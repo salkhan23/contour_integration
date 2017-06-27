@@ -82,6 +82,13 @@ class ContourIntegrationLayer(Layer):
             trainable=True
         )
 
+        half_len = self.n**2 >> 1
+        half_mask = K.ones((half_len, 1))
+        mask_1d = K.concatenate((half_mask,  K.constant([[0]]), half_mask), axis=0)
+        mask = K.reshape(mask_1d, (1, self.n, self.n))
+        self.mask = K.tile(mask, [ch, 1, 1])
+        self.mask = K.permute_dimensions(self.mask, [1, 2, 0])  # channel last
+
         super(ContourIntegrationLayer, self).build(input_shape)
 
     def compute_output_shape(self, input_shape):
@@ -104,34 +111,34 @@ class ContourIntegrationLayer(Layer):
         :param inputs:
         :return:
         """
-        _, r, c, ch = inputs.shape
-        print("Call Fcn: Input r, c, ch", r, c, ch)
-
-        # 1. We multiply input slices with the kernel, to retain the input size at the output,
-        # the input needs to be padded.
-        padded_inputs = K.spatial_2d_padding(
-            inputs,
-            ((self.n / 2, self.n / 2), (self.n / 2, self.n / 2))
-        )
-        print("Call Fcn: shape of padded input ", padded_inputs.shape)
-
-        # 2. Tensorflow uses C array indexing - last dimension changes first. Change the
-        # dimensions of the input so that row and column are the last two dimensions
-        input_col_last = K.permute_dimensions(padded_inputs, (0, 3, 1, 2))
-        print("Call Fcn: shape of input_col_last ", input_col_last.shape)
-
-        # 3. Force the central element, (that corresponds to the pixel itself to be zero)
-        kernel_col_last = K.permute_dimensions(self.kernel, (2, 0, 1))
-        print("Call Fcn: shape of kernel_col_last ", kernel_col_last.shape)
-
-        # mask = K.ones(shape=(self.n, self.n))
-        # mask[self.n / 2, self.n / 2] = 0
-        # mask = K.reshape(mask, (1, self.n, self.n))
+        # _, r, c, ch = inputs.shape
+        # print("Call Fcn: Input r, c, ch", r, c, ch)
+        #
+        # # 1. We multiply input slices with the kernel, to retain the input size at the output,
+        # # the input needs to be padded.
+        # padded_inputs = K.spatial_2d_padding(
+        #     inputs,
+        #     ((self.n / 2, self.n / 2), (self.n / 2, self.n / 2))
+        # )
+        # print("Call Fcn: shape of padded input ", padded_inputs.shape)
+        #
+        # # 2. Tensorflow uses C array indexing - last dimension changes first. Change the
+        # # dimensions of the input so that row and column are the last two dimensions
+        # input_col_last = K.permute_dimensions(padded_inputs, (0, 3, 1, 2))
+        # print("Call Fcn: shape of input_col_last ", input_col_last.shape)
+        #
+        # # 3. Force the central element, (that corresponds to the pixel itself to be zero)
+        # kernel_col_last = K.permute_dimensions(self.kernel, (2, 0, 1))
+        # print("Call Fcn: shape of kernel_col_last ", kernel_col_last.shape)
+        #
+        # # mask = K.ones(shape=(self.n, self.n))
+        # # mask[self.n / 2, self.n / 2] = 0
+        # # mask = K.reshape(mask, (1, self.n, self.n))
+        # # mask = K.tile(mask, n=0)
+        # # print("call Fcn: shape of mask", mask.shape)
+        #
+        # mask = K.var([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
         # mask = K.tile(mask, n=0)
-        # print("call Fcn: shape of mask", mask.shape)
-
-        mask = K.var([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
-        mask = K.tile(mask, n=0)
 
 
         #surround_kernel = kernel_col_last *
