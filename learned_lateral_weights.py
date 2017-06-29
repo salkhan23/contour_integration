@@ -152,6 +152,9 @@ class ContourIntegrationLayer(Layer):
         outputs = K.permute_dimensions(outputs, [0, 2, 3, 1])  # Back to batch first
         # print("Call Fcn: shape of output", outputs.shape)
 
+        # 5. Add the lateral and the feed-forward activations
+        outputs += inputs
+
         return outputs
 
 
