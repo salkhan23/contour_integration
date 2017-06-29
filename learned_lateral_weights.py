@@ -19,10 +19,14 @@ import keras.constraints as constraints
 import keras.backend as K
 import keras
 
-from keras.models import Sequential
+from keras.models import Sequential, save_model
 from keras.layers import Conv2D, Activation, MaxPooling2D, Dense, Dropout, Flatten
 
+import os
+
 import utils
+
+FILENAME = os.path.basename(__file__) + '.hf'
 
 BATCH_SIZE = 64
 NUM_CLASSES = 10
@@ -189,7 +193,7 @@ if __name__ == "__main__":
     model.add(Dropout(0.5))
     model.add(Dense(units=NUM_CLASSES, activation='softmax'))
 
-    # 3. Compile and Train the model
+    # 3. Compile/Train/Save the model
     # -------------------------------------------
     model.compile(
         loss=keras.losses.categorical_crossentropy,  # Note this is not a function call.
@@ -206,3 +210,4 @@ if __name__ == "__main__":
         validation_data=(x_test, y_test)
     )
 
+    save_model(model, FILENAME)
