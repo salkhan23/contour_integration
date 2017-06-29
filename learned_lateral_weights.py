@@ -119,7 +119,7 @@ class ContourIntegrationLayer(Layer):
         :return:
         """
         _, r, c, ch = K.int_shape(inputs)
-        print("Call Fcn: Input shape ", r, c, ch)
+        # print("Call Fcn: Input shape ", r, c, ch)
 
         # 1. Inputs Formatting
         # Channel First, batch second. This is done to take the unknown batch size into the matrix multiply
@@ -130,17 +130,17 @@ class ContourIntegrationLayer(Layer):
         )
 
         inputs_chan_first = K.permute_dimensions(padded_inputs, [3, 0, 1, 2])
-        print("Call Fcn: inputs_chan_first shape: ", inputs_chan_first.shape)
+        # print("Call Fcn: inputs_chan_first shape: ", inputs_chan_first.shape)
 
         # 2. Kernel and Mask
         masked_kernel = self.kernel * self.mask
-        print("Call Fcn: combined mask + kernel shape", masked_kernel.shape)
+        # print("Call Fcn: combined mask + kernel shape", masked_kernel.shape)
         # print("Call Fcn: First matrix of mask+kernel\n", K.eval(masked_kernel[:, :, 1]))
         masked_kernel_chan_first = K.permute_dimensions(masked_kernel, (2, 0, 1))
-        print("Call Fcn: masked_kernel_chan_first shape", masked_kernel_chan_first.shape)
+        # print("Call Fcn: masked_kernel_chan_first shape", masked_kernel_chan_first.shape)
         k_ch, k_r, k_c = K.int_shape(masked_kernel_chan_first)
         apply_kernel = K.reshape(masked_kernel_chan_first, (k_ch, k_r * k_c, 1))
-        print("Call Fcn: kernel for matrix multiply: ", apply_kernel.shape)
+        # print("Call Fcn: kernel for matrix multiply: ", apply_kernel.shape)
 
         # 3. Get outputs at each spatial location
         xs = []
@@ -154,14 +154,14 @@ class ContourIntegrationLayer(Layer):
                 output_slice = K.permute_dimensions(output_slice, [1, 0, 2])
                 xs.append(output_slice)
 
-        print("Call Fcn: len of xs", len(xs))
-        print("Call Fcn: shape of each element of xs", xs[0].shape)
+        # print("Call Fcn: len of xs", len(xs))
+        # print("Call Fcn: shape of each element of xs", xs[0].shape)
 
         # 4. Reshape the output to correct format
         outputs = K.concatenate(xs, axis=2)
         outputs = K.reshape(outputs, (-1, ch, r, c))  # Break into row and column
         outputs = K.permute_dimensions(outputs, [0, 2, 3, 1])  # Back to batch first
-        print("Call Fcn: shape of output", outputs.shape)
+        # print("Call Fcn: shape of output", outputs.shape)
 
         return outputs
 
