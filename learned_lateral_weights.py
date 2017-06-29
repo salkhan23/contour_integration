@@ -17,11 +17,14 @@ import keras.initializers as initializers
 import keras.regularizers as regularizers
 import keras.constraints as constraints
 import keras.backend as K
+import keras
 
 from keras.models import Sequential
-from keras.layers import Conv2D, LocallyConnected2D
+from keras.layers import Conv2D, Activation, MaxPooling2D, Dense, Dropout, Flatten
 
-BATCH_SIZE = 128
+import utils
+
+BATCH_SIZE = 64
 NUM_CLASSES = 10
 EPOCHS = 12
 
@@ -117,7 +120,12 @@ class ContourIntegrationLayer(Layer):
         # 1. Inputs Formatting
         # Channel First, batch second. This is done to take the unknown batch size into the matrix multiply
         # where it can be handled more easily
-        inputs_chan_first = K.permute_dimensions(inputs, [3, 0, 1, 2])
+        padded_inputs = K.spatial_2d_padding(
+            inputs,
+            ((self.n / 2, self.n / 2), (self.n / 2, self.n / 2))
+        )
+
+        inputs_chan_first = K.permute_dimensions(padded_inputs, [3, 0, 1, 2])
         print("Call Fcn: inputs_chan_first shape: ", inputs_chan_first.shape)
 
         # 2. Kernel and Mask
@@ -158,7 +166,43 @@ if __name__ == "__main__":
 
     input_dims = (IMG_ROWS, IMG_COL, 1)  # Input dimensions for a single sample
 
+    # 1. Get Data
+    # --------------------------------------------------------------------------
+    x_train, y_train, x_test, y_test, x_sample, y_sample = utils.get_mnist_data()
+
+    # 2. Define the model
+    # -------------------------------------------
     model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_dims, padding='same'))
+    # First Convolution layer, First sublayer processes feed-forward inputs, second layer adds the
+    # lateral connections. Third sublayer adds the activation function.
+    # Output = sigma_fcn([W_ff*x + W_l*(W_ff*x)]).
+    # Where sigma_fcn is the activation function
+    model.add(Conv2D(32, kernel_size=(3, 3), input_shape=input_dims, padding='same'))
     model.add(ContourIntegrationLayer(n=3))
-    model.summary()
+    model.add(Activation('relu'))
+    # Rest of the layers.
+    model.add(Conv2D(64, kernel_size=(3, 3), activation='relu', padding='same'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+    model.add(Flatten())
+    model.add(Dense(units=128, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(units=NUM_CLASSES, activation='softmax'))
+
+    # 3. Compile and Train the model
+    # -------------------------------------------
+    model.compile(
+        loss=keras.losses.categorical_crossentropy,  # Note this is not a function call.
+        optimizer=keras.optimizers.Adam(),
+        metrics=['accuracy']
+    )
+
+    model.fit(
+        x_train,
+        y_train,
+        batch_size=BATCH_SIZE,
+        epochs=EPOCHS,
+        verbose=1,
+        validation_data=(x_test, y_test)
+    )
+
