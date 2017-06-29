@@ -26,7 +26,7 @@ import os
 
 import utils
 
-FILENAME = os.path.basename(__file__) + '.hf'
+FILENAME = os.path.basename(__file__).split('.')[0] + '.hf'
 
 BATCH_SIZE = 64
 NUM_CLASSES = 10
@@ -100,17 +100,6 @@ class ContourIntegrationLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return input_shape  # Layer does not change the shape of the input
-
-    def get_config(self):
-        config = {
-            'kernel_shape': self.kernel_shape,
-            'data_format': self.data_format,
-            'kernel_initializer': initializers.serialize(self.kernel_initializer),
-            'kernel_regularizer': regularizers.serialize(self.kernel_regularizer),
-            'kernel_constraint': constraints.serialize(self.kernel_constraint),
-        }
-        base_config = super(ContourIntegrationLayer, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
 
     def call(self, inputs):
         """
