@@ -13,9 +13,10 @@ from __future__ import print_function
 import numpy as np
 
 from keras.engine.topology import Layer
+from keras.constraints import Constraint
+
 import keras.initializers as initializers
 import keras.regularizers as regularizers
-import keras.constraints as constraints
 import keras.backend as K
 import keras
 
@@ -39,6 +40,27 @@ IMG_ROWS, IMG_COL = 28, 28
 np.random.seed(7)
 
 
+class ZeroCenter(Constraint):
+    def __init__(self, n, ch):
+        """
+        Add a constraint that the central element of the weigh matrix should be zero. Only lateral connections
+        Should be learnt.
+
+        :param n: dimensions of the weight matrix, assuming it is a square
+        :param ch: number of channels in the input.
+        """
+
+        half_len = n**2 >> 1
+        half_mask = K.ones((half_len, 1))
+        mask_1d = K.concatenate((half_mask, K.constant([[0]]), half_mask), axis=0)
+        mask = K.reshape(mask_1d, (n, n, 1))
+        self.mask = K.tile(mask, [1, 1, ch])
+
+    def __call__(self, w):
+        w = w * self.mask
+        return w
+
+
 class ContourIntegrationLayer(Layer):
 
     def __init__(self, n=3,
@@ -60,7 +82,6 @@ class ContourIntegrationLayer(Layer):
 
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
-        self.kernel_constraint = constraints.get(kernel_constraint)
         self.data_format = K.image_data_format()
 
         super(ContourIntegrationLayer, self).__init__(**kwargs)
@@ -85,16 +106,9 @@ class ContourIntegrationLayer(Layer):
             initializer=self.kernel_initializer,
             name='kernel',
             regularizer=self.kernel_regularizer,
-            constraint=self.kernel_constraint,
+            constraint=ZeroCenter(self.n, ch),
             trainable=True
         )
-
-        half_len = self.n**2 >> 1
-        half_mask = K.ones((half_len, 1))
-        mask_1d = K.concatenate((half_mask,  K.constant([[0]]), half_mask), axis=0)
-        mask = K.reshape(mask_1d, (1, self.n, self.n))
-        self.mask = K.tile(mask, [ch, 1, 1])
-        self.mask = K.permute_dimensions(self.mask, [1, 2, 0])  # channel last
 
         super(ContourIntegrationLayer, self).build(input_shape)
 
@@ -121,14 +135,11 @@ class ContourIntegrationLayer(Layer):
         inputs_chan_first = K.permute_dimensions(padded_inputs, [3, 0, 1, 2])
         # print("Call Fcn: inputs_chan_first shape: ", inputs_chan_first.shape)
 
-        # 2. Kernel and Mask
-        masked_kernel = self.kernel * self.mask
-        # print("Call Fcn: combined mask + kernel shape", masked_kernel.shape)
-        # print("Call Fcn: First matrix of mask+kernel\n", K.eval(masked_kernel[:, :, 1]))
-        masked_kernel_chan_first = K.permute_dimensions(masked_kernel, (2, 0, 1))
-        # print("Call Fcn: masked_kernel_chan_first shape", masked_kernel_chan_first.shape)
-        k_ch, k_r, k_c = K.int_shape(masked_kernel_chan_first)
-        apply_kernel = K.reshape(masked_kernel_chan_first, (k_ch, k_r * k_c, 1))
+        # 2. Kernel
+        kernel_chan_first = K.permute_dimensions(self.kernel, (2, 0, 1))
+        # print("Call Fcn: kernel_chan_first shape", kernel_chan_first.shape)
+        k_ch, k_r, k_c = K.int_shape(kernel_chan_first)
+        apply_kernel = K.reshape(kernel_chan_first, (k_ch, k_r * k_c, 1))
         # print("Call Fcn: kernel for matrix multiply: ", apply_kernel.shape)
 
         # 3. Get outputs at each spatial location
