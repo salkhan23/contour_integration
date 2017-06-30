@@ -203,3 +203,10 @@ if __name__ == "__main__":
     )
 
     save_model(model, FILENAME)
+
+    # 4. Evaluate Model accuracy
+    # -------------------------------------------
+    score = model.evaluate(x_test, y_test, verbose=0)
+    print('Test Loss:', score[0])
+    print('Test Accuracy', score[1])
+
