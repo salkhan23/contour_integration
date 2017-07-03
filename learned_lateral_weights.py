@@ -146,8 +146,8 @@ class ContourIntegrationLayer(Layer):
         xs = []
         for i in range(r):
             for j in range(c):
-                input_slice = inputs_chan_first[:, :, i:i+3, j:j+3]
-                input_slice_apply = K.reshape(input_slice, (ch, -1, 9))
+                input_slice = inputs_chan_first[:, :, i:i+self.n, j:j+self.n]
+                input_slice_apply = K.reshape(input_slice, (ch, -1, self.n**2))
 
                 output_slice = K.batch_dot(input_slice_apply, apply_kernel)
                 # Reshape the output slice to put batch first
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     # Output = sigma_fcn([W_ff*x + W_l*(W_ff*x)]).
     # Where sigma_fcn is the activation function
     model.add(Conv2D(32, kernel_size=(3, 3), input_shape=input_dims, padding='same'))
-    model.add(ContourIntegrationLayer(n=3))
+    model.add(ContourIntegrationLayer(n=5))
     model.add(Activation('relu'))
     # Rest of the layers.
     model.add(Conv2D(64, kernel_size=(3, 3), activation='relu', padding='same'))
