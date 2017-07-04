@@ -46,7 +46,8 @@ def display_layer_activations(model, layer_idx, data_sample):
     :param model:
     :param layer_idx:
     :param data_sample:
-    :return:
+
+    :return: the whole activation volume
     """
 
     # Define a function to get the activation volume
@@ -77,3 +78,5 @@ def display_layer_activations(model, layer_idx, data_sample):
         plt.imshow(act_volume[0, :, :, ch_idx], cmap='Greys')
 
     f.suptitle("Feature maps of layer @ idx %d: %s" % (layer_idx, model.layers[layer_idx].name))
+
+    return act_volume
