@@ -80,3 +80,67 @@ def display_layer_activations(model, layer_idx, data_sample):
     f.suptitle("Feature maps of layer @ idx %d: %s" % (layer_idx, model.layers[layer_idx].name))
 
     return act_volume
+
+
+def add_noise(images, noise_type, **kwargs):
+    """
+
+    :param images:
+    :param noise_type: ['gaussian', 'pepper']
+    :param kwargs: conditional keyword arguments
+
+    if noise_type = gaussian
+    var = noise variance. default = 0.1
+    mean = mean of the noise. default = 0
+
+    :return: noisy images
+
+    REF: https://stackoverflow.com/questions/22937589/
+         how-to-add-noise-gaussian-salt-and-pepper-etc-to-image-in-python-with-opencv
+    """
+
+    noise_type = noise_type.lower()
+    allowed_noise = ['gaussian', 'pepper']
+
+    if noise_type not in allowed_noise:
+        raise Exception("Unknown noise type, %s" % noise_type)
+
+    b, r, c, ch = images.shape
+
+    if noise_type == 'gaussian':
+
+        var = 0.1
+        mean = 0
+
+        if 'var' in kwargs.keys():
+            var = kwargs['var']
+        if 'mean' in kwargs.keys():
+            mean = kwargs['mean']
+
+        print("Adding Gaussian noise with mean %f, var %f to images of size %s" % (mean, var, images.shape))
+
+        sigma = np.sqrt(var)
+        noise = np.random.normal(mean, sigma, (b, r, c, ch))
+
+        output = images + noise
+
+    elif noise_type == 'pepper':
+        prob = 0.004
+
+        if 'prob' in kwargs.keys():
+            prob = kwargs['prob']
+
+        # num samples to blacken
+        num_pepper = int(prob * (b * r * c * ch))
+
+        print("Adding Pepper noise with probability %f to images of size %s" % (prob, images.shape))
+
+        xs = [np.random.randint(0, max(i-1, 1), int(num_pepper)) for i in images.shape]
+        xs = np.array(xs)
+
+        # force numpy to create a separate copy of the input
+        output = np.copy(images)
+
+        output[xs[0, :], xs[1, :], xs[2,:], xs[3, :]] = 0
+
+    return output
