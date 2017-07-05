@@ -50,32 +50,28 @@ if __name__ == "__main__":
 
     f.suptitle("How the lateral connections are changing the feed-forward input")
 
+    # 4. Show Feed-forward and lateral Filters
+    # --------------------------------------------------------------------
+    weights_ff = contour_integration_model.layers[0].get_weights()[0]
+    weights_l = contour_integration_model.layers[1].get_weights()[0]
 
+    # Normalize the display
+    max_filt_value = np.max([np.max(weights_ff), np.max(weights_l)])
+    min_filt_value = np.min([np.min(weights_ff), np.min(weights_l)])
 
+    fig_dim = np.int(np.round(np.sqrt(weights_ff.shape[-1])))
 
+    # Plot the feed forward Filters
+    fig = plt.figure()
+    fig.suptitle("FF convolution Filters")
+    for ch_idx in range(weights_ff.shape[-1]):
+        fig.add_subplot(fig_dim, fig_dim, ch_idx + 1)
+        plt.imshow(weights_ff[:, :, 0, ch_idx], cmap='Greys', vmin=min_filt_value, vmax=max_filt_value)
 
-    # # 4. Show Feed-forward and lateral Filters
-    # # --------------------------------------------------------------------
-    # weights_ff = contour_integration_model.layers[0].get_weights()[0]
-    # weights_l = contour_integration_model.layers[1].get_weights()[0]
-    #
-    # # Normalize the display
-    # max_filt_value = np.max([np.max(weights_ff), np.max(weights_l)])
-    # min_filt_value = np.min([np.min(weights_ff), np.min(weights_l)])
-    #
-    # fig_dim = np.int(np.round(np.sqrt(weights_ff.shape[-1])))
-    #
-    # # Plot the feed forward Filters
-    # fig = plt.figure()
-    # fig.suptitle("FF convolution Filters")
-    # for ch_idx in range(weights_ff.shape[-1]):
-    #     fig.add_subplot(fig_dim, fig_dim, ch_idx + 1)
-    #     plt.imshow(weights_ff[:, :, 0, ch_idx], cmap='Greys', vmin=min_filt_value, vmax=max_filt_value)
-    #
-    # # Plot the lateral connections filters
-    # fig = plt.figure()
-    # fig.suptitle("Lateral Connections Filters")
-    #
-    # for ch_idx in range(weights_l.shape[-1]):
-    #     fig.add_subplot(fig_dim, fig_dim, ch_idx + 1)
-    #     plt.imshow(weights_l[:, :, ch_idx], cmap='Greys', vmin=min_filt_value, vmax=max_filt_value)
+    # Plot the lateral connections filters
+    fig = plt.figure()
+    fig.suptitle("Lateral Connections Filters")
+
+    for ch_idx in range(weights_l.shape[-1]):
+        fig.add_subplot(fig_dim, fig_dim, ch_idx + 1)
+        plt.imshow(weights_l[:, :, ch_idx], cmap='Greys', vmin=min_filt_value, vmax=max_filt_value)
