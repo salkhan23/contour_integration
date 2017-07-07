@@ -11,6 +11,32 @@ import numpy as np
 MNIST_NUM_CLASSES = 10
 
 
+def deprocess_image(x):
+    """
+    Utility function to convert a tensor into a valid image
+    Normalize Tensor: Center on 0., ensure std is 0.1 [Why?]
+
+    REF: https://github.com/fchollet/keras/blob/master/examples/conv_filter_visualization.py
+    unlike the original, data is kept within the [0,1] range, matplotlib.pyplot.imshow prefers
+    values in this range rather than [0, 255] which scipy.misc.imshow prefers. The later hangs
+     the code until the figure is closed.
+
+    :param x:
+    :return:
+    """
+    x -= x.mean()
+    x /= (x.std() + 1e-5)
+
+    # Clip to [0, 1]
+    x += 0.5
+    x = np.clip(x, 0, 1)
+
+    if K.image_data_format() == 'channels_first':  # [ch,r, c]
+        x = x.transpose((1, 2, 0))  # this is similar to K.permute dimensions but outside keras/TF
+
+    return x
+
+
 def get_mnist_data(sample_idx=0):
     """
     :param sample_idx: index of sample to return
@@ -36,6 +62,61 @@ def get_mnist_data(sample_idx=0):
     label_sample = label_test[sample_idx]
 
     return data_train, label_train, data_test, label_test, data_sample, label_sample
+
+
+def display_filters(weights, margin=1):
+    """
+    Display the filters of a layer in a single large image
+
+    :param weights: weight matrix of a model layer
+    :param margin: Gap/border between the kernels, filters in the large tiled filters image.
+
+    :return:
+    """
+
+    if len(K.int_shape(weights)) == 3:
+        r, c, out_ch = K.int_shape(weights)
+        weights = K.reshape(weights, (r, c, 1, out_ch))
+    r, c, in_ch, out_ch = K.int_shape(weights)
+
+    allowed_in_ch = [1, 3]  # can only display filters where the input dimension is 1 or 3
+    if in_ch not in allowed_in_ch:
+        raise Exception("Cannot display filters with input channels = %d" % in_ch)
+
+    n = np.int(np.round(np.sqrt(out_ch)))  # Single dimension of tiled image
+
+    width = (n * r) + ((n - 1) * margin)
+    height = (n * c) + ((n - 1) * margin)
+
+    tiled_filters = np.zeros((width, height, in_ch))
+
+    # Fill in in composite image with the filters
+    for r_idx in range(n):
+        for c_idx in range(n):
+
+            filt_idx = (r_idx * n) + c_idx
+            if filt_idx >= out_ch:
+                break
+
+            print("Processing filter %d" % filt_idx)
+
+            tiled_filters[
+                (r + margin) * r_idx: (r + margin) * r_idx + r,
+                (c + margin) * c_idx: (c + margin) * c_idx + c,
+                :
+            ] = deprocess_image(K.eval(weights[:, :, :, filt_idx]))
+
+    # Plot the Composite Figure
+    plt.ion()
+    plt.figure()
+
+    if 1 == in_ch:
+        plt.imshow(tiled_filters[:, :, 0], cmap='Greys')  # force to 2D. Expected by imshow
+    else:
+        plt.imshow(tiled_filters)
+    plt.colorbar()
+
+    return tiled_filters
 
 
 def display_layer_activations(model, layer_idx, data_sample):
