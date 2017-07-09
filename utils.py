@@ -16,12 +16,12 @@ def deprocess_image(x):
     Utility function to convert a tensor into a valid image
     Normalize Tensor: Center on 0., ensure std is 0.1 [Why?]
 
-    REF: https://github.com/fchollet/keras/blob/master/examples/conv_filter_visualization.py
-    unlike the original, data is kept within the [0,1] range, matplotlib.pyplot.imshow prefers
+    REF: https://github.com/fchollet/keras/blob/master/examples/conv_filter_visualization.py.
+    Unlike the original ref, data is kept within the [0,1] range. Matplotlib.pyplot.imshow prefers
     values in this range rather than [0, 255] which scipy.misc.imshow prefers. The later hangs
      the code until the figure is closed.
 
-    :param x:
+    :param x: image of dimension [r, c, ch]
     :return:
     """
     x -= x.mean()
