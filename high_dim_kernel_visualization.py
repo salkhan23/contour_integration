@@ -3,8 +3,8 @@
 #
 # Technique can be used for higher layer filters for which the input channels are not 1 or 3.
 #
-# Compared to the original tutorial, the input images are resized to be the same size of the filters.
-# This results in filters that are approximately the same as the kernel
+# Compared to the original tutorial, the input images are resized to be the same size of the
+# filters. This results in filters that are approximately the same as the kernel
 # (for those that can be visualized)
 #
 # Ref: https://blog.keras.io/how-convolutional-neural-networks-see-the-world.html
@@ -43,7 +43,8 @@ def normalize(x):
     return x / (K.sqrt(K.mean(K.square(x))) + 1e-5)
 
 
-def display_hd_filter_opt_stimuli(model, layer_idx, gen_img_row=7, gen_img_col=7, num_iterations=20, margin=1):
+def display_hd_filter_opt_stimuli(
+        model, layer_idx, gen_img_row=7, gen_img_col=7, num_iterations=20, margin=1):
     """
 
     :param margin:
@@ -52,11 +53,14 @@ def display_hd_filter_opt_stimuli(model, layer_idx, gen_img_row=7, gen_img_col=7
     :param gen_img_row:
     :param layer_idx:
     :param model:
-    :return:
+    :return: -1 if no weights are found, otherwise  0.
     """
     w_mat = model.layers[layer_idx].weights
     if not w_mat:
-        raise Exception("No weights in layer at index %d" % layer_idx)
+        print("No weights in layer at index %d" % layer_idx)
+        return -1
+
+    w_mat = w_mat[0]  # Exclude the biases
 
     # TODO: Generalize to Theano format
     r, c, in_ch, out_ch = K.int_shape(w_mat)
@@ -68,7 +72,7 @@ def display_hd_filter_opt_stimuli(model, layer_idx, gen_img_row=7, gen_img_col=7
         print("Processing filter %d" % filter_idx)
         start_time = time.time()
 
-        # Build a loss function that maximizes the activation of the nth filter of the layer being considered
+        # Build a loss function that maximizes the activation of the nth filter of the layer
         layer_output = model.layers[layer_idx].output
 
         if K.image_data_format() == 'channel_first':
@@ -77,23 +81,22 @@ def display_hd_filter_opt_stimuli(model, layer_idx, gen_img_row=7, gen_img_col=7
             loss = K.mean(layer_output[:, :, :, filter_idx])
 
         # Compute the gradient of the input picture wrt this loss
-        grads = K.gradients(loss, input_img)[0]  # Get the gradient of the loss function wrt input image
-        grads = normalize(grads)  # avoids very large or very small gradients and ensures a smooth ascent
+        grads = K.gradients(loss, input_img)[0]  # Gradient of the loss function wrt input image
+        grads = normalize(grads)  # avoid very large or small gradients and ensures a smooth ascent
 
         # This function returns the loss and the grads given the input picture
         iterate = K.function([input_img], [loss, grads])
 
-        # Step size for gradient ascent
-        step = 1.
-
         # we start from a gray image with some random noise
         if K.image_data_format() == 'channel_first':
-            input_img_data = np.random.random((1, in_ch, gen_img_row, gen_img_col))  # generates random floats b\w (0,1)
+            # generates random floats b\w (0,1)
+            input_img_data = np.random.random((1, 3, gen_img_row, gen_img_col))
         else:
-            input_img_data = np.random.random((1, gen_img_row, gen_img_col, in_ch))  # generates random floats b\w (0,1)
+            input_img_data = np.random.random((1, gen_img_row, gen_img_col, 3))
         input_img_data = (input_img_data - 0.5) * num_iterations + 128
 
         # Run gradient ascent for num_iterations steps
+        loss_value = 0
         for i in range(num_iterations):
             loss_value, grads_value = iterate([input_img_data])
             input_img_data += grads_value
@@ -112,10 +115,10 @@ def display_hd_filter_opt_stimuli(model, layer_idx, gen_img_row=7, gen_img_col=7
     # Display the generated images
     n = np.int(np.round(np.sqrt(out_ch)))  # Single dimension of tiled image
 
-    width = (n * r) + ((n - 1) * margin)
-    height = (n * c) + ((n - 1) * margin)
+    width = (n * gen_img_row) + ((n - 1) * margin)
+    height = (n * gen_img_col) + ((n - 1) * margin)
 
-    tiled_filters = np.zeros((width, height, in_ch))
+    tiled_filters = np.zeros((width, height, 3))
 
     # Fill in in composite image with the filters
     for r_idx in range(n):
@@ -126,18 +129,23 @@ def display_hd_filter_opt_stimuli(model, layer_idx, gen_img_row=7, gen_img_col=7
                 break
 
             print("Processing filter %d" % filt_idx)
+            img, loss = keep_filters[filt_idx]
 
             tiled_filters[
                 (gen_img_row + margin) * r_idx: (gen_img_row + margin) * r_idx + gen_img_row,
                 (gen_img_col + margin) * c_idx: (gen_img_col + margin) * c_idx + gen_img_col,
                 :
-            ] = utils.deprocess_image(K.eval(weights[:, :, :, filt_idx]))
+            ] = utils.deprocess_image(img)
 
     # Plot the Composite Figure
     plt.ion()
     plt.figure()
     plt.imshow(tiled_filters)
     plt.colorbar()
+    plt.title("Kernel visualization by gradient ascent.\n Layer %s (Idx %d). %d filters of size %dx%dx%d"
+              % (model.layers[layer_idx].name, layer_idx, out_ch, r, c, in_ch))
+
+    return 0
 
 
 if __name__ == "__main__":
@@ -147,100 +155,35 @@ if __name__ == "__main__":
     vgg16_model = vgg16.VGG16(weights='imagenet', include_top=False)
     vgg16_model.summary()
 
+    layer_index = 1
+    weights = vgg16_model.layers[layer_index].weights[0]
 
-
-
-
-
-
-
-
-    #
-    # layer_dict = dict([(layer.name, layer) for layer in model.layers[1:]])
-    #
-    # weights = layer_dict[LAYER_NAME].weights[0]  # Only the weights not the bias
-    # # r, c, in_ch, out_ch = K.int_shape(weights)
-    #
-    # # 1. Display the filters of the first layer
+    # # First Layer
     # # --------------------------------------------------------------------
     # utils.display_filters(weights)
-    # plt.title("Actual Kernels of layer %s" %LAYER_NAME)
-    #
-    # # 2. Display activations that maximally activate a neuron
-    # # This is the main tutorial
-    # # --------------------------------------------------------------------
+    # plt.title("Direct Filter Visualization, Layer %i, Filter shape %s"
+    #           % (layer_index, weights.shape[:-1]))
 
-    # input_img = model.input
+    display_hd_filter_opt_stimuli(
+        vgg16_model, layer_index, gen_img_row=3, gen_img_col=3, num_iterations=50)
+
+    # # Second Layer
+    # # --------------------------------------------------------------------
+    layer_index = 2
+    display_hd_filter_opt_stimuli(
+        vgg16_model, layer_index, gen_img_row=9, gen_img_col=9, num_iterations=50)
+
+    # # Third  Layer
+    # # --------------------------------------------------------------------
     #
-    # keep_filters = []
-    # for filter_idx in range(0, out_ch):
-    #     print("Processing filter %d" % filter_idx)
-    #     start_time = time.time()
+    # # Forth  Layer
+    # # --------------------------------------------------------------------
+    layer_index = 4
+    display_hd_filter_opt_stimuli(
+        vgg16_model, layer_index, gen_img_row=27, gen_img_col=27, num_iterations=50)
     #
-    #     # Build a loss function that maximizes the activation of the nth filter of the layer being considered
-    #     layer_output = layer_dict[LAYER_NAME].output
-    #
-    #     if K.image_data_format() == 'channel_first':
-    #         loss = K.mean(layer_output[:, filter_idx, :, :])
-    #     else:
-    #         loss = K.mean(layer_output[:, :, :, filter_idx])
-    #
-    #     # Compute the gradient of the input picture wrt this loss
-    #     grads = K.gradients(loss, input_img)[0]  # Get the gradient of the loss function wrt input image
-    #     grads = normalize(grads)  # avoids very large or very small gradients and ensures a smooth ascent
-    #
-    #     # This function returns the loss and the grads given the input picture
-    #     iterate = K.function([input_img], [loss, grads])
-    #
-    #     # Step size for gradient ascent
-    #     step = 1.
-    #
-    #     # we start from a gray image with some random noise
-    #     if K.image_data_format() == 'channel_first':
-    #         input_img_data = np.random.random((1, in_ch, IMG_WIDTH, IMG_HEIGHT))  # generates random floats b\w (0,1)
-    #     else:
-    #         input_img_data = np.random.random((1, IMG_WIDTH, IMG_HEIGHT, in_ch))  # generates random floats b\w (0,1)
-    #     input_img_data = (input_img_data - 0.5) * NUM_ITERATIONS + 128  # Why x20? ## number of steps?
-    #
-    #     # Run gradient ascent for 20 steps
-    #     for i in range(NUM_ITERATIONS):
-    #         loss_value, grads_value = iterate([input_img_data])
-    #         input_img_data += grads_value
-    #
-    #         print("Current Loss value:", loss_value)
-    #         if loss_value <= 0.0:
-    #             break  # some filters get stuck to 0, we can skip them
-    #
-    #     # Decode the resulting input image
-    #     # if loss_value > 0:
-    #     img = utils.deprocess_image(input_img_data[0])  # removes the batch index
-    #     keep_filters.append((img, loss_value))
-    #
-    #     end_time = time.time()
-    #     print('Filter %d processes in %ds' % (filter_idx, end_time - start_time))
-    #
-    # # Stitch the best 64 filters on a 8x8 grid
-    # n = 8
-    # #
-    # # # filters with the highest loss are assumed to be better looking
-    # # keep_filters.sort(key=lambda x: x[1], reverse=True)
-    # # keep_filters = keep_filters[:n * n]
-    # #
-    # # build a black picture with enough space for our 8x8 filters of size 128x128 with a 5pnt margin between
-    # margin = 1
-    # width = n * IMG_WIDTH + (n - 1) * margin
-    # height = n * IMG_HEIGHT + (n - 1) * margin
-    # stitched_filters = np.zeros((width, height, 3))
-    #
-    # # Fill in the picture with the saved filters
-    # for i in range(n):
-    #     for j in range(n):
-    #         img, loss = keep_filters[i * n + j]
-    #         stitched_filters[(IMG_WIDTH + margin) * i: (IMG_WIDTH + margin)*i + IMG_WIDTH,
-    #                          (IMG_HEIGHT + margin) * j:(IMG_HEIGHT+margin)*j + IMG_HEIGHT, :] = img
-    #
-    # # save the results
-    # plt.figure()
-    # plt.imshow(stitched_filters)
-    # plt.title("Max activations of individual filters at Layer %s" % LAYER_NAME)
-    # plt.colorbar()
+    # # Fifth  Layer
+    # # --------------------------------------------------------------------
+    layer_index = 5
+    display_hd_filter_opt_stimuli(
+        vgg16_model, layer_index, gen_img_row=81, gen_img_col=81, num_iterations=50)
