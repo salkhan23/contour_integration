@@ -23,25 +23,26 @@ NUM_CLASSES = 10
 BATCH_SIZE = 32
 EPOCHS = 2
 
-def plot_train_summary(training_summary):
+
+def plot_train_summary(t_summary):
     """
 
-    :param training_summary: Return value of model.fit()
+    :param t_summary: Return value of model.fit()
     :return:
     """
     f = plt.figure()
 
     f. add_subplot(1, 2, 1)
-    plt.plt(range(len(training_summary.history['acc'])), training_summary.history['acc'], color='blue')
-    plt.plt(range(len(training_summary.history['val_acc'])), training_summary.history['val_acc'], color='red')
+    plt.plot(range(len(t_summary.history['acc'])), t_summary.history['acc'], color='blue')
+    plt.plot(range(len(t_summary.history['val_acc'])), t_summary.history['val_acc'], color='red')
     plt.title('Model Accuracy')
     plt.xlabel("Acc")
     plt.ylabel('Epoch')
     plt.legend(loc='best')
 
     f.add_subplot(1, 2, 2)
-    plt.plt(range(len(training_summary.history['loss'])), training_summary.history['loss'], color='blue')
-    plt.plt(range(len(training_summary.history['val_loss'])), training_summary.history['val_loss'], color='red')
+    plt.plot(range(len(t_summary.history['loss'])), t_summary.history['loss'], color='blue')
+    plt.plot(range(len(t_summary.history['val_loss'])), t_summary.history['val_loss'], color='red')
     plt.title('Model Accuracy')
     plt.xlabel("Acc")
     plt.ylabel('Epoch')
@@ -52,7 +53,8 @@ if __name__ == "__main__":
     # 1. Import the Data
     # --------------------------------------------------------------------
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-    print('Data Set Details: X train shape: %s. X test shape: %s' % (str(x_train.shape), str(x_train.shape)))
+    print('Data Set Details: X train shape: %s. X test shape: %s'
+          % (str(x_train.shape), str(x_train.shape)))
 
     x_train = x_train.astype('float32')
     x_test = x_test.astype('float32')
@@ -69,13 +71,13 @@ if __name__ == "__main__":
     all_conv_model.add(Conv2D(96, (3, 3), padding='same', activation='relu'))
     all_conv_model.add(Conv2D(96, (3, 3), padding='same', activation='relu'))
 
-    all_conv_model.add(Conv2D(96, (3, 3), padding='same', activation='relu', strides=(2, 2)))  # pooling layer
+    all_conv_model.add(Conv2D(96, (3, 3), padding='same', activation='relu', strides=(2, 2)))
     all_conv_model.add(Dropout(0.5))
 
     all_conv_model.add(Conv2D(192, (3, 3), padding='same', activation='relu'))
     all_conv_model.add(Conv2D(192, (3, 3), padding='same', activation='relu'))
 
-    all_conv_model.add(Conv2D(192, (3, 3), padding='same', activation='relu', strides=(2, 2)))  # pooling layer
+    all_conv_model.add(Conv2D(192, (3, 3), padding='same', activation='relu', strides=(2, 2)))
     all_conv_model.add(Dropout(0.5))
 
     all_conv_model.add(Conv2D(192, (3, 3), padding='same', activation='relu'))
@@ -127,6 +129,6 @@ if __name__ == "__main__":
     # 4. Some plots
     # ----------------------------------------------------------------------------
     plt.ion()
-    plot_train_summary()
+    plot_train_summary(training_summary)
 
     display_hd_filter_opt_stimuli(all_conv_model, 1)
