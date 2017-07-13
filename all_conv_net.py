@@ -9,6 +9,7 @@
 # Date  : 13/07/17
 # -------------------------------------------------------------------------------------------------
 import matplotlib.pyplot as plt
+import numpy as np
 
 import keras
 from keras.datasets import cifar10
@@ -16,12 +17,16 @@ from keras.models import Sequential
 from keras.layers import Conv2D, Dropout, GlobalAveragePooling2D, Activation
 from keras.optimizers import SGD
 
-from high_dim_kernel_visualization import display_hd_filter_opt_stimuli
+import high_dim_kernel_visualization as hd_vis
+reload(hd_vis)
 
 
 NUM_CLASSES = 10
 BATCH_SIZE = 32
-EPOCHS = 2
+EPOCHS = 100
+
+# Set the random seed for reproducibility
+np.random.seed(7)
 
 
 def plot_train_summary(t_summary):
@@ -101,6 +106,8 @@ if __name__ == "__main__":
     save_file = 'all_conv_net_model.hdf5'
 
     training_callbacks = []
+
+    # Callback to save model as it trains
     checkpoint = keras.callbacks.ModelCheckpoint(
         save_file,
         monitor='val_acc',
@@ -110,7 +117,10 @@ if __name__ == "__main__":
     )
     training_callbacks.append(checkpoint)
 
-    training_summary = all_conv_model.fit(
+    # Callback to stop training early if loss is not falling
+    training_callbacks.append(keras.callbacks.EarlyStopping(patience=5))
+
+    training_history = all_conv_model.fit(
         x_train,
         y_train,
         batch_size=BATCH_SIZE,
@@ -129,6 +139,8 @@ if __name__ == "__main__":
     # 4. Some plots
     # ----------------------------------------------------------------------------
     plt.ion()
-    plot_train_summary(training_summary)
+    plot_train_summary(training_history)
 
-    display_hd_filter_opt_stimuli(all_conv_model, 1)
+    hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 1, gen_img_row=3, gen_img_col=3, margin=1)
+    hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 2, gen_img_row=5, gen_img_col=5, margin=1)
+    hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 3, gen_img_row=9, gen_img_col=9, margin=1)

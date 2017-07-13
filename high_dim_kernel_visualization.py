@@ -85,7 +85,7 @@ def display_hd_filter_opt_stimuli(
         grads = normalize(grads)  # avoid very large or small gradients and ensures a smooth ascent
 
         # This function returns the loss and the grads given the input picture
-        iterate = K.function([input_img], [loss, grads])
+        iterate = K.function([input_img, K.learning_phase()], [loss, grads])
 
         # we start from a gray image with some random noise
         if K.image_data_format() == 'channel_first':
@@ -98,7 +98,7 @@ def display_hd_filter_opt_stimuli(
         # Run gradient ascent for num_iterations steps
         loss_value = 0
         for i in range(num_iterations):
-            loss_value, grads_value = iterate([input_img_data])
+            loss_value, grads_value = iterate([input_img_data, 0])
             input_img_data += grads_value
 
             print("Current Loss value:", loss_value)
