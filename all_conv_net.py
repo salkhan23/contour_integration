@@ -38,8 +38,8 @@ def plot_train_summary(t_summary):
     f = plt.figure()
 
     f. add_subplot(1, 2, 1)
-    plt.plot(range(len(t_summary.history['acc'])), t_summary.history['acc'], color='blue')
-    plt.plot(range(len(t_summary.history['val_acc'])), t_summary.history['val_acc'], color='red')
+    plt.plot(range(len(t_summary.history['acc'])), t_summary.history['acc'], color='blue', label='Train')
+    plt.plot(range(len(t_summary.history['val_acc'])), t_summary.history['val_acc'], color='red', label='Test')
     plt.title('Model Accuracy')
     plt.xlabel("Acc")
     plt.ylabel('Epoch')
@@ -48,8 +48,8 @@ def plot_train_summary(t_summary):
     f.add_subplot(1, 2, 2)
     plt.plot(range(len(t_summary.history['loss'])), t_summary.history['loss'], color='blue')
     plt.plot(range(len(t_summary.history['val_loss'])), t_summary.history['val_loss'], color='red')
-    plt.title('Model Accuracy')
-    plt.xlabel("Acc")
+    plt.title('Model Loss')
+    plt.xlabel("Loss")
     plt.ylabel('Epoch')
 
 
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     training_callbacks.append(checkpoint)
 
     # Callback to stop training early if loss is not falling
-    training_callbacks.append(keras.callbacks.EarlyStopping(patience=5))
+    training_callbacks.append(keras.callbacks.EarlyStopping(patience=10))
 
     training_history = all_conv_model.fit(
         x_train,
