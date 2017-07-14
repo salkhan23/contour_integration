@@ -69,7 +69,7 @@ def display_hd_filter_opt_stimuli(
     keep_filters = []
 
     for filter_idx in range(0, out_ch):
-        print("Processing filter %d" % filter_idx)
+        # print("Processing filter %d" % filter_idx)
         start_time = time.time()
 
         # Build a loss function that maximizes the activation of the nth filter of the layer
@@ -101,7 +101,7 @@ def display_hd_filter_opt_stimuli(
             loss_value, grads_value = iterate([input_img_data, 0])
             input_img_data += grads_value
 
-            print("Current Loss value:", loss_value)
+            # print("Current Loss value:", loss_value)
             if loss_value <= 0.0:
                 break  # some filters get stuck to 0, we can skip them
 
@@ -110,7 +110,7 @@ def display_hd_filter_opt_stimuli(
         keep_filters.append((img, loss_value))
 
         end_time = time.time()
-        print('Filter %d processed in %ds' % (filter_idx, end_time - start_time))
+        # print('Filter %d processed in %ds' % (filter_idx, end_time - start_time))
 
     # Display the generated images
     n = np.int(np.round(np.sqrt(out_ch)))  # Single dimension of tiled image
@@ -128,7 +128,7 @@ def display_hd_filter_opt_stimuli(
             if filt_idx >= out_ch:
                 break
 
-            print("Processing filter %d" % filt_idx)
+            # print("Processing filter %d" % filt_idx)
             img, loss = keep_filters[filt_idx]
 
             tiled_filters[

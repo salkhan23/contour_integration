@@ -133,8 +133,8 @@ if __name__ == "__main__":
     # 4. Evaluate the Model Accuracy
     # ----------------------------------------------------------------------------
     score = all_conv_model.evaluate(x_test, y_test, verbose=0)
-    print('Test Loss:', score[0])
-    print('Test Accuracy', score[1])
+    print('Test Loss: %f' % score[0])
+    print('Test Accuracy %f' % score[1])
 
     # 4. Some plots
     # ----------------------------------------------------------------------------
