@@ -72,8 +72,8 @@ if __name__ == "__main__":
     # 2. Build the Model
     # --------------------------------------------------------------------
     all_conv_model = Sequential()
-    all_conv_model.add(Dropout(0.2, input_shape=(None, None, 3)))
-    all_conv_model.add(Conv2D(96, (3, 3), padding='same', activation='relu'))
+    # all_conv_model.add(Dropout(0.2, input_shape=(None, None, 3)))
+    all_conv_model.add(Conv2D(96, (3, 3), padding='same', activation='relu', input_shape=(None, None, 3)))
     all_conv_model.add(Conv2D(96, (3, 3), padding='same', activation='relu'))
 
     all_conv_model.add(Conv2D(96, (3, 3), padding='same', activation='relu', strides=(2, 2)))
@@ -86,15 +86,15 @@ if __name__ == "__main__":
     all_conv_model.add(Dropout(0.5))
 
     all_conv_model.add(Conv2D(192, (3, 3), padding='same', activation='relu'))
-    all_conv_model.add(Conv2D(192, (1, 1), padding='same', activation='relu'))
-    all_conv_model.add(Conv2D(10, (1, 1), padding='same', activation='relu'))
+    all_conv_model.add(Conv2D(192, (1, 1), padding='valid', activation='relu'))
+    all_conv_model.add(Conv2D(10, (1, 1), padding='valid', activation='relu'))
 
     all_conv_model.add(GlobalAveragePooling2D())
     all_conv_model.add(Activation('softmax'))
     all_conv_model.summary()
 
     # Compile the model
-    opt = SGD(lr=0.01, decay=1e-3, momentum=0.9, nesterov=True)
+    opt = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     all_conv_model.compile(
         loss='categorical_crossentropy',
         optimizer=opt,
@@ -117,8 +117,8 @@ if __name__ == "__main__":
     )
     training_callbacks.append(checkpoint)
 
-    # Callback to stop training early if loss is not falling
-    training_callbacks.append(keras.callbacks.EarlyStopping(patience=10))
+    # # Callback to stop training early if loss is not falling
+    # training_callbacks.append(keras.callbacks.EarlyStopping(patience=10))
 
     training_history = all_conv_model.fit(
         x_train,
@@ -141,6 +141,6 @@ if __name__ == "__main__":
     plt.ion()
     plot_train_summary(training_history)
 
-    hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 1, gen_img_row=3, gen_img_col=3, margin=1)
-    hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 2, gen_img_row=5, gen_img_col=5, margin=1)
-    hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 3, gen_img_row=9, gen_img_col=9, margin=1)
+    hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 0, gen_img_row=3, gen_img_col=3, margin=1)
+    hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 1, gen_img_row=5, gen_img_col=5, margin=1)
+    hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 2, gen_img_row=9, gen_img_col=9, margin=1)
