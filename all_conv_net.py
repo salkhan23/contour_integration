@@ -3,7 +3,7 @@
 # [Springenberg et. al. - 2015 - Striving for Simplicity: The All Convolutional Net]
 # on CIFAR-10
 #
-# Without Data Augmentation this achieves around 90% accuracy.
+# Without Data Augmentation this achieves around 90% accuracy after 350 epochs.
 #
 # Author: Salman Khan
 # Date  : 13/07/17
