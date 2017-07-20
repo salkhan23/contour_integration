@@ -18,7 +18,9 @@ from keras.layers import Conv2D, Dropout, GlobalAveragePooling2D, Activation
 from keras.optimizers import SGD
 
 import high_dim_kernel_visualization as hd_vis
+import utils
 reload(hd_vis)
+reload(utils)
 
 
 NUM_CLASSES = 10
@@ -27,30 +29,6 @@ EPOCHS = 100
 
 # Set the random seed for reproducibility
 np.random.seed(7)
-
-
-def plot_train_summary(t_summary):
-    """
-
-    :param t_summary: Return value of model.fit()
-    :return:
-    """
-    f = plt.figure()
-
-    f. add_subplot(1, 2, 1)
-    plt.plot(range(len(t_summary.history['acc'])), t_summary.history['acc'], color='blue', label='Train')
-    plt.plot(range(len(t_summary.history['val_acc'])), t_summary.history['val_acc'], color='red', label='Test')
-    plt.title('Model Accuracy')
-    plt.xlabel("Acc")
-    plt.ylabel('Epoch')
-    plt.legend(loc='best')
-
-    f.add_subplot(1, 2, 2)
-    plt.plot(range(len(t_summary.history['loss'])), t_summary.history['loss'], color='blue')
-    plt.plot(range(len(t_summary.history['val_loss'])), t_summary.history['val_loss'], color='red')
-    plt.title('Model Loss')
-    plt.xlabel("Loss")
-    plt.ylabel('Epoch')
 
 
 if __name__ == "__main__":
@@ -139,7 +117,7 @@ if __name__ == "__main__":
     # 4. Some plots
     # ----------------------------------------------------------------------------
     plt.ion()
-    plot_train_summary(training_history)
+    utils.plot_train_summary(training_history)
 
     hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 0, gen_img_row=3, gen_img_col=3, margin=1)
     hd_vis.display_hd_filter_opt_stimuli(all_conv_model, 1, gen_img_row=5, gen_img_col=5, margin=1)
