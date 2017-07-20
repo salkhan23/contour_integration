@@ -10,6 +10,7 @@
 # -------------------------------------------------------------------------------------------------
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 import keras
 from keras.datasets import cifar10
@@ -27,9 +28,8 @@ NUM_CLASSES = 10
 BATCH_SIZE = 32
 EPOCHS = 100
 
-# Set the random seed for reproducibility
-np.random.seed(7)
-
+np.random.seed(7)  # Set the random seed for reproducibility
+FILENAME = os.path.basename(__file__).split('.')[0] + '.hf'
 
 if __name__ == "__main__":
 
@@ -81,13 +81,11 @@ if __name__ == "__main__":
 
     # 3. Train the Model
     # --------------------------------------------------------------------
-    save_file = 'all_conv_net_model.hdf5'
-
     training_callbacks = []
 
     # Callback to save model as it trains
     checkpoint = keras.callbacks.ModelCheckpoint(
-        save_file,
+        FILENAME,
         monitor='val_acc',
         verbose=1,
         save_best_only=True,
