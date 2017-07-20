@@ -225,3 +225,27 @@ def add_noise(images, noise_type, **kwargs):
         output[xs[0, :], xs[1, :], xs[2,:], xs[3, :]] = 0
 
     return output
+
+
+def plot_train_summary(t_summary):
+    """
+
+    :param t_summary: Return value of model.fit()
+    :return:
+    """
+    f = plt.figure()
+
+    f. add_subplot(1, 2, 1)
+    plt.plot(range(len(t_summary.history['acc'])), t_summary.history['acc'], color='blue', label='Train')
+    plt.plot(range(len(t_summary.history['val_acc'])), t_summary.history['val_acc'], color='red', label='Test')
+    plt.title('Model Accuracy')
+    plt.xlabel("Acc")
+    plt.ylabel('Epoch')
+    plt.legend(loc='best')
+
+    f.add_subplot(1, 2, 2)
+    plt.plot(range(len(t_summary.history['loss'])), t_summary.history['loss'], color='blue')
+    plt.plot(range(len(t_summary.history['val_loss'])), t_summary.history['val_loss'], color='red')
+    plt.title('Model Loss')
+    plt.xlabel("Loss")
+    plt.ylabel('Epoch')
