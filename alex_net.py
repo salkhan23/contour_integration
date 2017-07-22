@@ -90,10 +90,9 @@ def alex_net(weights_path):
     conv_2 = crosschannelnormalization(name='convpool_1')(conv_2)
     conv_2 = ZeroPadding2D((2, 2))(conv_2)
 
-    conv_2 = merge([
-        Conv2D(128, (5, 5), activation='relu', name='conv_2_' + str(i + 1))(
-            splittensor(ratio_split=2, id_split=i)(conv_2)
-        ) for i in range(2)], mode='concat', concat_axis=1, name='conv_2')
+    conv_2_1 = Conv2D(128, (5, 5), activation='relu', name='conv_2_1')(splittensor(ratio_split=2, id_split=0)(conv_2))
+    conv_2_2 = Conv2D(128, (5, 5), activation='relu', name='conv_2_2')(splittensor(ratio_split=2, id_split=1)(conv_2))
+    conv_2 = Concatenate(axis=1, name='conv_2')([conv_2_1, conv_2_2])
 
     conv_3 = MaxPooling2D((3, 3), strides=(2, 2))(conv_2)
     conv_3 = crosschannelnormalization()(conv_3)
@@ -101,28 +100,27 @@ def alex_net(weights_path):
     conv_3 = Conv2D(384, (3, 3), activation='relu', name='conv_3')(conv_3)
 
     conv_4 = ZeroPadding2D((1, 1))(conv_3)
-    conv_4 = merge([
-        Conv2D(192, (3, 3), activation='relu', name='conv_4_' + str(i + 1))(
-            splittensor(ratio_split=2, id_split=i)(conv_4)
-        ) for i in range(2)], mode='concat', concat_axis=1, name='conv_4')
+    conv_4_1 = Conv2D(192, (3, 3), activation='relu', name='conv_4_1')(splittensor(ratio_split=2, id_split=0)(conv_4))
+    conv_4_2 = Conv2D(192, (3, 3), activation='relu', name='conv_4_2')(splittensor(ratio_split=2, id_split=1)(conv_4))
+    conv_4 = Concatenate(axis=1, name='conv_4')([conv_4_1, conv_4_2])
 
     conv_5 = ZeroPadding2D((1, 1))(conv_4)
-    conv_5 = merge([
-        Conv2D(128, (3, 3), activation='relu', name='conv_5_' + str(i + 1))(
-            splittensor(ratio_split=2, id_split=i)(conv_5)
-        ) for i in range(2)], mode='concat', concat_axis=1, name='conv_5')
+    conv_5_1 = Conv2D(128, (3, 3), activation='relu', name='conv_5_1')(splittensor(ratio_split=2, id_split=0)(conv_5))
+    conv_5_2 = Conv2D(128, (3, 3), activation='relu', name='conv_5_2')(splittensor(ratio_split=2, id_split=1)(conv_5))
+    conv_5 = Concatenate(axis=1, name='conv_5')([conv_5_1, conv_5_2])
 
     dense_1 = MaxPooling2D((3, 3), strides=(2, 2), name='convpool_5')(conv_5)
-
     dense_1 = Flatten(name='flatten')(dense_1)
     dense_1 = Dense(4096, activation='relu', name='dense_1')(dense_1)
+
     dense_2 = Dropout(0.5)(dense_1)
     dense_2 = Dense(4096, activation='relu', name='dense_2')(dense_2)
+
     dense_3 = Dropout(0.5)(dense_2)
     dense_3 = Dense(1000, name='dense_3')(dense_3)
     prediction = Activation('softmax', name='softmax')(dense_3)
 
-    model = Model(input=inputs, output=prediction)
+    model = Model(inputs=inputs, outputs=prediction)
 
     if weights_path:
         model.load_weights(weights_path, by_name=True)
@@ -136,50 +134,50 @@ if __name__ == "__main__":
     model = alex_net("trained_models/alexnet_weights.h5")
     model.summary()
 
-    weights_ch_last = model.layers[1].weights[0]
-    utils.display_filters(weights_ch_last)
-
-    from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
-
-    img = load_img("cat.7.jpg", target_size=(227,227))
-    x = img_to_array(img)
-    x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
-
-    y_hat = model.predict(x, batch_size=1, verbose=1)
-    print("Prediction %s" % np.argmax(y_hat))
-
-    #utils.display_layer_activations(model, 1, x)
-
-    layer_idx = 1
-    data_sample = x
-
-    get_layer_output = K.function(
-        [model.layers[0].input, K.learning_phase()],
-        [model.layers[layer_idx].output]
-    )
-
-    # Get the activations in a usable format
-    act_volume = np.asarray(get_layer_output(
-        [data_sample, 0],  # second input specifies the learning phase 0=output, 1=training
-    ))
-
-    # Reshape the activations, the casting above adds another dimension
-    act_volume = act_volume.reshape(
-        act_volume.shape[1],
-        act_volume.shape[2],
-        act_volume.shape[3],
-        act_volume.shape[4]
-    )
-
-    max_ch = np.int(np.round(np.sqrt(act_volume.shape[1])))
-
-    f = plt.figure()
-
-    for ch_idx in range(act_volume.shape[1]):
-        f.add_subplot(max_ch, max_ch, ch_idx + 1)
-        plt.imshow(act_volume[0, ch_idx, :, :], cmap='Greys')
-
-    f.suptitle("Feature maps of layer @ idx %d: %s" % (layer_idx, model.layers[layer_idx].name))
+    # weights_ch_last = model.layers[1].weights[0]
+    # utils.display_filters(weights_ch_last)
+    #
+    # from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
+    #
+    # img = load_img("cat.7.jpg", target_size=(227,227))
+    # x = img_to_array(img)
+    # x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
+    #
+    # y_hat = model.predict(x, batch_size=1, verbose=1)
+    # print("Prediction %s" % np.argmax(y_hat))
+    #
+    # #utils.display_layer_activations(model, 1, x)
+    #
+    # layer_idx = 1
+    # data_sample = x
+    #
+    # get_layer_output = K.function(
+    #     [model.layers[0].input, K.learning_phase()],
+    #     [model.layers[layer_idx].output]
+    # )
+    #
+    # # Get the activations in a usable format
+    # act_volume = np.asarray(get_layer_output(
+    #     [data_sample, 0],  # second input specifies the learning phase 0=output, 1=training
+    # ))
+    #
+    # # Reshape the activations, the casting above adds another dimension
+    # act_volume = act_volume.reshape(
+    #     act_volume.shape[1],
+    #     act_volume.shape[2],
+    #     act_volume.shape[3],
+    #     act_volume.shape[4]
+    # )
+    #
+    # max_ch = np.int(np.round(np.sqrt(act_volume.shape[1])))
+    #
+    # f = plt.figure()
+    #
+    # for ch_idx in range(act_volume.shape[1]):
+    #     f.add_subplot(max_ch, max_ch, ch_idx + 1)
+    #     plt.imshow(act_volume[0, ch_idx, :, :], cmap='Greys')
+    #
+    # f.suptitle("Feature maps of layer @ idx %d: %s" % (layer_idx, model.layers[layer_idx].name))
 
 
 
