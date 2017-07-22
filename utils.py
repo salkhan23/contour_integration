@@ -31,8 +31,9 @@ def deprocess_image(x):
     x += 0.5
     x = np.clip(x, 0, 1)
 
-    if K.image_data_format() == 'channels_first':  # [ch,r, c]
-        x = x.transpose((1, 2, 0))  # this is similar to K.permute dimensions but outside keras/TF
+    ## This is not needed
+    # if K.image_data_format() == 'channels_first':  # [ch,r, c]
+    #     x = x.transpose((1, 2, 0))  # this is similar to K.permute dimensions but outside keras/TF
 
     return x
 
@@ -73,11 +74,11 @@ def display_filters(weights, margin=1):
 
     :return:
     """
-
     if len(K.int_shape(weights)) == 3:
         r, c, out_ch = K.int_shape(weights)
         weights = K.reshape(weights, (r, c, 1, out_ch))
     r, c, in_ch, out_ch = K.int_shape(weights)
+    # print("display_filters: [r, c, in_ch, out_ch]", r, c, in_ch, out_ch)
 
     allowed_in_ch = [1, 3]  # can only display filters where the input dimension is 1 or 3
     if in_ch not in allowed_in_ch:
