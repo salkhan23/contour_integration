@@ -31,7 +31,7 @@ def deprocess_image(x):
     x += 0.5
     x = np.clip(x, 0, 1)
 
-    ## This is not needed
+    # # This is not needed
     # if K.image_data_format() == 'channels_first':  # [ch,r, c]
     #     x = x.transpose((1, 2, 0))  # this is similar to K.permute dimensions but outside keras/TF
 
@@ -120,11 +120,12 @@ def display_filters(weights, margin=1):
     return tiled_filters
 
 
-def display_layer_activations(model, layer_idx, data_sample):
+def display_layer_activations(model, layer_idx, data_sample, margin=1):
     """
     Display the activation volume of the specified layer. Each feature map is displayed in a separate subplot.
     Expected format of layers is [b, r, c, ch]
 
+    :param margin:
     :param model:
     :param layer_idx:
     :param data_sample:
@@ -151,21 +152,60 @@ def display_layer_activations(model, layer_idx, data_sample):
         act_volume.shape[4]
     )
 
-    max_ch = np.int(np.round(np.sqrt(act_volume.shape[-1])))
+    if K.image_data_format() == 'channels_first':
+        b, out_ch, r, c = act_volume.shape
+    else:
+        b, r, c, out_ch = act_volume.shape
+    # print("display_layer_activations: shape [b %d,out_ch %d,r %d,c %d]" % (b, out_ch, r, c))
 
+    n = np.int(np.round(np.sqrt(out_ch)))
+
+    # Construct a large image to tile all the activations
+    width = (n * r) + ((n - 1) * margin)
+    height = (n * c) + ((n - 1) * margin)
+    tiled_filters = np.zeros((width, height))
+
+    # Fill in in composite image with the filters
+    for r_idx in range(n):
+        for c_idx in range(n):
+
+            filt_idx = (r_idx * n) + c_idx
+            if filt_idx >= out_ch:
+                break
+
+            print("Processing filter %d" % filt_idx)
+
+            if K.image_data_format() == 'channels_first':
+                tiled_filters[
+                    (r + margin) * r_idx: (r + margin) * r_idx + r,
+                    (c + margin) * c_idx: (c + margin) * c_idx + c,
+                ] = deprocess_image(act_volume[0, filt_idx, :, :])
+            else:
+                tiled_filters[
+                    (r + margin) * r_idx: (r + margin) * r_idx + r,
+                    (c + margin) * c_idx: (c + margin) * c_idx + c,
+                ] = deprocess_image(act_volume[0, :, :, filt_idx])
+
+    # Plot the composite figure
     f = plt.figure()
+    plt.imshow(tiled_filters, cmap='Greys')  # force to 2D. Expected by imshow
+    plt.colorbar()
+    f.suptitle("Feature maps of layer @ idx %d: %s. [Globally scaled]" % (layer_idx, model.layers[layer_idx].name))
 
-    for ch_idx in range(act_volume.shape[-1]):
-        f.add_subplot(max_ch, max_ch, ch_idx + 1)
-        plt.imshow(act_volume[0, :, :, ch_idx], cmap='Greys')
-
-    f.suptitle("Feature maps of layer @ idx %d: %s" % (layer_idx, model.layers[layer_idx].name))
+    # Individually scaled images
+    f = plt.figure()
+    for ch_idx in range(out_ch):
+        print("Processing filter %d" % ch_idx)
+        f.add_subplot(n, n, ch_idx + 1)
+        plt.imshow((act_volume[0, ch_idx, :, :]), cmap='Greys')
+    f.suptitle("Feature maps of layer @ idx %d: %s. [Individually scaled]" % (layer_idx, model.layers[layer_idx].name))
 
     return act_volume
 
 
 def add_noise(images, noise_type, **kwargs):
     """
+    # TODO: add support for channel first format
 
     :param images:
     :param noise_type: ['gaussian', 'pepper']
@@ -189,6 +229,7 @@ def add_noise(images, noise_type, **kwargs):
 
     b, r, c, ch = images.shape
 
+    output = np.zeros_like(images)
     if noise_type == 'gaussian':
 
         var = 0.1
@@ -223,7 +264,7 @@ def add_noise(images, noise_type, **kwargs):
         # force numpy to create a separate copy of the input
         output = np.copy(images)
 
-        output[xs[0, :], xs[1, :], xs[2,:], xs[3, :]] = 0
+        output[xs[0, :], xs[1, :], xs[2, :], xs[3, :]] = 0
 
     return output
 

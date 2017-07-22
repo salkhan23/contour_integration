@@ -1,22 +1,21 @@
 # -------------------------------------------------------------------------------------------------
 #  This is the Alex Net model trained on Imagenet.
 #
-#  Code Ref: https://github.com/heuritech/convnets-keras
+#  Code Ref: https://github.com/heuritech/convnets-keras. Updated to use Keras V2 APIs
 #
 # Author: Salman Khan
 # Date  : 21/07/17
 # -------------------------------------------------------------------------------------------------
 from __future__ import print_function
 import numpy as np
-from scipy import misc
 import matplotlib.pyplot as plt
 
-
 from keras.models import Model
-from keras.layers import Input, Activation, Convolution2D, MaxPooling2D
-from keras.layers import Dense, Flatten, ZeroPadding2D, merge, Dropout
-import keras.backend as K
+from keras.layers import Input, Activation, MaxPooling2D
+from keras.layers import Dense, Flatten, ZeroPadding2D, Dropout
 from keras.layers.core import Lambda
+from keras.preprocessing.image import img_to_array, load_img
+import keras.backend as K
 
 from keras.layers import Conv2D, Concatenate
 
@@ -29,12 +28,12 @@ def crosschannelnormalization(alpha=1e-4, k=2, beta=0.75, n=5, **kwargs):
     This is the function used for cross channel normalization in the original Alexnet
     """
 
-    def f(X):
-        b, ch, r, c = K.int_shape(X)
-        print(b, ch, r, c)
+    def f(x_in):
+        b, ch, r, c = K.int_shape(x_in)
+        # print("Cross Channel Normalization: Input shape [b,ch,r,c]", b, ch, r, c)
 
         half = n // 2
-        square = K.square(X)
+        square = K.square(x_in)
         extra_channels = K.spatial_2d_padding(
             K.permute_dimensions(square, (0, 2, 3, 1)), ((0, 0), (half, half)))
 
@@ -44,23 +43,23 @@ def crosschannelnormalization(alpha=1e-4, k=2, beta=0.75, n=5, **kwargs):
         for i in range(n):
             scale += alpha * extra_channels[:, i:i + ch, :, :]
         scale = scale ** beta
-        return X / scale
+        return x_in / scale
 
     return Lambda(f, output_shape=lambda input_shape: input_shape, **kwargs)
 
 
 def splittensor(axis=1, ratio_split=1, id_split=0, **kwargs):
-    def f(X):
-        div = K.int_shape(X)[axis] // ratio_split
+    def f(x_in):
+        div = K.int_shape(x_in)[axis] // ratio_split
 
         if axis == 0:
-            output = X[id_split * div:(id_split + 1) * div, :, :, :]
+            output = x_in[id_split * div:(id_split + 1) * div, :, :, :]
         elif axis == 1:
-            output = X[:, id_split * div:(id_split + 1) * div, :, :]
+            output = x_in[:, id_split * div:(id_split + 1) * div, :, :]
         elif axis == 2:
-            output = X[:, :, id_split * div:(id_split + 1) * div, :]
+            output = x_in[:, :, id_split * div:(id_split + 1) * div, :]
         elif axis == 3:
-            output = X[:, :, :, id_split * div:(id_split + 1) * div]
+            output = x_in[:, :, :, id_split * div:(id_split + 1) * div]
         else:
             raise ValueError('This axis is not possible')
 
@@ -129,88 +128,31 @@ def alex_net(weights_path):
 
 if __name__ == "__main__":
 
+    plt.ion()
+
+    # 1. Load the model
+    # --------------------------------------------------------------------
     # Model was originally defined with Theano backend.
     K.set_image_dim_ordering('th')
-    model = alex_net("trained_models/alexnet_weights.h5")
-    model.summary()
+    alex_net_model = alex_net("trained_models/AlexNet/alexnet_weights.h5")
+    alex_net_model.summary()
 
-    # weights_ch_last = model.layers[1].weights[0]
-    # utils.display_filters(weights_ch_last)
-    #
-    # from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
-    #
-    # img = load_img("cat.7.jpg", target_size=(227,227))
-    # x = img_to_array(img)
-    # x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
-    #
+    # 2. Display First Layer Filters
+    # --------------------------------------------------------------------
+    weights_ch_last = alex_net_model.layers[1].weights[0]
+    utils.display_filters(weights_ch_last)
+
+    # 3. Display the activations of a test image
+    # ---------------------------------------------------------------------
+    img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
+    img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    plt.figure()
+    plt.imshow(img)
+
+    x = img_to_array(img)
+    x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
+
     # y_hat = model.predict(x, batch_size=1, verbose=1)
     # print("Prediction %s" % np.argmax(y_hat))
-    #
-    # #utils.display_layer_activations(model, 1, x)
-    #
-    # layer_idx = 1
-    # data_sample = x
-    #
-    # get_layer_output = K.function(
-    #     [model.layers[0].input, K.learning_phase()],
-    #     [model.layers[layer_idx].output]
-    # )
-    #
-    # # Get the activations in a usable format
-    # act_volume = np.asarray(get_layer_output(
-    #     [data_sample, 0],  # second input specifies the learning phase 0=output, 1=training
-    # ))
-    #
-    # # Reshape the activations, the casting above adds another dimension
-    # act_volume = act_volume.reshape(
-    #     act_volume.shape[1],
-    #     act_volume.shape[2],
-    #     act_volume.shape[3],
-    #     act_volume.shape[4]
-    # )
-    #
-    # max_ch = np.int(np.round(np.sqrt(act_volume.shape[1])))
-    #
-    # f = plt.figure()
-    #
-    # for ch_idx in range(act_volume.shape[1]):
-    #     f.add_subplot(max_ch, max_ch, ch_idx + 1)
-    #     plt.imshow(act_volume[0, ch_idx, :, :], cmap='Greys')
-    #
-    # f.suptitle("Feature maps of layer @ idx %d: %s" % (layer_idx, model.layers[layer_idx].name))
 
-
-
-
-
-
-    # x = img_to_array(img, 'channels_first')
-    # x = x.reshape((1,) + x.shape)
-    # print(x.shape)
-    #
-    # inp = Input(shape=(None, None, 3))
-    # out1 = Lambda(lambda image: K.image.resize_images(image, (128, 128)))(inp)
-    # model2 = Model(input=inp, output=out1)
-    #
-    #
-    # f = misc.imread("cat.7.jpg")
-    # out = model2.predict(f[np.newaxis, ...])
-    #
-    # fig, Axes = plt.subplots(nrows=1, ncols=2)
-    # Axes[0].imshow(f)
-    # Axes[1].imshow(np.int8(out[0, ...]))
-    #
-    #
-    #
-    # # f = np.reshape(f, (1, f.shape[0],f.shape[1],f.shape[2]))
-    # # f = K.resize_images(f, 227, 227, 'channels_first')
-    # # print(f.shape)
-    # # plt.ion()
-    # #
-    # # plt.imshow(f)
-    # #
-    # # y_hat = model.predict(f, batch_size=1, verbose=0)
-    # # print("Estimate sample", np.argmax(y_hat))
-
-
-
+    utils.display_layer_activations(alex_net_model, 1, x)
