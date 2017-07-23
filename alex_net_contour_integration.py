@@ -14,7 +14,6 @@ from keras.models import Model
 from keras.layers import Input, Activation, MaxPooling2D, Conv2D, Concatenate
 from keras.layers import Dense, Flatten, ZeroPadding2D, Dropout
 from keras.engine.topology import Layer
-from keras.layers.core import Lambda
 from keras.preprocessing.image import img_to_array, load_img
 import keras.backend as K
 
@@ -24,9 +23,6 @@ import utils
 reload(utils)
 reload(learned_lateral_weights)
 reload(alex_net)
-
-import keras.initializers as initializers
-import keras.regularizers as regularizers
 
 
 class ContourIntegrationLayer(Layer):
@@ -42,8 +38,8 @@ class ContourIntegrationLayer(Layer):
         kernel = np.reshape(kernel, (1, kernel.shape[0], kernel.shape[1]))
         kernel = np.repeat(kernel, 96, axis=0)
         # Normalize the kernel
-        #norm = np.square(kernel).sum()
-        #kernel = kernel / norm
+        # norm = np.square(kernel).sum()
+        # kernel = kernel / norm
 
         self.kernel = K.variable(kernel)
         self.n = 3  # single dimension of the square kernel
@@ -85,7 +81,7 @@ class ContourIntegrationLayer(Layer):
             inputs_chan_first = K.permute_dimensions(padded_inputs, [3, 0, 1, 2])
         else:
             inputs_chan_first = K.permute_dimensions(padded_inputs, [1, 0, 2, 3])
-        print("Call Fcn: inputs_chan_first shape: ", inputs_chan_first.shape)
+        # print("Call Fcn: inputs_chan_first shape: ", inputs_chan_first.shape)
 
         # 2. Kernel Formatting
         # --------------------
@@ -186,8 +182,8 @@ def build_model(weights_path):
 
     model = Model(inputs=inputs, outputs=prediction)
 
-    # if weights_path:
-    #     model.load_weights(weights_path, by_name=True)
+    if weights_path:
+        model.load_weights(weights_path, by_name=True)
 
     return model
 
@@ -204,9 +200,9 @@ if __name__ == "__main__":
 
     # 2. Display First Layer Filters
     # --------------------------------------------------------------------
-    # weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
-    # utils.display_filters(weights_ch_last)
-    #
+    weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
+    utils.display_filters(weights_ch_last)
+
     # weights_ch_last = alex_net_cont_int_model.layers[2].kernel
     # utils.display_filters(weights_ch_last)
 
@@ -226,3 +222,9 @@ if __name__ == "__main__":
     utils.display_layer_activations(alex_net_cont_int_model, 1, x)
     utils.display_layer_activations(alex_net_cont_int_model, 2, x)
 
+    # 4. Create a random image that maximized the output of a particular activation layer
+    # ---------------------------------------------------------------------------------
+    test_image = np.zeros_like(x)
+    for ii in range(test_image.shape[0]):
+        for jj in range(test_image.shape[1]):
+            test_image
