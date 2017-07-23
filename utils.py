@@ -75,8 +75,15 @@ def display_filters(weights, margin=1):
     :return:
     """
     if len(K.int_shape(weights)) == 3:
-        r, c, out_ch = K.int_shape(weights)
-        weights = K.reshape(weights, (r, c, 1, out_ch))
+
+        if K.image_data_format() == 'channels_last':
+            r, c, out_ch = K.int_shape(weights)
+            weights = K.reshape(weights, (r, c, 1, out_ch))
+        else:
+            out_ch, r, c = K.int_shape(weights)
+            weights = K.reshape(weights, (out_ch, r, c, 1))
+            weights = K.permute_dimensions(weights, [1, 2, 3, 0])
+
     r, c, in_ch, out_ch = K.int_shape(weights)
     # print("display_filters: [r, c, in_ch, out_ch]", r, c, in_ch, out_ch)
 
@@ -192,13 +199,13 @@ def display_layer_activations(model, layer_idx, data_sample, margin=1):
     plt.colorbar()
     f.suptitle("Feature maps of layer @ idx %d: %s. [Globally scaled]" % (layer_idx, model.layers[layer_idx].name))
 
-    # Individually scaled images
-    f = plt.figure()
-    for ch_idx in range(out_ch):
-        print("Processing filter %d" % ch_idx)
-        f.add_subplot(n, n, ch_idx + 1)
-        plt.imshow((act_volume[0, ch_idx, :, :]), cmap='Greys')
-    f.suptitle("Feature maps of layer @ idx %d: %s. [Individually scaled]" % (layer_idx, model.layers[layer_idx].name))
+    # # Individually scaled images
+    # f = plt.figure()
+    # for ch_idx in range(out_ch):
+    #     print("Processing filter %d" % ch_idx)
+    #     f.add_subplot(n, n, ch_idx + 1)
+    #     plt.imshow((act_volume[0, ch_idx, :, :]), cmap='Greys')
+    # f.suptitle("Feature maps of layer @ idx %d: %s. [Individually scaled]" % (layer_idx, model.layers[layer_idx].name))
 
     return act_volume
 
