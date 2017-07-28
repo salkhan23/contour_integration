@@ -199,16 +199,16 @@ if __name__ == "__main__":
     alex_net_cont_int_model = build_model("trained_models/AlexNet/alexnet_weights.h5")
     # alex_net_cont_int_model.summary()
 
-    # 2. Display filters in the first convolutional and contour integration layers
-    # --------------------------------------------------------------------
-    weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
-    utils.display_filters(weights_ch_last)
+    # # 2. Display filters in the first convolutional and contour integration layers
+    # # --------------------------------------------------------------------
+    # weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
+    # utils.display_filters(weights_ch_last)
 
     # weights_ch_last = alex_net_cont_int_model.layers[2].kernel
     # utils.display_filters(weights_ch_last)
 
-    # 3. Display the activations of a test image
-    # ---------------------------------------------------------------------
+    # # 3. Display the activations of a test image
+    # # ---------------------------------------------------------------------
     # img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
     img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
     plt.figure()
@@ -218,6 +218,7 @@ if __name__ == "__main__":
     x = img_to_array(img)
     x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
 
+
     # y_hat = alex_net_cont_int_model.predict(x, batch_size=1, verbose=1)
     # print("Prediction %s" % np.argmax(y_hat))
 
@@ -226,12 +227,16 @@ if __name__ == "__main__":
 
     # 4. Create a random image that maximized the output of a particular neuron in the conv layer
     # --------------------------------------------------------------------------------------------
-    tgt_filt_idx = 21
+    tgt_filt_idx = 10
 
     tgt_filter = K.eval(alex_net_cont_int_model.layers[1].weights[0])
     tgt_filter = utils.deprocess_image(tgt_filter[:, :, :, tgt_filt_idx])
+    plt.figure()
+    plt.imshow(tgt_filter)
+    plt.title("Target Filter")
 
     stride = 4  # The Stride using the in convolutional layer
+    skip_every = 3
     img_dim = 227
     filt_dim = 11
     n = (img_dim - filt_dim) / stride + 1
@@ -240,9 +245,10 @@ if __name__ == "__main__":
 
     for ii in range(n):
         for jj in range(n):
-            test_image[
-                ii*stride: ii*stride + filt_dim,
-                jj * stride: jj * stride + filt_dim, :] += tgt_filter
+            if (ii % skip_every == 0) & (jj % skip_every == 0):
+                test_image[
+                    ii*stride: ii*stride + filt_dim,
+                    jj * stride: jj * stride + filt_dim, :] += tgt_filter
 
     plt.figure()
     plt.imshow(test_image)
@@ -250,7 +256,8 @@ if __name__ == "__main__":
     # 5. Pass the image through the model and look at the activations
     # ----------------------------------------------------------------
     x = test_image
-    x = np.reshape(x, [1, x.shape[2], x.shape[0], x.shape[1]])
+    x = np.transpose(x, (2, 0, 1))
+    x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
 
     utils.display_layer_activations(alex_net_cont_int_model, 1, x)
-    # utils.display_layer_activations(alex_net_cont_int_model, 2, x)
+    utils.display_layer_activations(alex_net_cont_int_model, 2, x)
