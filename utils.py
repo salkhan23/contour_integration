@@ -197,15 +197,7 @@ def display_layer_activations(model, layer_idx, data_sample, margin=1):
     f = plt.figure()
     plt.imshow(tiled_filters, cmap='Greys')  # force to 2D. Expected by imshow
     plt.colorbar()
-    f.suptitle("Feature maps of layer @ idx %d: %s. [Globally scaled]" % (layer_idx, model.layers[layer_idx].name))
-
-    # # Individually scaled images
-    # f = plt.figure()
-    # for ch_idx in range(out_ch):
-    #     print("Processing filter %d" % ch_idx)
-    #     f.add_subplot(n, n, ch_idx + 1)
-    #     plt.imshow((act_volume[0, ch_idx, :, :]), cmap='Greys')
-    # f.suptitle("Feature maps of layer @ idx %d: %s. [Individually scaled]" % (layer_idx, model.layers[layer_idx].name))
+    f.suptitle("Feature maps of layer @ idx %d: %s." % (layer_idx, model.layers[layer_idx].name))
 
     return act_volume
 
