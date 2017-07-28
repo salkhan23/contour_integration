@@ -24,6 +24,8 @@ reload(utils)
 reload(learned_lateral_weights)
 reload(alex_net)
 
+np.random.seed(7)  # Set the random seed for reproducibility
+
 
 class ContourIntegrationLayer(Layer):
 
@@ -34,7 +36,7 @@ class ContourIntegrationLayer(Layer):
         :param kwargs:
         """
 
-        kernel = np.array([[1, 0, -1], [0, 1, 0], [-1, 0, 1]])
+        kernel = np.array([[1, 0, -1], [0, 1, 0], [-1, 0, 1]]) / 0.25
         kernel = np.reshape(kernel, (1, kernel.shape[0], kernel.shape[1]))
         kernel = np.repeat(kernel, 96, axis=0)
         # Normalize the kernel
@@ -191,14 +193,13 @@ if __name__ == "__main__":
 
     plt.ion()
 
-    # 1. Buld the model
+    # 1. Build the model
     # --------------------------------------------------------------------
-    # Model was originally defined with Theano backend.
-    K.set_image_dim_ordering('th')
+    K.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
     alex_net_cont_int_model = build_model("trained_models/AlexNet/alexnet_weights.h5")
     # alex_net_cont_int_model.summary()
 
-    # 2. Display First Layer Filters
+    # 2. Display filters in the first convolutional and contour integration layers
     # --------------------------------------------------------------------
     weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
     utils.display_filters(weights_ch_last)
@@ -210,21 +211,46 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------
     # img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
     img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
-    # plt.figure()
-    # plt.imshow(img)
+    plt.figure()
+    plt.imshow(img)
+    plt.title('Original Image')
 
     x = img_to_array(img)
     x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
 
-    y_hat = alex_net_cont_int_model.predict(x, batch_size=1, verbose=1)
-    print("Prediction %s" % np.argmax(y_hat))
+    # y_hat = alex_net_cont_int_model.predict(x, batch_size=1, verbose=1)
+    # print("Prediction %s" % np.argmax(y_hat))
 
     utils.display_layer_activations(alex_net_cont_int_model, 1, x)
     utils.display_layer_activations(alex_net_cont_int_model, 2, x)
 
-    # 4. Create a random image that maximized the output of a particular activation layer
-    # ---------------------------------------------------------------------------------
-    test_image = np.zeros_like(x)
-    for ii in range(test_image.shape[0]):
-        for jj in range(test_image.shape[1]):
-            test_image
+    # 4. Create a random image that maximized the output of a particular neuron in the conv layer
+    # --------------------------------------------------------------------------------------------
+    tgt_filt_idx = 21
+
+    tgt_filter = K.eval(alex_net_cont_int_model.layers[1].weights[0])
+    tgt_filter = utils.deprocess_image(tgt_filter[:, :, :, tgt_filt_idx])
+
+    stride = 4  # The Stride using the in convolutional layer
+    img_dim = 227
+    filt_dim = 11
+    n = (img_dim - filt_dim) / stride + 1
+
+    test_image = np.zeros((img_dim, img_dim, 3))
+
+    for ii in range(n):
+        for jj in range(n):
+            test_image[
+                ii*stride: ii*stride + filt_dim,
+                jj * stride: jj * stride + filt_dim, :] += tgt_filter
+
+    plt.figure()
+    plt.imshow(test_image)
+
+    # 5. Pass the image through the model and look at the activations
+    # ----------------------------------------------------------------
+    x = test_image
+    x = np.reshape(x, [1, x.shape[2], x.shape[0], x.shape[1]])
+
+    utils.display_layer_activations(alex_net_cont_int_model, 1, x)
+    # utils.display_layer_activations(alex_net_cont_int_model, 2, x)
