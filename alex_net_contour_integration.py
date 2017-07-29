@@ -35,8 +35,8 @@ class ContourIntegrationLayer(Layer):
         :param n:
         :param kwargs:
         """
-
-        kernel = np.array([[1, 0, -1], [0, 1, 0], [-1, 0, 1]]) / 0.25
+        # kernel = np.array([[1, 0, -1], [0, 1, 0], [-1, 0, 1]]) / 0.25
+        kernel = np.array([[0, 1, 0], [-1, 0, -1], [0, 1, 0]]) / 4.0
         kernel = np.reshape(kernel, (1, kernel.shape[0], kernel.shape[1]))
         kernel = np.repeat(kernel, 96, axis=0)
         # Normalize the kernel
@@ -189,6 +189,40 @@ def build_model(weights_path):
 
     return model
 
+
+def get_layer_activation(model, layer_idx, data_sample):
+    """
+    Return the activation volume of the specified layer.
+
+    :param model:
+    :param layer_idx:
+    :param data_sample:
+
+    :return: the whole activation volume
+    """
+
+    # Define a function to get the activation volume
+    get_layer_output = K.function(
+        [model.layers[0].input, K.learning_phase()],
+        [model.layers[layer_idx].output]
+    )
+
+    # Get the activations in a usable format
+    act_volume = np.asarray(get_layer_output(
+        [data_sample, 0],  # second input specifies the learning phase 0=output, 1=training
+    ))
+
+    # Reshape the activations, the casting above adds another dimension
+    act_volume = act_volume.reshape(
+        act_volume.shape[1],
+        act_volume.shape[2],
+        act_volume.shape[3],
+        act_volume.shape[4]
+    )
+
+    return act_volume
+
+
 if __name__ == "__main__":
 
     plt.ion()
@@ -196,6 +230,7 @@ if __name__ == "__main__":
     # 1. Build the model
     # --------------------------------------------------------------------
     K.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
+    print("Building Contour Integration Model...")
     alex_net_cont_int_model = build_model("trained_models/AlexNet/alexnet_weights.h5")
     # alex_net_cont_int_model.summary()
 
@@ -210,31 +245,28 @@ if __name__ == "__main__":
     # # 3. Display the activations of a test image
     # # ---------------------------------------------------------------------
     # img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
-    img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
-    plt.figure()
-    plt.imshow(img)
-    plt.title('Original Image')
-
-    x = img_to_array(img)
-    x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
-
-
-    # y_hat = alex_net_cont_int_model.predict(x, batch_size=1, verbose=1)
-    # print("Prediction %s" % np.argmax(y_hat))
-
-    utils.display_layer_activations(alex_net_cont_int_model, 1, x)
-    utils.display_layer_activations(alex_net_cont_int_model, 2, x)
+    # img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    # plt.figure()
+    # plt.imshow(img)
+    # plt.title('Original Image')
+    #
+    # x = img_to_array(img)
+    # x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
+    #
+    # # y_hat = alex_net_cont_int_model.predict(x, batch_size=1, verbose=1)
+    # # print("Prediction %s" % np.argmax(y_hat))
+    #
+    # utils.display_layer_activations(alex_net_cont_int_model, 1, x)
+    # utils.display_layer_activations(alex_net_cont_int_model, 2, x)
 
     # 4. Create a random image that maximized the output of a particular neuron in the conv layer
     # --------------------------------------------------------------------------------------------
+    # Target Filter
     tgt_filt_idx = 10
-
     tgt_filter = K.eval(alex_net_cont_int_model.layers[1].weights[0])
-    tgt_filter = utils.deprocess_image(tgt_filter[:, :, :, tgt_filt_idx])
-    plt.figure()
-    plt.imshow(tgt_filter)
-    plt.title("Target Filter")
+    tgt_filter = tgt_filter[:, :, :, tgt_filt_idx]
 
+    # Generate test image
     stride = 4  # The Stride using the in convolutional layer
     skip_every = 3
     img_dim = 227
@@ -243,15 +275,27 @@ if __name__ == "__main__":
 
     test_image = np.zeros((img_dim, img_dim, 3))
 
-    for ii in range(n):
-        for jj in range(n):
-            if (ii % skip_every == 0) & (jj % skip_every == 0):
-                test_image[
-                    ii*stride: ii*stride + filt_dim,
-                    jj * stride: jj * stride + filt_dim, :] += tgt_filter
+    ii = 22
+    jj = 22
+    test_image[
+        ii*stride: ii*stride + filt_dim,
+        jj * stride: jj * stride + filt_dim, :] += tgt_filter
 
-    plt.figure()
+    # for ii in range(n):
+    #     for jj in range(n):
+    #         if (ii % skip_every == 0) & (jj % skip_every == 0):
+    #             test_image[
+    #                 ii*stride: ii*stride + filt_dim,
+    #                 jj * stride: jj * stride + filt_dim, :] += tgt_filter
+    #
+
+    f = plt.figure()
+    f.add_subplot(1, 2, 1)
+    plt.imshow(tgt_filter)
+    plt.title("Target Filter")
+    f.add_subplot(1, 2, 2)
     plt.imshow(test_image)
+    plt.title('Generated Image')
 
     # 5. Pass the image through the model and look at the activations
     # ----------------------------------------------------------------
@@ -259,5 +303,18 @@ if __name__ == "__main__":
     x = np.transpose(x, (2, 0, 1))
     x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
 
-    utils.display_layer_activations(alex_net_cont_int_model, 1, x)
-    utils.display_layer_activations(alex_net_cont_int_model, 2, x)
+    l1_activations = get_layer_activation(alex_net_cont_int_model, 1, x)
+    l2_activations = get_layer_activation(alex_net_cont_int_model, 2, x)
+
+    f = plt.figure()
+    f.add_subplot(1, 2, 1)
+    plt.imshow(l1_activations[0, tgt_filt_idx, :, :], cmap='Greys')
+    plt.title('Raw Feature map of conv layer (l1) at index %d' % tgt_filt_idx)
+    plt.colorbar(orientation='horizontal')
+    plt.grid()
+    f.add_subplot(1, 2, 2)
+    plt.imshow(l2_activations[0, tgt_filt_idx, :, :], cmap='Greys')
+    plt.title('Raw Feature map of contour integration layer (l2) at index %d' % tgt_filt_idx)
+    plt.colorbar(orientation='horizontal')
+    plt.grid()
+
