@@ -223,6 +223,30 @@ def get_layer_activation(model, layer_idx, data_sample):
     return act_volume
 
 
+def add_fragment_at_location(image, fragment, loc_x, loc_y):
+    """
+
+    :param image:
+    :param fragment:
+    :param loc_x:
+    :param loc_y:
+    :return:
+    """
+    stride = 4  # The Stride using the in convolutional layer
+    filt_dim = 11
+
+    print("Location of filter x: %d-%d, y: %d-%d"
+          % (loc_x * stride,  loc_x * stride + filt_dim, loc_y * stride, loc_y * stride + filt_dim))
+
+    image[
+        loc_x * stride: loc_x * stride + filt_dim,
+        loc_y * stride: loc_y * stride + filt_dim,
+        :,
+    ] += fragment
+
+    return image
+
+
 if __name__ == "__main__":
 
     plt.ion()
@@ -266,28 +290,45 @@ if __name__ == "__main__":
     tgt_filter = K.eval(alex_net_cont_int_model.layers[1].weights[0])
     tgt_filter = tgt_filter[:, :, :, tgt_filt_idx]
 
-    # Generate test image
-    stride = 4  # The Stride using the in convolutional layer
-    skip_every = 3
-    img_dim = 227
-    filt_dim = 11
-    n = (img_dim - filt_dim) / stride + 1
+    # # # Fake Filter
+    # tgt_filter = np.zeros((11, 11, 3))
+    # tgt_filter[:, (1, 2, 6, 7, 8), :] = 1
 
+    # Generate test image
+    img_dim = 227
     test_image = np.zeros((img_dim, img_dim, 3))
 
-    ii = 22
-    jj = 22
-    test_image[
-        ii*stride: ii*stride + filt_dim,
-        jj * stride: jj * stride + filt_dim, :] += tgt_filter
+    # Point
+    add_fragment_at_location(test_image, tgt_filter, 22, 10)
 
-    # for ii in range(n):
-    #     for jj in range(n):
-    #         if (ii % skip_every == 0) & (jj % skip_every == 0):
-    #             test_image[
-    #                 ii*stride: ii*stride + filt_dim,
-    #                 jj * stride: jj * stride + filt_dim, :] += tgt_filter
-    #
+    # parallel line (continuous)
+    # test_image[100:200, 22, :] = 1
+    add_fragment_at_location(test_image, tgt_filter, 10, 20)
+    add_fragment_at_location(test_image, tgt_filter, 11, 20)
+    add_fragment_at_location(test_image, tgt_filter, 12, 20)
+    add_fragment_at_location(test_image, tgt_filter, 13, 20)
+    add_fragment_at_location(test_image, tgt_filter, 14, 20)
+
+    # non-overlapping
+    add_fragment_at_location(test_image, tgt_filter, 30, 20)
+    add_fragment_at_location(test_image, tgt_filter, 33, 20)
+    add_fragment_at_location(test_image, tgt_filter, 36, 20)
+    add_fragment_at_location(test_image, tgt_filter, 39, 20)
+    add_fragment_at_location(test_image, tgt_filter, 42, 20)
+
+    # Orthogonal Line (overlapping)
+    add_fragment_at_location(test_image, tgt_filter, 10, 40)
+    add_fragment_at_location(test_image, tgt_filter, 10, 41)
+    add_fragment_at_location(test_image, tgt_filter, 10, 42)
+    add_fragment_at_location(test_image, tgt_filter, 10, 43)
+    add_fragment_at_location(test_image, tgt_filter, 10, 44)
+
+    # Orthogonal Line(slightly overlapping)
+    add_fragment_at_location(test_image, tgt_filter, 30, 40)
+    add_fragment_at_location(test_image, tgt_filter, 30, 42)
+    add_fragment_at_location(test_image, tgt_filter, 30, 44)
+    add_fragment_at_location(test_image, tgt_filter, 30, 46)
+    add_fragment_at_location(test_image, tgt_filter, 30, 48)
 
     f = plt.figure()
     f.add_subplot(1, 2, 1)
@@ -317,4 +358,3 @@ if __name__ == "__main__":
     plt.title('Raw Feature map of contour integration layer (l2) at index %d' % tgt_filt_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
-
