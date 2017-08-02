@@ -35,13 +35,11 @@ class ContourIntegrationLayer(Layer):
         :param n:
         :param kwargs:
         """
-        # kernel = np.array([[1, 0, -1], [0, 1, 0], [-1, 0, 1]]) / 0.25
-        kernel = np.array([[0, 1, 0], [-1, 0, -1], [0, 1, 0]]) / 4.0
-        kernel = np.reshape(kernel, (1, kernel.shape[0], kernel.shape[1]))
-        kernel = np.repeat(kernel, 96, axis=0)
-        # Normalize the kernel
-        # norm = np.square(kernel).sum()
-        # kernel = kernel / norm
+        kernel = np.zeros((96, 3, 3))
+        kernel[10, :, :] = np.array([[0, 1, 0], [-1, 0, -1], [0, 1, 0]]) / 4.0
+        kernel[ 5, :, :] = np.array([[0, -1, 0], [1, 0, 1], [0, -1, 0]]) / 4.0
+        kernel[54, :, :] = np.array([[1, 0, -1], [0, 0, 0], [-1, 0, 1]]) / 4.0
+        kernel[67, :, :] = np.array([[1, 0, -1], [0, 0, 0], [-1, 0, 1]]) / 4.0
 
         self.kernel = K.variable(kernel)
         self.n = 3  # single dimension of the square kernel
@@ -298,6 +296,14 @@ def generate_test_contour_image_from_fragment(fragment, overlap=4, img_dim=227):
     for ii in range(4):
         test_image[start_x: start_x + 11, start_y + ii * 11: start_y + (ii + 1) * 11, :] = fragment
 
+    # DIAGONAL (backward slash): overlapping
+    add_fragment_at_location(test_image, fragment, 30, 5)
+    add_fragment_at_location(test_image, fragment, 31, 6)
+    add_fragment_at_location(test_image, fragment, 32, 7)
+    add_fragment_at_location(test_image, fragment, 33, 8)
+    add_fragment_at_location(test_image, fragment, 34, 9)
+    test_image = np.clip(test_image, 0, 1)
+
     # DIAGONAL (backward slash): Visually Non-overlapping fragments. Spatially adjacent with no gaps
     start_x = 40 * overlap
     start_y = 5 * overlap
@@ -338,8 +344,8 @@ def plot_tgt_filters_activations(model, image, f_idx):
 
     f = plt.figure()
     f.add_subplot(1, 2, 1)
-    max_activation = l2_activations.max()
-    min_activation = l2_activations.min()
+    max_activation = l2_activations[0, f_idx, :, :].max()
+    min_activation = l2_activations[0, f_idx, :, :].min()
 
     plt.imshow(l1_activations[0, f_idx, :, :], cmap='seismic', vmin=min_activation, vmax=max_activation)
     plt.title('Raw Feature map of conv layer (l1) at index %d' % f_idx)
@@ -373,22 +379,34 @@ def main(model, fragment, f_idx):
 
     contour_test_image = generate_test_contour_image_from_fragment(fragment)
 
-    plt.figure()
-    ax = plt.subplot2grid((2, 4), (0, 0))
+    f = plt.figure()
+    ax = plt.subplot2grid((3, 8), (0, 0),  colspan=2)
     ax.imshow(tgt_conv1_filter)
     ax.set_title('Conv 1 Filter @ idx %d' % f_idx)
 
-    ax1 = plt.subplot2grid((2, 4), (0, 1))
-    ax1.imshow(contour_1)
+    ax1 = plt.subplot2grid((3, 8), (0, 2), colspan=2)
+    ax1.imshow(fragment)
     ax1.set_title('Contour Fragment')
 
-    ax2 = plt.subplot2grid((2, 4), (0, 2), colspan=2, rowspan=2)
+    ax2 = plt.subplot2grid((3, 8), (0, 4), colspan=4, rowspan=3)
     ax2.imshow(contour_test_image)
     ax2.set_title('Test image')
 
-    ax3 = plt.subplot2grid((2, 4), (1, 0))
-    ax3.imshow(tgt_cont_int_filter)
+    ax3 = plt.subplot2grid((3, 8), (1, 0), colspan=2)
+    ax3.imshow(tgt_cont_int_filter, cmap='seismic')
     ax3.set_title('Cont. Int. Filter @ idx %d' % f_idx)
+
+    # Show individual slices of the conv filter
+    tgt_conv_filter_min = tgt_conv1_filter.min()
+    tgt_conv_filter_max = tgt_conv1_filter.max()
+    ax4 = plt.subplot2grid((3, 8), (2, 0))
+    ax4.imshow(tgt_conv1_filter[:, :, 0], cmap='seismic', vmin=tgt_conv_filter_min, vmax=tgt_conv_filter_max)
+    ax5 = plt.subplot2grid((3, 8), (2, 1))
+    ax5.imshow(tgt_conv1_filter[:, :, 1], cmap='seismic', vmin=tgt_conv_filter_min, vmax=tgt_conv_filter_max)
+    ax6 = plt.subplot2grid((3, 8), (2, 2))
+    ax_for_cb = \
+        ax6.imshow(tgt_conv1_filter[:, :, 2], cmap='seismic', vmin=tgt_conv_filter_min, vmax=tgt_conv_filter_max)
+    f.colorbar(ax_for_cb,)
 
     plot_tgt_filters_activations(model, contour_test_image, f_idx)
 
@@ -402,12 +420,12 @@ if __name__ == "__main__":
     K.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
     print("Building Contour Integration Model...")
     alex_net_cont_int_model = build_model("trained_models/AlexNet/alexnet_weights.h5")
-    # alex_net_cont_int_model.summary()
+    alex_net_cont_int_model.summary()
 
     # # 2. Display filters in the first convolutional and contour integration layers
     # # --------------------------------------------------------------------
-    # weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
-    # utils.display_filters(weights_ch_last)
+    #weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
+    #utils.display_filters(weights_ch_last)
 
     # weights_ch_last = alex_net_cont_int_model.layers[2].kernel
     # utils.display_filters(weights_ch_last)
@@ -429,11 +447,32 @@ if __name__ == "__main__":
     # utils.display_layer_activations(alex_net_cont_int_model, 1, x)
     # utils.display_layer_activations(alex_net_cont_int_model, 2, x)
 
-    # 4. Create a random image that maximized the output of a particular neuron in the conv layer
-    # --------------------------------------------------------------------------------------------
-    # Target Filter(s) first conv layer and contour integration layer
+    # 4. Contour Enhancement Visualizations
+    # ---------------------------------------------------------------------
+    # Vertical Filter
     tgt_filt_idx = 10
     contour_1 = np.zeros((11, 11, 3))
     contour_1[:, (0, 3, 4, 5, 9, 10), :] = 1
-
     main(alex_net_cont_int_model, contour_1, tgt_filt_idx)
+
+    # Horizontal Filter
+    tgt_filt_idx = 5
+    contour_2 = np.zeros((11, 11, 3))
+    contour_2[0:6, :, :] = 1
+    main(alex_net_cont_int_model, contour_2, tgt_filt_idx)
+
+    # # Diagonal Filter (back slash)
+    # tgt_filt_idx = 67
+    # contour_3 = K.eval(alex_net_cont_int_model.layers[1].weights[0])
+    # contour_3 = contour_3[:, :, :, tgt_filt_idx]
+    # contour_3 = np.zeros((11, 11))
+    # contour_3[0, :] = [1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1]
+    # for i in range(1, 11):
+    #     if (i % 2) == 0:
+    #         contour_3[i, :] = np.roll(contour_3[i-1, :], 1)
+    #     else:
+    #         contour_3[i, :] = contour_3[i-1, :]
+    # contour_3 = np.reshape(contour_3, (11, 11, 1))
+    # contour_3 = np.repeat(contour_3, 3, axis=2)
+    # main(alex_net_cont_int_model, contour_3, tgt_filt_idx)
+
