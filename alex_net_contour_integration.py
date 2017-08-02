@@ -233,18 +233,92 @@ def add_fragment_at_location(image, fragment, loc_x, loc_y):
     :return:
     """
     stride = 4  # The Stride using the in convolutional layer
-    filt_dim = 11
+    filt_dim_r = fragment.shape[0]
+    filt_dim_c = fragment.shape[1]
 
-    print("Location of filter x: %d-%d, y: %d-%d"
-          % (loc_x * stride,  loc_x * stride + filt_dim, loc_y * stride, loc_y * stride + filt_dim))
+    print("Fragment Placed at x: %d-%d, y: %d-%d"
+          % (loc_x * stride,  loc_x * stride + filt_dim_r, loc_y * stride, loc_y * stride + filt_dim_c))
 
     image[
-        loc_x * stride: loc_x * stride + filt_dim,
-        loc_y * stride: loc_y * stride + filt_dim,
+        loc_x * stride: loc_x * stride + filt_dim_r,
+        loc_y * stride: loc_y * stride + filt_dim_c,
         :,
     ] += fragment
 
     return image
+
+
+def generate_test_contour_image_from_fragment(fragment, overlap=4, img_dim=227):
+    """
+     Generates contours by spatially tiling fragments
+
+    :param img_dim:  dimension of the generated image (square image generated)
+    :param overlap:  Number of pixels that overlap between tiled fragments (stride of the convolutional layer)
+    :param fragment:
+    :return:
+    """
+    test_image = np.zeros((img_dim, img_dim, 3))
+
+    # Single Point
+    add_fragment_at_location(test_image, fragment, 10, 10)
+
+    # VERTICAL: Overlapping fragments
+    # # contour_2 = np.zeros(((conv_1_stride * (5 - 1) + 11), 11, 3))
+    # # contour_2[:, (0, 3, 4, 5, 9, 10), :] = 1
+    # # add_fragment_at_location(test_image, contour_2, 5, 20)
+    add_fragment_at_location(test_image, fragment, 5, 20)
+    add_fragment_at_location(test_image, fragment, 6, 20)
+    add_fragment_at_location(test_image, fragment, 7, 20)
+    add_fragment_at_location(test_image, fragment, 8, 20)
+    add_fragment_at_location(test_image, fragment, 9, 20)
+    test_image = np.clip(test_image, 0, 1)
+
+    # VERTICAL: Non-overlapping fragments
+    add_fragment_at_location(test_image, fragment, 16, 20)
+    add_fragment_at_location(test_image, fragment, 20, 20)
+    add_fragment_at_location(test_image, fragment, 24, 20)
+    add_fragment_at_location(test_image, fragment, 28, 20)
+
+    # HORIZONTAL: Overlapping fragments
+    add_fragment_at_location(test_image, fragment, 5, 40)
+    add_fragment_at_location(test_image, fragment, 5, 41)
+    add_fragment_at_location(test_image, fragment, 5, 42)
+    add_fragment_at_location(test_image, fragment, 5, 43)
+    test_image = np.clip(test_image, 0, 1)
+
+    # HORIZONTAL: Non-overlapping fragments
+    add_fragment_at_location(test_image, fragment, 15, 40)
+    add_fragment_at_location(test_image, fragment, 15, 44)
+    add_fragment_at_location(test_image, fragment, 15, 48)
+    add_fragment_at_location(test_image, fragment, 15, 52)
+
+    # HORIZONTAL: Visually Non-overlapping fragments. Spatially adjacent with no gaps
+    start_x = 25 * overlap  # Starting at location 25, 40
+    start_y = 40 * overlap
+    for ii in range(4):
+        test_image[start_x: start_x + 11, start_y + ii * 11: start_y + (ii + 1) * 11, :] = fragment
+
+    # DIAGONAL (backward slash): Visually Non-overlapping fragments. Spatially adjacent with no gaps
+    start_x = 40 * overlap
+    start_y = 5 * overlap
+    for ii in range(5):
+        test_image[
+            start_x + ii * 11: start_x + (ii + 1) * 11,
+            start_y + ii * 11: start_y + (ii + 1) * 11,
+            :
+        ] = fragment
+
+    # DIAGONAL (forward slash): Visually Non-overlapping fragments. Spatially adjacent with no gaps
+    start_x = 51 * overlap
+    start_y = 30 * overlap
+    for ii in range(5):
+        test_image[
+            start_x - (ii * 11): start_x - (ii * 11) + 11,
+            start_y + (ii * 11): start_y + (ii + 1) * 11,
+            :
+        ] = fragment
+
+    return test_image
 
 
 if __name__ == "__main__":
@@ -285,62 +359,40 @@ if __name__ == "__main__":
 
     # 4. Create a random image that maximized the output of a particular neuron in the conv layer
     # --------------------------------------------------------------------------------------------
-    # Target Filter
+    # Target Filter(s) first conv layer and contour integration layer
     tgt_filt_idx = 10
-    tgt_filter = K.eval(alex_net_cont_int_model.layers[1].weights[0])
-    tgt_filter = tgt_filter[:, :, :, tgt_filt_idx]
 
-    # # # Fake Filter
-    # tgt_filter = np.zeros((11, 11, 3))
-    # tgt_filter[:, (1, 2, 6, 7, 8), :] = 1
+    tgt_conv1_filter = K.eval(alex_net_cont_int_model.layers[1].weights[0])
+    tgt_conv1_filter = tgt_conv1_filter[:, :, :, tgt_filt_idx]
 
-    # Generate test image
-    img_dim = 227
-    test_image = np.zeros((img_dim, img_dim, 3))
+    tgt_cont_int_filter = K.eval(alex_net_cont_int_model.layers[2].kernel)
+    tgt_cont_int_filter = tgt_cont_int_filter[tgt_filt_idx, :, :]
 
-    # Point
-    add_fragment_at_location(test_image, tgt_filter, 22, 10)
+    # Similar (but simpler) fragment
+    contour_1 = np.zeros((11, 11, 3))
+    contour_1[:, (0, 3, 4, 5, 9, 10), :] = 1
 
-    # parallel line (continuous)
-    # test_image[100:200, 22, :] = 1
-    add_fragment_at_location(test_image, tgt_filter, 10, 20)
-    add_fragment_at_location(test_image, tgt_filter, 11, 20)
-    add_fragment_at_location(test_image, tgt_filter, 12, 20)
-    add_fragment_at_location(test_image, tgt_filter, 13, 20)
-    add_fragment_at_location(test_image, tgt_filter, 14, 20)
+    contour_test_image = generate_test_contour_image_from_fragment(contour_1)
 
-    # non-overlapping
-    add_fragment_at_location(test_image, tgt_filter, 30, 20)
-    add_fragment_at_location(test_image, tgt_filter, 33, 20)
-    add_fragment_at_location(test_image, tgt_filter, 36, 20)
-    add_fragment_at_location(test_image, tgt_filter, 39, 20)
-    add_fragment_at_location(test_image, tgt_filter, 42, 20)
+    ax = plt.subplot2grid((2, 4), (0, 0))
+    ax.imshow(tgt_conv1_filter)
+    ax.set_title('Conv 1 Filter')
 
-    # Orthogonal Line (overlapping)
-    add_fragment_at_location(test_image, tgt_filter, 10, 40)
-    add_fragment_at_location(test_image, tgt_filter, 10, 41)
-    add_fragment_at_location(test_image, tgt_filter, 10, 42)
-    add_fragment_at_location(test_image, tgt_filter, 10, 43)
-    add_fragment_at_location(test_image, tgt_filter, 10, 44)
+    ax1 = plt.subplot2grid((2, 4), (0, 1))
+    ax1.imshow(contour_1)
+    ax1.set_title('Contour Fragment')
 
-    # Orthogonal Line(slightly overlapping)
-    add_fragment_at_location(test_image, tgt_filter, 30, 40)
-    add_fragment_at_location(test_image, tgt_filter, 30, 42)
-    add_fragment_at_location(test_image, tgt_filter, 30, 44)
-    add_fragment_at_location(test_image, tgt_filter, 30, 46)
-    add_fragment_at_location(test_image, tgt_filter, 30, 48)
+    ax2 = plt.subplot2grid((2, 4), (0, 2), colspan=2, rowspan=2)
+    ax2.imshow(contour_test_image)
+    ax2.set_title('Test image')
 
-    f = plt.figure()
-    f.add_subplot(1, 2, 1)
-    plt.imshow(tgt_filter)
-    plt.title("Target Filter")
-    f.add_subplot(1, 2, 2)
-    plt.imshow(test_image)
-    plt.title('Generated Image')
+    ax3 = plt.subplot2grid((2, 4), (1, 0))
+    ax3.imshow(tgt_cont_int_filter)
+    ax3.set_title('Cont. Int. Filter')
 
     # 5. Pass the image through the model and look at the activations
     # ----------------------------------------------------------------
-    x = test_image
+    x = contour_test_image
     x = np.transpose(x, (2, 0, 1))
     x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
 
@@ -349,12 +401,16 @@ if __name__ == "__main__":
 
     f = plt.figure()
     f.add_subplot(1, 2, 1)
-    plt.imshow(l1_activations[0, tgt_filt_idx, :, :], cmap='Greys')
+    max_activation = l2_activations.max()
+    min_activation = l2_activations.min()
+
+    plt.imshow(l1_activations[0, tgt_filt_idx, :, :], cmap='seismic', vmin=min_activation, vmax=max_activation)
     plt.title('Raw Feature map of conv layer (l1) at index %d' % tgt_filt_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
+
     f.add_subplot(1, 2, 2)
-    plt.imshow(l2_activations[0, tgt_filt_idx, :, :], cmap='Greys')
+    plt.imshow(l2_activations[0, tgt_filt_idx, :, :], cmap='seismic', vmin=min_activation, vmax=max_activation)
     plt.title('Raw Feature map of contour integration layer (l2) at index %d' % tgt_filt_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
