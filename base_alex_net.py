@@ -1,7 +1,13 @@
 # -------------------------------------------------------------------------------------------------
-#  This is the Alex Net model trained on Imagenet.
+#  This is the Alex Net model (original two separate streams model) trained on Imagenet.
 #
-#  Code Ref: https://github.com/heuritech/convnets-keras. Updated to use Keras V2 APIs
+#  Code Ref: https://github.com/heuritech/convnets-keras
+#  The code has been updated to use Keras V2 APIs
+#
+#  NOTES:
+#  [1] The model loads pre-trained weights that must be stored in trained_models/AlexNet/alexnet_weights.h5
+#  [2] Weights can be found @ https://github.com/heuritech/convnets-keras
+#  [3] A test image is also needed.
 #
 # Author: Salman Khan
 # Date  : 21/07/17
@@ -144,7 +150,7 @@ if __name__ == "__main__":
 
     # 3. Display the activations of a test image
     # ---------------------------------------------------------------------
-    img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
+    # img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
     img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
     plt.figure()
     plt.imshow(img)
