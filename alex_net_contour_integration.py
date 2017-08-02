@@ -321,6 +321,78 @@ def generate_test_contour_image_from_fragment(fragment, overlap=4, img_dim=227):
     return test_image
 
 
+def plot_tgt_filters_activations(model, image, f_idx):
+    """
+
+    :param model: model to use
+    :param image: test image
+    :param f_idx: index of filter
+    :return:
+    """
+    x = image
+    x = np.transpose(x, (2, 0, 1))
+    x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
+
+    l1_activations = get_layer_activation(model, 1, x)
+    l2_activations = get_layer_activation(model, 2, x)
+
+    f = plt.figure()
+    f.add_subplot(1, 2, 1)
+    max_activation = l2_activations.max()
+    min_activation = l2_activations.min()
+
+    plt.imshow(l1_activations[0, f_idx, :, :], cmap='seismic', vmin=min_activation, vmax=max_activation)
+    plt.title('Raw Feature map of conv layer (l1) at index %d' % f_idx)
+    plt.colorbar(orientation='horizontal')
+    plt.grid()
+
+    f.add_subplot(1, 2, 2)
+    plt.imshow(l2_activations[0, f_idx, :, :], cmap='seismic', vmin=min_activation, vmax=max_activation)
+    plt.title('Raw Feature map of contour integration layer (l2) at index %d' % f_idx)
+    plt.colorbar(orientation='horizontal')
+    plt.grid()
+
+
+def main(model, fragment, f_idx):
+    """
+    This is the main routine for this file. First, the given contour fragment is tiled into
+    a test image to form variously oriented contours. This is then passed to the model to
+    visualize the activations of the first convolutional layer and contour integration layer
+
+    :param model:
+    :param fragment:
+    :param f_idx:
+    :return:
+    """
+
+    tgt_conv1_filter = K.eval(model.layers[1].weights[0])
+    tgt_conv1_filter = tgt_conv1_filter[:, :, :, f_idx]
+
+    tgt_cont_int_filter = K.eval(model.layers[2].kernel)
+    tgt_cont_int_filter = tgt_cont_int_filter[f_idx, :, :]
+
+    contour_test_image = generate_test_contour_image_from_fragment(fragment)
+
+    plt.figure()
+    ax = plt.subplot2grid((2, 4), (0, 0))
+    ax.imshow(tgt_conv1_filter)
+    ax.set_title('Conv 1 Filter @ idx %d' % f_idx)
+
+    ax1 = plt.subplot2grid((2, 4), (0, 1))
+    ax1.imshow(contour_1)
+    ax1.set_title('Contour Fragment')
+
+    ax2 = plt.subplot2grid((2, 4), (0, 2), colspan=2, rowspan=2)
+    ax2.imshow(contour_test_image)
+    ax2.set_title('Test image')
+
+    ax3 = plt.subplot2grid((2, 4), (1, 0))
+    ax3.imshow(tgt_cont_int_filter)
+    ax3.set_title('Cont. Int. Filter @ idx %d' % f_idx)
+
+    plot_tgt_filters_activations(model, contour_test_image, f_idx)
+
+
 if __name__ == "__main__":
 
     plt.ion()
@@ -334,8 +406,8 @@ if __name__ == "__main__":
 
     # # 2. Display filters in the first convolutional and contour integration layers
     # # --------------------------------------------------------------------
-    weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
-    utils.display_filters(weights_ch_last)
+    # weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
+    # utils.display_filters(weights_ch_last)
 
     # weights_ch_last = alex_net_cont_int_model.layers[2].kernel
     # utils.display_filters(weights_ch_last)
@@ -361,56 +433,7 @@ if __name__ == "__main__":
     # --------------------------------------------------------------------------------------------
     # Target Filter(s) first conv layer and contour integration layer
     tgt_filt_idx = 10
-
-    tgt_conv1_filter = K.eval(alex_net_cont_int_model.layers[1].weights[0])
-    tgt_conv1_filter = tgt_conv1_filter[:, :, :, tgt_filt_idx]
-
-    tgt_cont_int_filter = K.eval(alex_net_cont_int_model.layers[2].kernel)
-    tgt_cont_int_filter = tgt_cont_int_filter[tgt_filt_idx, :, :]
-
-    # Similar (but simpler) fragment
     contour_1 = np.zeros((11, 11, 3))
     contour_1[:, (0, 3, 4, 5, 9, 10), :] = 1
 
-    contour_test_image = generate_test_contour_image_from_fragment(contour_1)
-
-    ax = plt.subplot2grid((2, 4), (0, 0))
-    ax.imshow(tgt_conv1_filter)
-    ax.set_title('Conv 1 Filter')
-
-    ax1 = plt.subplot2grid((2, 4), (0, 1))
-    ax1.imshow(contour_1)
-    ax1.set_title('Contour Fragment')
-
-    ax2 = plt.subplot2grid((2, 4), (0, 2), colspan=2, rowspan=2)
-    ax2.imshow(contour_test_image)
-    ax2.set_title('Test image')
-
-    ax3 = plt.subplot2grid((2, 4), (1, 0))
-    ax3.imshow(tgt_cont_int_filter)
-    ax3.set_title('Cont. Int. Filter')
-
-    # 5. Pass the image through the model and look at the activations
-    # ----------------------------------------------------------------
-    x = contour_test_image
-    x = np.transpose(x, (2, 0, 1))
-    x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
-
-    l1_activations = get_layer_activation(alex_net_cont_int_model, 1, x)
-    l2_activations = get_layer_activation(alex_net_cont_int_model, 2, x)
-
-    f = plt.figure()
-    f.add_subplot(1, 2, 1)
-    max_activation = l2_activations.max()
-    min_activation = l2_activations.min()
-
-    plt.imshow(l1_activations[0, tgt_filt_idx, :, :], cmap='seismic', vmin=min_activation, vmax=max_activation)
-    plt.title('Raw Feature map of conv layer (l1) at index %d' % tgt_filt_idx)
-    plt.colorbar(orientation='horizontal')
-    plt.grid()
-
-    f.add_subplot(1, 2, 2)
-    plt.imshow(l2_activations[0, tgt_filt_idx, :, :], cmap='seismic', vmin=min_activation, vmax=max_activation)
-    plt.title('Raw Feature map of contour integration layer (l2) at index %d' % tgt_filt_idx)
-    plt.colorbar(orientation='horizontal')
-    plt.grid()
+    main(alex_net_cont_int_model, contour_1, tgt_filt_idx)
