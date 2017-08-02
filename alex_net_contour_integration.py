@@ -17,7 +17,7 @@ from keras.engine.topology import Layer
 from keras.preprocessing.image import img_to_array, load_img
 import keras.backend as K
 
-import alex_net
+import base_alex_net as alex_net
 import learned_lateral_weights
 import utils
 reload(utils)
@@ -334,8 +334,8 @@ if __name__ == "__main__":
 
     # # 2. Display filters in the first convolutional and contour integration layers
     # # --------------------------------------------------------------------
-    # weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
-    # utils.display_filters(weights_ch_last)
+    weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
+    utils.display_filters(weights_ch_last)
 
     # weights_ch_last = alex_net_cont_int_model.layers[2].kernel
     # utils.display_filters(weights_ch_last)
