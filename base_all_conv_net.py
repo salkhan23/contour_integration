@@ -3,7 +3,16 @@
 # [Springenberg et. al. - 2015 - Striving for Simplicity: The All Convolutional Net]
 # on CIFAR-10
 #
-# Without Data Augmentation this achieves around 90% accuracy after 350 epochs.
+# Ref: https://github.com/MateLabs/All-Conv-Keras/blob/master/allconv.py
+# The code has been updated to use 1 GPU instead of 4 in the orginal. As such the weights from the original source
+# cannot be loaded. However, it does not take log to train.
+#
+# Notes:
+#   [1] According to ref, without Data Augmentation this achieves around 90% accuracy after 350
+#       epochs on the CIFAR-10 data set. The current script runs for 200 EPOCHS and achieves an
+#       accuracy of about 87%.
+#   [2] The model has been modified from the original to have variable input dimensions. This
+#       is a requirement to use the high layer activations visualization technique.
 #
 # Author: Salman Khan
 # Date  : 13/07/17
