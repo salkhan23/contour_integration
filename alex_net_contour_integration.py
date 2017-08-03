@@ -327,9 +327,10 @@ def generate_test_contour_image_from_fragment(fragment, overlap=4, img_dim=227):
     return test_image
 
 
-def plot_tgt_filters_activations(model, image, f_idx):
+def plot_tgt_filters_activations(model, image, f_idx, image_normalization=False):
     """
 
+    :param image_normalization:
     :param model: model to use
     :param image: test image
     :param f_idx: index of filter
@@ -342,18 +343,24 @@ def plot_tgt_filters_activations(model, image, f_idx):
     l1_activations = get_layer_activation(model, 1, x)
     l2_activations = get_layer_activation(model, 2, x)
 
+    tgt_l1_activation = l1_activations[0, f_idx, :, :]
+    tgt_l2_activation = l2_activations[0, f_idx, :, :]
+    if image_normalization:
+        tgt_l1_activation = utils.deprocess_image(tgt_l1_activation)
+        tgt_l2_activation = utils.deprocess_image(tgt_l2_activation)
+
     f = plt.figure()
     f.add_subplot(1, 2, 1)
-    max_activation = l2_activations[0, f_idx, :, :].max()
-    min_activation = l2_activations[0, f_idx, :, :].min()
+    max_activation = tgt_l1_activation.max()
+    min_activation = tgt_l2_activation.min()
 
-    plt.imshow(l1_activations[0, f_idx, :, :], cmap='seismic', vmin=min_activation, vmax=max_activation)
+    plt.imshow(tgt_l1_activation, cmap='seismic', vmin=min_activation, vmax=max_activation)
     plt.title('Raw Feature map of conv layer (l1) at index %d' % f_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
     f.add_subplot(1, 2, 2)
-    plt.imshow(l2_activations[0, f_idx, :, :], cmap='seismic', vmin=min_activation, vmax=max_activation)
+    plt.imshow(tgt_l2_activation, cmap='seismic', vmin=min_activation, vmax=max_activation)
     plt.title('Raw Feature map of contour integration layer (l2) at index %d' % f_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
@@ -420,12 +427,12 @@ if __name__ == "__main__":
     K.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
     print("Building Contour Integration Model...")
     alex_net_cont_int_model = build_model("trained_models/AlexNet/alexnet_weights.h5")
-    alex_net_cont_int_model.summary()
+    # alex_net_cont_int_model.summary()
 
     # # 2. Display filters in the first convolutional and contour integration layers
     # # --------------------------------------------------------------------
-    #weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
-    #utils.display_filters(weights_ch_last)
+    # weights_ch_last = alex_net_cont_int_model.layers[1].weights[0]
+    # utils.display_filters(weights_ch_last)
 
     # weights_ch_last = alex_net_cont_int_model.layers[2].kernel
     # utils.display_filters(weights_ch_last)
@@ -476,3 +483,16 @@ if __name__ == "__main__":
     # contour_3 = np.repeat(contour_3, 3, axis=2)
     # main(alex_net_cont_int_model, contour_3, tgt_filt_idx)
 
+    # 5. Output of contour enhancement on real image
+    # ----------------------------------------------------------------------
+    # test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
+
+    tgt_filt_idx = 5
+    plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
+
+    tgt_filt_idx = 10
+    plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
+
+    # 5. Contours Embedded in a Sea of Similar but randomly oriented contours
+    # ------------------------------------------------------------------------
