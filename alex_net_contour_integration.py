@@ -246,6 +246,32 @@ def add_fragment_at_location(image, fragment, loc_x, loc_y):
     return image
 
 
+def replace_fragment_at_location(image, fragment, loc_x, loc_y):
+    """
+    Similar to add_fragment_at_location, but instead of adding the fragment, replaces it
+
+    :param image:
+    :param fragment:
+    :param loc_x:
+    :param loc_y:
+    :return:
+    """
+    stride = 4  # The Stride using the in convolutional layer
+    filt_dim_r = fragment.shape[0]
+    filt_dim_c = fragment.shape[1]
+
+    print("Fragment Placed at x: %d-%d, y: %d-%d"
+          % (loc_x * stride,  loc_x * stride + filt_dim_r, loc_y * stride, loc_y * stride + filt_dim_c))
+
+    image[
+        loc_x * stride: loc_x * stride + filt_dim_r,
+        loc_y * stride: loc_y * stride + filt_dim_c,
+        :,
+    ] = fragment
+
+    return image
+
+
 def generate_test_contour_image_from_fragment(fragment, overlap=4, img_dim=227):
     """
      Generates contours by spatially tiling fragments
@@ -457,16 +483,16 @@ if __name__ == "__main__":
     # 4. Contour Enhancement Visualizations
     # ---------------------------------------------------------------------
     # Vertical Filter
-    tgt_filt_idx = 10
-    frag_1 = np.zeros((11, 11, 3))
-    frag_1[:, (0, 3, 4, 5, 9, 10), :] = 1
-    main(alex_net_cont_int_model, frag_1, tgt_filt_idx)
-
-    # Horizontal Filter
-    tgt_filt_idx = 5
-    frag_2 = np.zeros((11, 11, 3))
-    frag_2[0:6, :, :] = 1
-    main(alex_net_cont_int_model, frag_2, tgt_filt_idx)
+    # tgt_filt_idx = 10
+    # frag_1 = np.zeros((11, 11, 3))
+    # frag_1[:, (0, 3, 4, 5, 9, 10), :] = 1
+    # main(alex_net_cont_int_model, frag_1, tgt_filt_idx)
+    #
+    # # Horizontal Filter
+    # tgt_filt_idx = 5
+    # frag_2 = np.zeros((11, 11, 3))
+    # frag_2[0:6, :, :] = 1
+    # main(alex_net_cont_int_model, frag_2, tgt_filt_idx)
 
     # # Diagonal Filter (back slash)
     # tgt_filt_idx = 67
@@ -485,15 +511,67 @@ if __name__ == "__main__":
 
     # 5. Output of contour enhancement on real image
     # ----------------------------------------------------------------------
-    # test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
-    test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
-
-    tgt_filt_idx = 5
-    plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
-
-    tgt_filt_idx = 10
-    plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
+    # # test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    # test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
+    #
+    # tgt_filt_idx = 5
+    # plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
+    #
+    # tgt_filt_idx = 10
+    # plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
 
     # 5. Contours Embedded in a Sea of similar but randomly oriented contours
     # ------------------------------------------------------------------------
     tgt_filt_idx = 5
+
+    # original contour
+    frag1 = np.zeros((11, 11, 3))
+    frag1[0:6, :, :] = 1
+    # flipped around
+    frag2 = np.zeros((11, 11, 3))
+    frag2[6:, :, :] = 1
+    # rotated by 90
+    frag3 = np.zeros((11, 11, 3))
+    frag3[:, 0:6, :] = 1
+    # rotated by 270
+    frag4 = np.zeros((11, 11, 3))
+    frag4[:, 6:, :] = 1
+    # # rotated by 45
+    # frag5 = np.zeros((11, 11, 3))
+    # frag5[0:6, :, :] = 1
+    # for r_idx in range(11):
+    #     frag5[r_idx, :, :] = np.roll(frag5[r_idx, :, :], r_idx, axis=0)
+
+    # Make a bank of similar fragments but with different orientations
+    filter_bank = [frag1, frag2, frag3, frag4]
+
+    # fig = plt.figure()
+    # for filt_idx, frag in enumerate(filter_bank):
+    #     fig.add_subplot(3, 3, filt_idx + 1)
+    #     plt.imshow(frag)
+
+    # Make an image of visually non overlapping randomly oriented stimuli
+    test_img = np.zeros((227,227,3))
+    for r_idx in range(20):
+        for c_idx in range(20):
+            frag_idx = np.random.randint(0, 4)
+            test_img[r_idx * 11: r_idx * 11 + 11, c_idx * 11:c_idx * 11 + 11, :] = filter_bank[frag_idx]
+
+    plt.figure()
+
+    # now add a contour at a particular location
+    test_img = replace_fragment_at_location(test_img, frag1, 20, 20)
+    test_img = replace_fragment_at_location(test_img, frag1, 20, 21)
+    test_img = replace_fragment_at_location(test_img, frag1, 20, 22)
+    test_img = replace_fragment_at_location(test_img, frag1, 20, 23)
+    test_img = replace_fragment_at_location(test_img, frag1, 20, 24)
+    test_img = replace_fragment_at_location(test_img, frag1, 20, 25)
+    test_img = replace_fragment_at_location(test_img, frag1, 20, 26)
+    test_img = replace_fragment_at_location(test_img, frag1, 20, 27)
+    test_img = replace_fragment_at_location(test_img, frag1, 20, 28)
+    test_img = replace_fragment_at_location(test_img, frag1, 20, 29)
+
+    plt.imshow(test_img)
+    plt.title("Test Image. Contour in a sea of similarly oriented fragments")
+    plot_tgt_filters_activations(alex_net_cont_int_model, test_img, tgt_filt_idx)
+
