@@ -458,30 +458,30 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------
     # Vertical Filter
     tgt_filt_idx = 10
-    contour_1 = np.zeros((11, 11, 3))
-    contour_1[:, (0, 3, 4, 5, 9, 10), :] = 1
-    main(alex_net_cont_int_model, contour_1, tgt_filt_idx)
+    frag_1 = np.zeros((11, 11, 3))
+    frag_1[:, (0, 3, 4, 5, 9, 10), :] = 1
+    main(alex_net_cont_int_model, frag_1, tgt_filt_idx)
 
     # Horizontal Filter
     tgt_filt_idx = 5
-    contour_2 = np.zeros((11, 11, 3))
-    contour_2[0:6, :, :] = 1
-    main(alex_net_cont_int_model, contour_2, tgt_filt_idx)
+    frag_2 = np.zeros((11, 11, 3))
+    frag_2[0:6, :, :] = 1
+    main(alex_net_cont_int_model, frag_2, tgt_filt_idx)
 
     # # Diagonal Filter (back slash)
     # tgt_filt_idx = 67
-    # contour_3 = K.eval(alex_net_cont_int_model.layers[1].weights[0])
-    # contour_3 = contour_3[:, :, :, tgt_filt_idx]
-    # contour_3 = np.zeros((11, 11))
-    # contour_3[0, :] = [1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1]
+    # frag_3 = K.eval(alex_net_cont_int_model.layers[1].weights[0])
+    # frag_3 = frag_3[:, :, :, tgt_filt_idx]
+    # frag_3 = np.zeros((11, 11))
+    # frag_3[0, :] = [1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1]
     # for i in range(1, 11):
     #     if (i % 2) == 0:
-    #         contour_3[i, :] = np.roll(contour_3[i-1, :], 1)
+    #         frag_3[i, :] = np.roll(frag_3[i - 1, :], 1)
     #     else:
-    #         contour_3[i, :] = contour_3[i-1, :]
-    # contour_3 = np.reshape(contour_3, (11, 11, 1))
-    # contour_3 = np.repeat(contour_3, 3, axis=2)
-    # main(alex_net_cont_int_model, contour_3, tgt_filt_idx)
+    #         frag_3[i, :] = frag_3[i - 1, :]
+    # frag_3 = np.reshape(frag_3, (11, 11, 1))
+    # frag_3 = np.repeat(frag_3, 3, axis=2)
+    # main(alex_net_cont_int_model, frag_3, tgt_filt_idx)
 
     # 5. Output of contour enhancement on real image
     # ----------------------------------------------------------------------
@@ -494,5 +494,6 @@ if __name__ == "__main__":
     tgt_filt_idx = 10
     plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
 
-    # 5. Contours Embedded in a Sea of Similar but randomly oriented contours
+    # 5. Contours Embedded in a Sea of similar but randomly oriented contours
     # ------------------------------------------------------------------------
+    tgt_filt_idx = 5
