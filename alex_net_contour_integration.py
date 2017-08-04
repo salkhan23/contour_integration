@@ -27,23 +27,145 @@ reload(alex_net)
 np.random.seed(7)  # Set the random seed for reproducibility
 
 
+def get_enhancement_model_contour_kernels():
+
+    n = 3
+    kernel = np.zeros((96, n, n))
+    kernel[10, :, :] = np.array([[0, 1, 0], [0, 0, 0], [0, 1, 0]]) / 2.0
+    kernel[ 5, :, :] = np.array([[0, 0, 0], [1, 0, 1], [0, 0, 0]]) / 2.0
+    kernel[54, :, :] = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 1]]) / 2.0
+    kernel[67, :, :] = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 1]]) / 2.0
+
+    return kernel, n
+
+
+def get_suppression_model_contour_kernels():
+    n = 3
+    kernel = np.zeros((96, n, n))
+    kernel[10, :, :] = np.array([[0, 0, 0], [-1, 0, -1], [0, 0, 0]]) / 2.0
+    kernel[ 5, :, :] = np.array([[0, -1, 0], [0, 0, 0], [0, -1, 0]]) / 2.0
+    kernel[54, :, :] = np.array([[0, 0, -1], [0, 0, 0], [-1, 0, 0]]) / 2.0
+    kernel[67, :, :] = np.array([[0, 0, -1], [0, 0, 0], [-1, 0, 0]]) / 2.0
+
+    return kernel, n
+
+
+def get_enhance_n_suppress_contour_kernels():
+    n = 3
+    kernel = np.zeros((96, n, n))
+    kernel[10, :, :] = np.array([[0, 1, 0], [-1, 0, -1], [0, 1, 0]]) / 4.0
+    kernel[ 5, :, :] = np.array([[0, -1, 0], [1, 0, 1], [0, -1, 0]]) / 4.0
+    kernel[54, :, :] = np.array([[1, 0, -1], [0, 0, 0], [-1, 0, 1]]) / 4.0
+    kernel[67, :, :] = np.array([[1, 0, -1], [0, 0, 0], [-1, 0, 1]]) / 4.0
+
+    return kernel, n
+
+
+def get_enhance_n_suppress_5x5_contour_kernels():
+    n = 5
+    kernel = np.zeros((96, n, n))
+    kernel[10, :, :] = np.array([
+        [ 0,  0, 1,  0,  0],
+        [ 0,  0, 1,  0,  0],
+        [-1, -1, 0, -1, -1],
+        [ 0,  0, 1,  0,  0],
+        [ 0,  0, 1,  0,  0],
+    ]) / 8.0
+
+    kernel[5, :, :] = np.array([
+        [0, 0, -1, 0, 0],
+        [0, 0, -1, 0, 0],
+        [1, 1,  0, 1, 1],
+        [0, 0, -1, 0, 0],
+        [0, 0, -1, 0, 0],
+    ]) / 8.0
+
+    kernel[54, :, :] = np.array([
+        [ 1,  0, 0,  0, -1],
+        [ 0,  1, 0, -1,  0],
+        [ 0,  0, 0,  0,  0],
+        [ 0, -1, 0,  1,  0],
+        [-1,  0, 0,  0,  1],
+    ]) / 8.0
+
+    kernel[67, :, :] = np.array([
+        [ 1,  0, 0,  0, -1],
+        [ 0,  1, 0, -1,  0],
+        [ 0,  0, 0,  0,  0],
+        [ 0, -1, 0,  1,  0],
+        [-1,  0, 0,  0,  1],
+    ]) / 8.0
+
+    return kernel, n
+
+
+def get_enhance_n_suppress_non_overlap_contour_kernels():
+    n = 5
+    kernel = np.zeros((96, n, n))
+    kernel[10, :, :] = np.array([
+        [ 0, 0, 1, 0,  0],
+        [ 0, 0, 0, 0,  0],
+        [-1, 0, 0, 0, -1],
+        [ 0, 0, 0, 0,  0],
+        [ 0, 0, 1, 0,  0],
+    ]) / 4.0
+
+    kernel[5, :, :] = np.array([
+        [0, 0, -1, 0, 0],
+        [0, 0,  0, 0, 0],
+        [1, 0,  0, 0, 1],
+        [0, 0,  0, 0, 0],
+        [0, 0, -1, 0, 0],
+    ]) / 4.0
+
+    kernel[54, :, :] = np.array([
+        [ 1, 0, 0, 0, -1],
+        [ 0, 0, 0, 0,  0],
+        [ 0, 0, 0, 0,  0],
+        [ 0, 0, 0, 0,  0],
+        [-1, 0, 0, 0,  1],
+    ]) / 4.0
+
+    kernel[67, :, :] = np.array([
+        [ 1, 0, 0, 0, -1],
+        [ 0, 0, 0, 0,  0],
+        [ 0, 0, 0, 0,  0],
+        [ 0, 0, 0, 0,  0],
+        [-1, 0, 0, 0,  1],
+    ]) / 8.0
+
+
 class ContourIntegrationLayer(Layer):
 
-    def __init__(self, **kwargs):
+    def __init__(self, model_type, **kwargs):
         """
 
         :param n:
         :param kwargs:
         """
-        kernel = np.zeros((96, 3, 3))
-        kernel[10, :, :] = np.array([[0, 1, 0], [-1, 0, -1], [0, 1, 0]]) / 4.0
-        kernel[ 5, :, :] = np.array([[0, -1, 0], [1, 0, 1], [0, -1, 0]]) / 4.0
-        kernel[54, :, :] = np.array([[1, 0, -1], [0, 0, 0], [-1, 0, 1]]) / 4.0
-        kernel[67, :, :] = np.array([[1, 0, -1], [0, 0, 0], [-1, 0, 1]]) / 4.0
+        model_type = model_type.lower()
+        valid_model_types = [
+            'enhance',
+            'suppress',
+            'enhance_n_suppress',
+            'enhance_n_suppress_5',
+            'enhance_n_suppress_non_overlap']
 
-        self.kernel = K.variable(kernel)
-        self.n = 3  # single dimension of the square kernel
+        if model_type not in valid_model_types:
+            raise Exception("Need to specify a valid model type")
 
+        if model_type == 'enhance':
+            self.kernel, self.n = get_enhancement_model_contour_kernels()
+        elif model_type == 'suppress':
+            self.kernel, self.n = get_suppression_model_contour_kernels()
+        elif model_type == 'enhance_n_suppress':
+            self.kernel, self.n = get_enhance_n_suppress_contour_kernels()
+        elif model_type == 'enhance_n_suppress_5':
+            self.kernel, self.n = get_enhance_n_suppress_5x5_contour_kernels()
+        else:
+            self.kernel, self.n = get_enhance_n_suppress_contour_kernels
+
+        self.kernel = K.variable(self.kernel)
         super(ContourIntegrationLayer, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -125,11 +247,12 @@ class ContourIntegrationLayer(Layer):
         return outputs
 
 
-def build_model(weights_path):
+def build_model(weights_path, model_type):
     """
     Build a modified AlexNet with a Contour Emphasizing layer
     Note: Layer names have to stay the same, to enable loading pre-trained weights
 
+    :param model_type:
     :param weights_path:
     :return:
     """
@@ -138,7 +261,7 @@ def build_model(weights_path):
 
     conv_1 = Conv2D(96, (11, 11), strides=(4, 4), activation='relu', name='conv_1')(inputs)
 
-    contour_int_layer = ContourIntegrationLayer(name='contour_integration')(conv_1)
+    contour_int_layer = ContourIntegrationLayer(name='contour_integration', model_type=model_type)(conv_1)
 
     conv_2 = MaxPooling2D((3, 3), strides=(2, 2))(contour_int_layer)
     conv_2 = alex_net.crosschannelnormalization(name='convpool_1')(conv_2)
@@ -377,7 +500,7 @@ def plot_tgt_filters_activations(model, image, f_idx, image_normalization=False)
 
     f = plt.figure()
     f.add_subplot(1, 2, 1)
-    max_activation = tgt_l1_activation.max()
+    max_activation = tgt_l2_activation.max()
     min_activation = tgt_l2_activation.min()
 
     plt.imshow(tgt_l1_activation, cmap='seismic', vmin=min_activation, vmax=max_activation)
@@ -452,7 +575,13 @@ if __name__ == "__main__":
     # --------------------------------------------------------------------
     K.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
     print("Building Contour Integration Model...")
-    alex_net_cont_int_model = build_model("trained_models/AlexNet/alexnet_weights.h5")
+
+    # m_type = 'enhance'
+    # m_type = 'suppress'
+    m_type = 'enhance_n_suppress'
+    # m_type = 'enhance_n_suppress_5'
+    # m_type = 'enhance_n_suppress_non_overlap'
+    alex_net_cont_int_model = build_model("trained_models/AlexNet/alexnet_weights.h5", model_type=m_type)
     # alex_net_cont_int_model.summary()
 
     # # 2. Display filters in the first convolutional and contour integration layers
@@ -483,16 +612,16 @@ if __name__ == "__main__":
     # 4. Contour Enhancement Visualizations
     # ---------------------------------------------------------------------
     # Vertical Filter
-    # tgt_filt_idx = 10
-    # frag_1 = np.zeros((11, 11, 3))
-    # frag_1[:, (0, 3, 4, 5, 9, 10), :] = 1
-    # main(alex_net_cont_int_model, frag_1, tgt_filt_idx)
-    #
-    # # Horizontal Filter
-    # tgt_filt_idx = 5
-    # frag_2 = np.zeros((11, 11, 3))
-    # frag_2[0:6, :, :] = 1
-    # main(alex_net_cont_int_model, frag_2, tgt_filt_idx)
+    tgt_filt_idx = 10
+    frag_1 = np.zeros((11, 11, 3))
+    frag_1[:, (0, 3, 4, 5, 9, 10), :] = 1
+    main(alex_net_cont_int_model, frag_1, tgt_filt_idx)
+
+    # Horizontal Filter
+    tgt_filt_idx = 5
+    frag_2 = np.zeros((11, 11, 3))
+    frag_2[0:6, :, :] = 1
+    main(alex_net_cont_int_model, frag_2, tgt_filt_idx)
 
     # # Diagonal Filter (back slash)
     # tgt_filt_idx = 67
@@ -511,67 +640,67 @@ if __name__ == "__main__":
 
     # 5. Output of contour enhancement on real image
     # ----------------------------------------------------------------------
-    # # test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
     # test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
-    #
-    # tgt_filt_idx = 5
-    # plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
-    #
-    # tgt_filt_idx = 10
-    # plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
+
+    tgt_filt_idx = 5
+    plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
+
+    tgt_filt_idx = 10
+    plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
 
     # 5. Contours Embedded in a Sea of similar but randomly oriented contours
     # ------------------------------------------------------------------------
-    tgt_filt_idx = 5
-
-    # original contour
-    frag1 = np.zeros((11, 11, 3))
-    frag1[0:6, :, :] = 1
-    # flipped around
-    frag2 = np.zeros((11, 11, 3))
-    frag2[6:, :, :] = 1
-    # rotated by 90
-    frag3 = np.zeros((11, 11, 3))
-    frag3[:, 0:6, :] = 1
-    # rotated by 270
-    frag4 = np.zeros((11, 11, 3))
-    frag4[:, 6:, :] = 1
-    # # rotated by 45
-    # frag5 = np.zeros((11, 11, 3))
-    # frag5[0:6, :, :] = 1
-    # for r_idx in range(11):
-    #     frag5[r_idx, :, :] = np.roll(frag5[r_idx, :, :], r_idx, axis=0)
-
-    # Make a bank of similar fragments but with different orientations
-    filter_bank = [frag1, frag2, frag3, frag4]
+    # tgt_filt_idx = 5
+    #
+    # # original contour
+    # frag1 = np.zeros((11, 11, 3))
+    # frag1[0:6, :, :] = 1
+    # # flipped around
+    # frag2 = np.zeros((11, 11, 3))
+    # frag2[6:, :, :] = 1
+    # # rotated by 90
+    # frag3 = np.zeros((11, 11, 3))
+    # frag3[:, 0:6, :] = 1
+    # # rotated by 270
+    # frag4 = np.zeros((11, 11, 3))
+    # frag4[:, 6:, :] = 1
+    # # # rotated by 45
+    # # frag5 = np.zeros((11, 11, 3))
+    # # frag5[0:6, :, :] = 1
+    # # for r_idx in range(11):
+    # #     frag5[r_idx, :, :] = np.roll(frag5[r_idx, :, :], r_idx, axis=0)
+    #
+    # # Make a bank of similar fragments but with different orientations
+    # filter_bank = [frag1, frag2, frag3, frag4]
 
     # fig = plt.figure()
     # for filt_idx, frag in enumerate(filter_bank):
     #     fig.add_subplot(3, 3, filt_idx + 1)
     #     plt.imshow(frag)
-
-    # Make an image of visually non overlapping randomly oriented stimuli
-    test_img = np.zeros((227,227,3))
-    for r_idx in range(20):
-        for c_idx in range(20):
-            frag_idx = np.random.randint(0, 4)
-            test_img[r_idx * 11: r_idx * 11 + 11, c_idx * 11:c_idx * 11 + 11, :] = filter_bank[frag_idx]
-
-    plt.figure()
-
-    # now add a contour at a particular location
-    test_img = replace_fragment_at_location(test_img, frag1, 20, 20)
-    test_img = replace_fragment_at_location(test_img, frag1, 20, 21)
-    test_img = replace_fragment_at_location(test_img, frag1, 20, 22)
-    test_img = replace_fragment_at_location(test_img, frag1, 20, 23)
-    test_img = replace_fragment_at_location(test_img, frag1, 20, 24)
-    test_img = replace_fragment_at_location(test_img, frag1, 20, 25)
-    test_img = replace_fragment_at_location(test_img, frag1, 20, 26)
-    test_img = replace_fragment_at_location(test_img, frag1, 20, 27)
-    test_img = replace_fragment_at_location(test_img, frag1, 20, 28)
-    test_img = replace_fragment_at_location(test_img, frag1, 20, 29)
-
-    plt.imshow(test_img)
-    plt.title("Test Image. Contour in a sea of similarly oriented fragments")
-    plot_tgt_filters_activations(alex_net_cont_int_model, test_img, tgt_filt_idx)
+    #
+    # # Make an image of visually non overlapping randomly oriented stimuli
+    # test_img = np.zeros((227,227,3))
+    # for r_idx in range(20):
+    #     for c_idx in range(20):
+    #         frag_idx = np.random.randint(0, 4)
+    #         test_img[r_idx * 11: r_idx * 11 + 11, c_idx * 11:c_idx * 11 + 11, :] = filter_bank[frag_idx]
+    #
+    # plt.figure()
+    #
+    # # now add a contour at a particular location
+    # test_img = replace_fragment_at_location(test_img, frag1, 20, 20)
+    # test_img = replace_fragment_at_location(test_img, frag1, 20, 21)
+    # test_img = replace_fragment_at_location(test_img, frag1, 20, 22)
+    # test_img = replace_fragment_at_location(test_img, frag1, 20, 23)
+    # test_img = replace_fragment_at_location(test_img, frag1, 20, 24)
+    # test_img = replace_fragment_at_location(test_img, frag1, 20, 25)
+    # test_img = replace_fragment_at_location(test_img, frag1, 20, 26)
+    # test_img = replace_fragment_at_location(test_img, frag1, 20, 27)
+    # test_img = replace_fragment_at_location(test_img, frag1, 20, 28)
+    # test_img = replace_fragment_at_location(test_img, frag1, 20, 29)
+    #
+    # plt.imshow(test_img)
+    # plt.title("Test Image. Contour in a sea of similarly oriented fragments")
+    # plot_tgt_filters_activations(alex_net_cont_int_model, test_img, tgt_filt_idx)
 
