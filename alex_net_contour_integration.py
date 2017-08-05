@@ -28,11 +28,10 @@ np.random.seed(7)  # Set the random seed for reproducibility
 
 
 def get_enhancement_model_contour_kernels():
-
     n = 3
     kernel = np.zeros((96, n, n))
     kernel[10, :, :] = np.array([[0, 1, 0], [0, 0, 0], [0, 1, 0]]) / 2.0
-    kernel[ 5, :, :] = np.array([[0, 0, 0], [1, 0, 1], [0, 0, 0]]) / 2.0
+    kernel[5, :, :] = np.array([[0, 0, 0], [1, 0, 1], [0, 0, 0]]) / 2.0
     kernel[54, :, :] = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 1]]) / 2.0
     kernel[67, :, :] = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 1]]) / 2.0
 
@@ -43,7 +42,7 @@ def get_suppression_model_contour_kernels():
     n = 3
     kernel = np.zeros((96, n, n))
     kernel[10, :, :] = np.array([[0, 0, 0], [-1, 0, -1], [0, 0, 0]]) / 2.0
-    kernel[ 5, :, :] = np.array([[0, -1, 0], [0, 0, 0], [0, -1, 0]]) / 2.0
+    kernel[5, :, :] = np.array([[0, -1, 0], [0, 0, 0], [0, -1, 0]]) / 2.0
     kernel[54, :, :] = np.array([[0, 0, -1], [0, 0, 0], [-1, 0, 0]]) / 2.0
     kernel[67, :, :] = np.array([[0, 0, -1], [0, 0, 0], [-1, 0, 0]]) / 2.0
 
@@ -54,7 +53,7 @@ def get_enhance_n_suppress_contour_kernels():
     n = 3
     kernel = np.zeros((96, n, n))
     kernel[10, :, :] = np.array([[0, 1, 0], [-1, 0, -1], [0, 1, 0]]) / 4.0
-    kernel[ 5, :, :] = np.array([[0, -1, 0], [1, 0, 1], [0, -1, 0]]) / 4.0
+    kernel[5, :, :] = np.array([[0, -1, 0], [1, 0, 1], [0, -1, 0]]) / 4.0
     kernel[54, :, :] = np.array([[1, 0, -1], [0, 0, 0], [-1, 0, 1]]) / 4.0
     kernel[67, :, :] = np.array([[1, 0, -1], [0, 0, 0], [-1, 0, 1]]) / 4.0
 
@@ -65,78 +64,87 @@ def get_enhance_n_suppress_5x5_contour_kernels():
     n = 5
     kernel = np.zeros((96, n, n))
     kernel[10, :, :] = np.array([
-        [ 0,  0, 1,  0,  0],
-        [ 0,  0, 1,  0,  0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 1, 0, 0],
         [-1, -1, 0, -1, -1],
-        [ 0,  0, 1,  0,  0],
-        [ 0,  0, 1,  0,  0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 1, 0, 0],
     ]) / 8.0
 
     kernel[5, :, :] = np.array([
         [0, 0, -1, 0, 0],
         [0, 0, -1, 0, 0],
-        [1, 1,  0, 1, 1],
+        [1, 1, 0, 1, 1],
         [0, 0, -1, 0, 0],
         [0, 0, -1, 0, 0],
     ]) / 8.0
 
     kernel[54, :, :] = np.array([
-        [ 1,  0, 0,  0, -1],
-        [ 0,  1, 0, -1,  0],
-        [ 0,  0, 0,  0,  0],
-        [ 0, -1, 0,  1,  0],
-        [-1,  0, 0,  0,  1],
+        [1, 0, 0, 0, -1],
+        [0, 1, 0, -1, 0],
+        [0, 0, 0, 0, 0],
+        [0, -1, 0, 1, 0],
+        [-1, 0, 0, 0, 1],
     ]) / 8.0
 
     kernel[67, :, :] = np.array([
-        [ 1,  0, 0,  0, -1],
-        [ 0,  1, 0, -1,  0],
-        [ 0,  0, 0,  0,  0],
-        [ 0, -1, 0,  1,  0],
-        [-1,  0, 0,  0,  1],
+        [1, 0, 0, 0, -1],
+        [0, 1, 0, -1, 0],
+        [0, 0, 0, 0, 0],
+        [0, -1, 0, 1, 0],
+        [-1, 0, 0, 0, 1],
     ]) / 8.0
 
     return kernel, n
 
 
 def get_enhance_n_suppress_non_overlap_contour_kernels():
-    n = 5
+    n = 7
     kernel = np.zeros((96, n, n))
     kernel[10, :, :] = np.array([
-        [ 0, 0, 1, 0,  0],
-        [ 0, 0, 0, 0,  0],
-        [-1, 0, 0, 0, -1],
-        [ 0, 0, 0, 0,  0],
-        [ 0, 0, 1, 0,  0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [-1, 0, 0, 0, 0, 0, -1],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
     ]) / 4.0
 
     kernel[5, :, :] = np.array([
-        [0, 0, -1, 0, 0],
-        [0, 0,  0, 0, 0],
-        [1, 0,  0, 0, 1],
-        [0, 0,  0, 0, 0],
-        [0, 0, -1, 0, 0],
+        [0, 0, 0, -1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, -1, 0, 0, 0],
     ]) / 4.0
 
     kernel[54, :, :] = np.array([
-        [ 1, 0, 0, 0, -1],
-        [ 0, 0, 0, 0,  0],
-        [ 0, 0, 0, 0,  0],
-        [ 0, 0, 0, 0,  0],
-        [-1, 0, 0, 0,  1],
+        [1, 0, 0, 0, 0, 0, -1],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [-1, 0, 0, 0, 0, 0, 1],
     ]) / 4.0
 
     kernel[67, :, :] = np.array([
-        [ 1, 0, 0, 0, -1],
-        [ 0, 0, 0, 0,  0],
-        [ 0, 0, 0, 0,  0],
-        [ 0, 0, 0, 0,  0],
-        [-1, 0, 0, 0,  1],
-    ]) / 8.0
+        [1, 0, 0, 0, 0, 0, -1],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [-1, 0, 0, 0, 0, 0, 1],
+    ]) / 4.0
+
+    return kernel, n
 
 
 class ContourIntegrationLayer(Layer):
-
     def __init__(self, model_type, **kwargs):
         """
 
@@ -163,7 +171,7 @@ class ContourIntegrationLayer(Layer):
         elif model_type == 'enhance_n_suppress_5':
             self.kernel, self.n = get_enhance_n_suppress_5x5_contour_kernels()
         else:
-            self.kernel, self.n = get_enhance_n_suppress_contour_kernels
+            self.kernel, self.n = get_enhance_n_suppress_non_overlap_contour_kernels()
 
         self.kernel = K.variable(self.kernel)
         super(ContourIntegrationLayer, self).__init__(**kwargs)
@@ -223,8 +231,8 @@ class ContourIntegrationLayer(Layer):
         xs = []
         for i in range(r):
             for j in range(c):
-                input_slice = inputs_chan_first[:, :, i:i+self.n, j:j+self.n]
-                input_slice_apply = K.reshape(input_slice, (ch, -1, self.n**2))
+                input_slice = inputs_chan_first[:, :, i:i + self.n, j:j + self.n]
+                input_slice_apply = K.reshape(input_slice, (ch, -1, self.n ** 2))
 
                 output_slice = K.batch_dot(input_slice_apply, apply_kernel)
                 # Reshape the output slice to put batch first
@@ -267,9 +275,9 @@ def build_model(weights_path, model_type):
     conv_2 = alex_net.crosschannelnormalization(name='convpool_1')(conv_2)
     conv_2 = ZeroPadding2D((2, 2))(conv_2)
 
-    conv_2_1 = Conv2D(128, (5, 5), activation='relu', name='conv_2_1')\
+    conv_2_1 = Conv2D(128, (5, 5), activation='relu', name='conv_2_1') \
         (alex_net.splittensor(ratio_split=2, id_split=0)(conv_2))
-    conv_2_2 = Conv2D(128, (5, 5), activation='relu', name='conv_2_2')\
+    conv_2_2 = Conv2D(128, (5, 5), activation='relu', name='conv_2_2') \
         (alex_net.splittensor(ratio_split=2, id_split=1)(conv_2))
     conv_2 = Concatenate(axis=1, name='conv_2')([conv_2_1, conv_2_2])
 
@@ -279,16 +287,16 @@ def build_model(weights_path, model_type):
     conv_3 = Conv2D(384, (3, 3), activation='relu', name='conv_3')(conv_3)
 
     conv_4 = ZeroPadding2D((1, 1))(conv_3)
-    conv_4_1 = Conv2D(192, (3, 3), activation='relu', name='conv_4_1')\
+    conv_4_1 = Conv2D(192, (3, 3), activation='relu', name='conv_4_1') \
         (alex_net.splittensor(ratio_split=2, id_split=0)(conv_4))
-    conv_4_2 = Conv2D(192, (3, 3), activation='relu', name='conv_4_2')\
+    conv_4_2 = Conv2D(192, (3, 3), activation='relu', name='conv_4_2') \
         (alex_net.splittensor(ratio_split=2, id_split=1)(conv_4))
     conv_4 = Concatenate(axis=1, name='conv_4')([conv_4_1, conv_4_2])
 
     conv_5 = ZeroPadding2D((1, 1))(conv_4)
-    conv_5_1 = Conv2D(128, (3, 3), activation='relu', name='conv_5_1')\
+    conv_5_1 = Conv2D(128, (3, 3), activation='relu', name='conv_5_1') \
         (alex_net.splittensor(ratio_split=2, id_split=0)(conv_5))
-    conv_5_2 = Conv2D(128, (3, 3), activation='relu', name='conv_5_2')\
+    conv_5_2 = Conv2D(128, (3, 3), activation='relu', name='conv_5_2') \
         (alex_net.splittensor(ratio_split=2, id_split=1)(conv_5))
     conv_5 = Concatenate(axis=1, name='conv_5')([conv_5_1, conv_5_2])
 
@@ -358,7 +366,7 @@ def add_fragment_at_location(image, fragment, loc_x, loc_y):
     filt_dim_c = fragment.shape[1]
 
     print("Fragment Placed at x: %d-%d, y: %d-%d"
-          % (loc_x * stride,  loc_x * stride + filt_dim_r, loc_y * stride, loc_y * stride + filt_dim_c))
+          % (loc_x * stride, loc_x * stride + filt_dim_r, loc_y * stride, loc_y * stride + filt_dim_c))
 
     image[
         loc_x * stride: loc_x * stride + filt_dim_r,
@@ -384,7 +392,7 @@ def replace_fragment_at_location(image, fragment, loc_x, loc_y):
     filt_dim_c = fragment.shape[1]
 
     print("Fragment Placed at x: %d-%d, y: %d-%d"
-          % (loc_x * stride,  loc_x * stride + filt_dim_r, loc_y * stride, loc_y * stride + filt_dim_c))
+          % (loc_x * stride, loc_x * stride + filt_dim_r, loc_y * stride, loc_y * stride + filt_dim_c))
 
     image[
         loc_x * stride: loc_x * stride + filt_dim_r,
@@ -499,7 +507,7 @@ def plot_tgt_filters_activations(model, image, f_idx, image_normalization=False)
         tgt_l2_activation = utils.deprocess_image(tgt_l2_activation)
 
     f = plt.figure()
-    f.add_subplot(1, 2, 1)
+    f.add_subplot(1, 3, 1)
     max_activation = tgt_l2_activation.max()
     min_activation = tgt_l2_activation.min()
 
@@ -508,10 +516,16 @@ def plot_tgt_filters_activations(model, image, f_idx, image_normalization=False)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
-    f.add_subplot(1, 2, 2)
+    f.add_subplot(1, 3, 2)
     plt.imshow(tgt_l2_activation, cmap='seismic', vmin=min_activation, vmax=max_activation)
     plt.title('Raw Feature map of contour integration layer (l2) at index %d' % f_idx)
     plt.colorbar(orientation='horizontal')
+    plt.grid()
+
+    f.add_subplot(1, 3, 3)
+    plt.imshow(tgt_l2_activation - tgt_l1_activation, cmap='seismic')
+    plt.colorbar(orientation='horizontal')
+    plt.title("Difference")
     plt.grid()
 
 
@@ -536,7 +550,7 @@ def main(model, fragment, f_idx):
     contour_test_image = generate_test_contour_image_from_fragment(fragment)
 
     f = plt.figure()
-    ax = plt.subplot2grid((3, 8), (0, 0),  colspan=2)
+    ax = plt.subplot2grid((3, 8), (0, 0), colspan=2)
     ax.imshow(tgt_conv1_filter)
     ax.set_title('Conv 1 Filter @ idx %d' % f_idx)
 
@@ -562,13 +576,12 @@ def main(model, fragment, f_idx):
     ax6 = plt.subplot2grid((3, 8), (2, 2))
     ax_for_cb = \
         ax6.imshow(tgt_conv1_filter[:, :, 2], cmap='seismic', vmin=tgt_conv_filter_min, vmax=tgt_conv_filter_max)
-    f.colorbar(ax_for_cb,)
+    f.colorbar(ax_for_cb, )
 
     plot_tgt_filters_activations(model, contour_test_image, f_idx)
 
 
 if __name__ == "__main__":
-
     plt.ion()
 
     # 1. Build the model
@@ -624,11 +637,11 @@ if __name__ == "__main__":
     main(alex_net_cont_int_model, frag_2, tgt_filt_idx)
 
     # # Diagonal Filter (back slash)
-    # tgt_filt_idx = 67
-    # frag_3 = K.eval(alex_net_cont_int_model.layers[1].weights[0])
-    # frag_3 = frag_3[:, :, :, tgt_filt_idx]
+    # tgt_filt_idx = 54
+    # # frag_3 = K.eval(alex_net_cont_int_model.layers[1].weights[0])
+    # # frag_3 = frag_3[:, :, :, tgt_filt_idx]
     # frag_3 = np.zeros((11, 11))
-    # frag_3[0, :] = [1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1]
+    # frag_3[0, :] = [1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1]
     # for i in range(1, 11):
     #     if (i % 2) == 0:
     #         frag_3[i, :] = np.roll(frag_3[i - 1, :], 1)
@@ -640,14 +653,14 @@ if __name__ == "__main__":
 
     # 5. Output of contour enhancement on real image
     # ----------------------------------------------------------------------
-    test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
-    # test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
-
-    tgt_filt_idx = 5
-    plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
-
-    tgt_filt_idx = 10
-    plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
+    # test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    # # test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
+    #
+    # tgt_filt_idx = 5
+    # plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
+    #
+    # tgt_filt_idx = 10
+    # plot_tgt_filters_activations(alex_net_cont_int_model, test_real_img, tgt_filt_idx, image_normalization=True)
 
     # 5. Contours Embedded in a Sea of similar but randomly oriented contours
     # ------------------------------------------------------------------------
@@ -703,4 +716,3 @@ if __name__ == "__main__":
     # plt.imshow(test_img)
     # plt.title("Test Image. Contour in a sea of similarly oriented fragments")
     # plot_tgt_filters_activations(alex_net_cont_int_model, test_img, tgt_filt_idx)
-
