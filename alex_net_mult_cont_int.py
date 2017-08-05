@@ -19,7 +19,7 @@ import keras.backend as K
 import base_alex_net as alex_net
 import learned_lateral_weights
 import utils
-import alex_net_contour_integration as linear_cont_int_model
+import alex_net_add_cont_int as linear_cont_int_model
 reload(utils)
 reload(learned_lateral_weights)
 reload(alex_net)
@@ -224,7 +224,7 @@ if __name__ == "__main__":
     alex_net_cont_int_model = build_model("trained_models/AlexNet/alexnet_weights.h5", model_type=m_type)
     # alex_net_cont_int_model.summary()
 
-    # TODO: Again same code as  alex_net_contour_integration.py. Combine!
+    # TODO: Again same code as  alex_net_add_cont_int.py. Combine!
     # 4. Contour Enhancement Visualizations
     # ---------------------------------------------------------------------
     # Vertical Filter
