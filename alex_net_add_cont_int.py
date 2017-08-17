@@ -161,7 +161,7 @@ def get_enhance_n_suppress_non_overlap_contour_kernels():
     return kernel, n
 
 
-def get_non_overlap_full_contour_kernels(sigma=5):
+def get_non_overlap_full_contour_kernels(sigma=5.0):
     """
 
     :param sigma: standard deviation of gaussian to model, further away contours should add less gain
