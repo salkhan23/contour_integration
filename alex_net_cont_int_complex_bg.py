@@ -29,23 +29,6 @@ reload(nonlinear_cont_int_model)
 np.random.seed(7)  # Set the random seed for reproducibility
 
 
-def get_2d_gaussian_kernel(shape, sigma=1.0):
-    """
-    Returns a 2d (unnormalized) Gaussian kernel of the specified shape.
-
-    :param shape: x,y dimensions of the gaussian
-    :param sigma: standard deviation of generated Gaussian
-    :return:
-    """
-    ax = np.arange(-shape[0] // 2 + 1, shape[0] // 2 + 1)
-    ay = np.arange(-shape[1] // 2 + 1, shape[1] // 2 + 1)
-
-    xx, yy = np.meshgrid(ax, ay)
-    kernel = np.exp(-(xx ** 2 + yy ** 2) / (2 * sigma ** 2))
-
-    return kernel
-
-
 def get_randomly_rotated_tile(tile, delta_rotation=45.0):
     """
     randomly rotate tile by 360/delta_rotation permutations
@@ -74,7 +57,7 @@ def tile_image(img, fragment, insert_locs, rotate=True):
     img_len = img.shape[0]
     tile_len = fragment.shape[0]
 
-    g_kernel = get_2d_gaussian_kernel((tile_len, tile_len), sigma=5.0)
+    g_kernel = linear_cont_int_model.get_2d_gaussian_kernel((tile_len, tile_len), sigma=5.0)
     g_kernel = np.reshape(g_kernel, (g_kernel.shape[0], g_kernel.shape[1], 1))
     g_kernel = np.repeat(g_kernel, 3, axis=2)
 
