@@ -42,7 +42,9 @@ class ContourIntegrationLayer(Layer):
             'suppress',
             'enhance_n_suppress',
             'enhance_n_suppress_5',
-            'enhance_n_suppress_non_overlap']
+            'enhance_n_suppress_non_overlap',
+            'non_overlap_full'
+        ]
 
         if model_type not in valid_model_types:
             raise Exception("Need to specify a valid model type")
@@ -55,8 +57,10 @@ class ContourIntegrationLayer(Layer):
             self.kernel, self.n = linear_cont_int_model.get_enhance_n_suppress_contour_kernels()
         elif model_type == 'enhance_n_suppress_5':
             self.kernel, self.n = linear_cont_int_model.get_enhance_n_suppress_5x5_contour_kernels()
-        else:
+        elif model_type == 'enhance_n_suppress_non_overlap':
             self.kernel, self.n = linear_cont_int_model.get_enhance_n_suppress_non_overlap_contour_kernels()
+        else:
+            self.kernel, self.n = linear_cont_int_model.get_non_overlap_full_contour_kernels()
 
         self.kernel = K.variable(self.kernel)
         super(ContourIntegrationLayer, self).__init__(**kwargs)
