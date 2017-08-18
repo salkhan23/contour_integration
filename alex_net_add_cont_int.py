@@ -161,29 +161,29 @@ def get_enhance_n_suppress_non_overlap_contour_kernels():
     return kernel, n
 
 
-def get_non_overlap_full_contour_kernels(sigma=5.0):
+def get_non_overlap_full_contour_kernels(sigma=6.0):
     """
 
     :param sigma: standard deviation of gaussian to model, further away contours should add less gain
     :return:
     """
-    n = 19
+    n = 25
     kernel = np.zeros((96, n, n))
     g_kernel = get_2d_gaussian_kernel((n, n), sigma)
 
     # Vertical Kernel
-    kernel[10, (0, 3, 6, 12, 15, 18), (9, 9, 9, 9, 9, 9)] = 1
-    kernel[10, (9, 9, 9, 9, 9, 9), (0, 3, 6, 12, 15, 18)] = -1
+    kernel[10, (0, 3, 6, 9, 15, 18, 21, 24), (12, 12, 12, 12, 12, 12, 12, 12)] = 1
+    kernel[10, (12, 12, 12, 12, 12, 12, 12, 12), (0, 3, 6, 9, 15, 18, 21, 24)] = -1
     kernel[10, :, :] = kernel[10, :, :] * g_kernel
 
     # Horizontal Kernel
-    kernel[5, (0, 3, 6, 12, 15, 18), (9, 9, 9, 9, 9, 9)] = -1
-    kernel[5, (9, 9, 9, 9, 9, 9), (0, 3, 6, 12, 15, 18)] = 1
+    kernel[5, (0, 3, 6, 9, 15, 18, 21, 24), (12, 12, 12, 12, 12, 12, 12, 12)] = -1
+    kernel[5, (12, 12, 12, 12, 12, 12, 12, 12), (0, 3, 6, 9, 15, 18, 21, 24)] = 1
     kernel[5, :, :] = kernel[5, :, :] * g_kernel
 
     # Diagonal Kernel (Leaning backwards)
-    kernel[54, (0, 3, 6, 12, 15, 18), (0, 3, 6, 12, 15, 18)] = 1
-    kernel[54, (0, 3, 6, 12, 15, 18), (18, 15, 12, 6, 3, 0)] = -1
+    kernel[54, (0, 3, 6, 9, 15, 18, 21, 24), (0, 3, 6, 9, 15, 18, 21, 24)] = 1
+    kernel[54, (0, 3, 6, 9, 15, 18, 21, 24), (24, 21, 18, 15, 12, 6, 3, 0)] = -1
     kernel[54, :, :] = kernel[54, :, :] * g_kernel
 
     # Diagonal Kernel(Leaning backwards)
