@@ -194,7 +194,9 @@ if __name__ == "__main__":
     # Average RF size of neuron = 0.6 degrees. Alex Net Conv L1 RF size 11x11
     # Contour Fragments placed in squares of size = 0.4 degrees. 0.4/0.6 * 11 = 7.3 = 8
     # Within each square, contour of size 0.2 x 0.05 degrees. 0.2/0.6*11, 0.05/0.6*11 = (3.6, 0.92) = (4, 1)
+    # However, the make RF (square) increase the width of fragment to 2.
     fragment = np.zeros((8, 8, 3))
+    fragment[(2, 3, 4, 5), 3, :] = 255
     fragment[(2, 3, 4, 5), 4, :] = 255
 
     # 2(b) Display the target Filter and the contour fragment
