@@ -118,7 +118,7 @@ def vertical_contour(model, tgt_filt_idx, frag, contour_len):
     image_len = test_image.shape[0]
 
     # Output dimensions of the first convolutional layer of Alexnet [55x55x96] and a stride=4 was used
-    center_neuron_loc = 27 * 4
+    center_neuron_loc = 27 * 4  # Starting Visual Field Location of neuron @ location (27,27)
     num_tiles = image_len // frag_len
 
     start_x = range(
@@ -179,27 +179,43 @@ if __name__ == "__main__":
     # 2. Vertical Contours of various lengths
     # ----------------------------------------
     tgt_filter_index = 10
-    tgt_neuron_loc = (27, 27)
-    tgt_neuron_l2_act = []
 
-    fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
-    fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
-
-    # Display the target Filter and the contour fragment
-    # --------------------------------------------------
+    # 2(a) Contour fragment to use
+    # -------------------------------
+    # Fragment is the target filter
     # conv1_weights = K.eval(contour_integration_model.layers[1].weights[0])
-    # tgt_filter = conv1_weights[:, :, :, tgt_filter_index]
-    #
-    # fig = plt.figure()
-    # fig.add_subplot(1, 2, 1)
-    # display_filt = (tgt_filter - tgt_filter.min()) * 1 / (tgt_filter.max() - tgt_filter.min())  # normalize to [0, 1]
-    # plt.imshow(display_filt)
-    # plt.title("Target Filter")
-    # fig.add_subplot(1, 2, 2)
-    # plt.imshow(fragment / 255.0)
-    # plt.title("Contour Fragment")
+    # fragment = conv1_weights[:, :, :, tgt_filter_index]
 
+    # Simpler 'target filter' like contour fragment
+    # fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
+    # fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
+
+    # Fragment similar to used in Ref
+    # Average RF size of neuron = 0.6 degrees. Alex Net Conv L1 RF size 11x11
+    # Contour Fragments placed in squares of size = 0.4 degrees. 0.4/0.6 * 11 = 7.3 = 8
+    # Within each square, contour of size 0.2 x 0.05 degrees. 0.2/0.6*11, 0.05/0.6*11 = (3.6, 0.92) = (4, 1)
+    fragment = np.zeros((8, 8, 3))
+    fragment[(2, 3, 4, 5), 4, :] = 255
+
+    # 2(b) Display the target Filter and the contour fragment
+    # --------------------------------------------------
+    conv1_weights = K.eval(contour_integration_model.layers[1].weights[0])
+    tgt_filter = conv1_weights[:, :, :, tgt_filter_index]
+
+    fig = plt.figure()
+    fig.add_subplot(1, 2, 1)
+    display_filt = (tgt_filter - tgt_filter.min()) * 1 / (tgt_filter.max() - tgt_filter.min())  # normalize to [0, 1]
+    plt.imshow(display_filt)
+    plt.title("Target Filter")
+    fig.add_subplot(1, 2, 2)
+    plt.imshow(fragment / 255.0)
+    plt.title("Contour Fragment")
+
+    # 2(c) Response to contours of various lengths
+    # --------------------------------------------------
     contour_lengths_arr = range(1, 11, 2)
+    tgt_neuron_l2_act = []
+    tgt_neuron_loc = (27, 27)
 
     for c_len in contour_lengths_arr:
         l2_activations = vertical_contour(
