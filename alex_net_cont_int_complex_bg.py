@@ -92,12 +92,13 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True):
     return img
 
 
-def vertical_contour(model, tgt_filt_idx, frag, contour_len):
+def vertical_contour(model, tgt_filt_idx, frag, contour_len, smoothing_bw_tiles=True):
     """
     Creates a test image of a sea of "contour fragments" by tiling random rotations of the contour
     fragment (frag), then inserts a vertical contour of the specified length into the center of
     the image Plot the l1 & l2 activations of the contour integration alexnet model.
 
+    :param smoothing_bw_tiles: use smoothign between tiles
     :param model:
     :param tgt_filt_idx: target neuron activation
     :param frag: Contour fragment to be tiled.
@@ -128,7 +129,13 @@ def vertical_contour(model, tgt_filt_idx, frag, contour_len):
     )
     start_y = np.copy(start_x)
 
-    test_image = tile_image(test_image, frag, (start_x, start_y), rotate=True, gaussian_smoothing=True)
+    test_image = tile_image(
+        test_image,
+        frag,
+        (start_x, start_y),
+        rotate=True,
+        gaussian_smoothing=smoothing_bw_tiles
+    )
 
     # Insert Contour
     # --------------
@@ -139,7 +146,13 @@ def vertical_contour(model, tgt_filt_idx, frag, contour_len):
     )
     start_y = np.ones_like(start_x) * center_neuron_loc
 
-    test_image = tile_image(test_image, frag, (start_x, start_y), rotate=False, gaussian_smoothing=True)
+    test_image = tile_image(
+        test_image,
+        frag,
+        (start_x, start_y),
+        rotate=False,
+        gaussian_smoothing=smoothing_bw_tiles
+    )
 
     # Bring it back to the [0,1] range (rotation fcn scales pixels to [0, 255])
     test_image = test_image / 255.0
@@ -182,22 +195,25 @@ if __name__ == "__main__":
 
     # 2(a) Contour fragment to use
     # -------------------------------
-    # Fragment is the target filter
+    # # Fragment is the target filter
     # conv1_weights = K.eval(contour_integration_model.layers[1].weights[0])
     # fragment = conv1_weights[:, :, :, tgt_filter_index]
+    # smooth_tiles = True
 
     # Simpler 'target filter' like contour fragment
-    # fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
-    # fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
+    fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
+    fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
+    smooth_tiles = True
 
-    # Fragment similar to used in Ref
-    # Average RF size of neuron = 0.6 degrees. Alex Net Conv L1 RF size 11x11
-    # Contour Fragments placed in squares of size = 0.4 degrees. 0.4/0.6 * 11 = 7.3 = 8
-    # Within each square, contour of size 0.2 x 0.05 degrees. 0.2/0.6*11, 0.05/0.6*11 = (3.6, 0.92) = (4, 1)
-    # However, the make RF (square) increase the width of fragment to 2.
-    fragment = np.zeros((8, 8, 3))
-    fragment[(2, 3, 4, 5), 3, :] = 255
-    fragment[(2, 3, 4, 5), 4, :] = 255
+    # # Fragment similar to used in Ref
+    # # Average RF size of neuron = 0.6 degrees. Alex Net Conv L1 RF size 11x11
+    # # Contour Fragments placed in squares of size = 0.4 degrees. 0.4/0.6 * 11 = 7.3 = 8
+    # # Within each square, contour of size 0.2 x 0.05 degrees. 0.2/0.6*11, 0.05/0.6*11 = (3.6, 0.92) = (4, 1)
+    # # However, the make RF (square) increase the width of fragment to 2.
+    # fragment = np.zeros((8, 8, 3))
+    # fragment[(2, 3, 4, 5), 3, :] = 255
+    # fragment[(2, 3, 4, 5), 4, :] = 255
+    # smooth_tiles = False
 
     # 2(b) Display the target Filter and the contour fragment
     # --------------------------------------------------
@@ -225,6 +241,7 @@ if __name__ == "__main__":
             tgt_filter_index,
             fragment,
             c_len,
+            smoothing_bw_tiles=smooth_tiles
         )
 
         tgt_neuron_l2_act.append(
