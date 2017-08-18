@@ -94,14 +94,9 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True):
 
 def vertical_contour(model, tgt_filt_idx, frag, contour_len):
     """
-
     Creates a test image of a sea of "contour fragments" by tiling random rotations of the contour
-    fragment (frag), then inserts
-
-    For the specified target filter (convolutional layer 1 of Alexnet), create a test image of a sea
-    of similar but randomly oriented fragments, then inserts a vertical contour of the specified
-    length into the center of the image. Plot the l1 & l2 activations of the contour integration alexnet
-    model.
+    fragment (frag), then inserts a vertical contour of the specified length into the center of
+    the image Plot the l1 & l2 activations of the contour integration alexnet model.
 
     :param model:
     :param tgt_filt_idx: target neuron activation
@@ -112,20 +107,6 @@ def vertical_contour(model, tgt_filt_idx, frag, contour_len):
     """
 
     frag_len = frag.shape[0]
-
-    # # Display the target Filter and the contour fragment
-    # # --------------------------------------------------
-    # conv1_weights = K.eval(model.layers[1].weights[0])
-    # tgt_filt = conv1_weights[:, :, :, tgt_filt_idx]
-
-    # f = plt.figure()
-    # f.add_subplot(1, 2, 1)
-    # display_filt = (tgt_filt - tgt_filt.min()) * 1 / (tgt_filt.max() - tgt_filt.min())  # normalize to [0, 1]
-    # plt.imshow(display_filt)
-    # plt.title("Target Filter")
-    # f.add_subplot(1, 2, 2)
-    # plt.imshow(fragment / 255.0)
-    # plt.title("Contour Fragment")
 
     # Sea of similar but randomly oriented fragments
     # -----------------------------------------------
@@ -203,6 +184,20 @@ if __name__ == "__main__":
 
     fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
     fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
+
+    # Display the target Filter and the contour fragment
+    # --------------------------------------------------
+    # conv1_weights = K.eval(contour_integration_model.layers[1].weights[0])
+    # tgt_filter = conv1_weights[:, :, :, tgt_filter_index]
+    #
+    # fig = plt.figure()
+    # fig.add_subplot(1, 2, 1)
+    # display_filt = (tgt_filter - tgt_filter.min()) * 1 / (tgt_filter.max() - tgt_filter.min())  # normalize to [0, 1]
+    # plt.imshow(display_filt)
+    # plt.title("Target Filter")
+    # fig.add_subplot(1, 2, 2)
+    # plt.imshow(fragment / 255.0)
+    # plt.title("Contour Fragment")
 
     contour_lengths_arr = range(1, 11, 2)
 
