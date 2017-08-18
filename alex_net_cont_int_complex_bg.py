@@ -41,21 +41,21 @@ def get_randomly_rotated_tile(tile, delta_rotation=45.0):
     return imrotate(tile, angle=(np.random.randint(0, num_possible_rotations) * delta_rotation))
 
 
-def tile_image(img, fragment, insert_locs, rotate=True):
+def tile_image(img, frag, insert_locs, rotate=True):
     """
     Place tile 'fragments' at the specified starting positions (x, y) in the image.
     Each Fragment is multiplied with a Gaussian smoothing function to prevent tile edges becoming part of
     stimuli
 
+    :param frag: contour fragment to be inserted
     :param insert_locs: array of (x,y) positions to insert tiles at.
     :param img: image where tiles will be placed
-    :param tile: tile or fragment to be inserted
     :param rotate: If true each tile is randomly rotated before insertion. Currently 8 possible orientations
 
     :return: tiled image
     """
     img_len = img.shape[0]
-    tile_len = fragment.shape[0]
+    tile_len = frag.shape[0]
 
     g_kernel = linear_cont_int_model.get_2d_gaussian_kernel((tile_len, tile_len), sigma=5.0)
     g_kernel = np.reshape(g_kernel, (g_kernel.shape[0], g_kernel.shape[1], 1))
@@ -73,9 +73,9 @@ def tile_image(img, fragment, insert_locs, rotate=True):
             stop_y_loc = min(y + tile_len, img_len)
 
             if rotate:
-                tile = get_randomly_rotated_tile(fragment, 45)
+                tile = get_randomly_rotated_tile(frag, 45)
             else:
-                tile = fragment
+                tile = frag
 
             # multiply the file with the gaussian smoothing filter
             # The edges between the tiles will lie within the stimuli of some neurons.
@@ -91,90 +91,92 @@ def tile_image(img, fragment, insert_locs, rotate=True):
     return img
 
 
-def main(model, tgt_filt_idx, contour_len):
+def vertical_contour(model, tgt_filt_idx, frag, contour_len):
     """
-    This is the main routine of this script.
-    For the specified target filter (of convolutional layer 1 of Alexnet), it creates a sea, of similar but randomly
-    oriented fragments, then inserts a contour of the specifed length into the image, and plots the l1 & l2
-    activations of the of alexnet
 
-    :param contour_len:
-    :param tgt_filt_idx:
+    Creates a test image of a sea of "contour fragments" by tiling random rotations of the contour
+    fragment (frag), then inserts
+
+    For the specified target filter (convolutional layer 1 of Alexnet), create a test image of a sea
+    of similar but randomly oriented fragments, then inserts a vertical contour of the specified
+    length into the center of the image. Plot the l1 & l2 activations of the contour integration alexnet
+    model.
+
     :param model:
+    :param tgt_filt_idx: target neuron activation
+    :param frag: Contour fragment to be tiled.
+    :param contour_len:
 
     :return: l2 activations
     """
 
-    conv1_weights = K.eval(model.layers[1].weights[0])
-    tgt_filter = conv1_weights[:, :, :, tgt_filt_idx]
+    frag_len = frag.shape[0]
 
-    # Simpler but similar fragment
-    fragment = np.zeros_like(tgt_filter)
-    fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
-    fragment_len = fragment.shape[0]
+    # # Display the target Filter and the contour fragment
+    # # --------------------------------------------------
+    # conv1_weights = K.eval(model.layers[1].weights[0])
+    # tgt_filt = conv1_weights[:, :, :, tgt_filt_idx]
 
     # f = plt.figure()
     # f.add_subplot(1, 2, 1)
-    # display_filt = (tgt_filter - tgt_filter.min()) * 1 / (tgt_filter.max() - tgt_filter.min())
+    # display_filt = (tgt_filt - tgt_filt.min()) * 1 / (tgt_filt.max() - tgt_filt.min())  # normalize to [0, 1]
     # plt.imshow(display_filt)
     # plt.title("Target Filter")
     # f.add_subplot(1, 2, 2)
     # plt.imshow(fragment / 255.0)
     # plt.title("Contour Fragment")
 
-    # 3. Make Test Image Sea of similar but randomly oriented fragments
-    # ------------------------------------------------------------------
+    # Sea of similar but randomly oriented fragments
+    # -----------------------------------------------
     # Rather than tiling starting from location (0, 0). Start at the center of the RF of a central neuron.
-    # This ensures that this central neuron is looking directly at the neuron and has a maximal response and
-    # is similar to the Ref, where the central contour fragment was in the center of the RF of the neuron
-    # being monitored and the origin.
+    # This ensures that this central neuron is looking directly at the fragment and has a maximal response.
+    # This is similar to the Ref, where the center contour fragment was in the center of the RF of the neuron
+    # being monitored and the origin of the visual field
     test_image = np.ones((227, 227, 3)) * 128.0
     image_len = test_image.shape[0]
 
     # Output dimensions of the first convolutional layer of Alexnet [55x55x96] and a stride=4 was used
     center_neuron_loc = 27 * 4
-    num_tiles = image_len // fragment_len
+    num_tiles = image_len // frag_len
 
     start_x = range(
-        center_neuron_loc - (num_tiles / 2) * fragment_len,
-        center_neuron_loc + (num_tiles / 2 + 1) * fragment_len,
-        fragment_len
+        center_neuron_loc - (num_tiles / 2) * frag_len,
+        center_neuron_loc + (num_tiles / 2 + 1) * frag_len,
+        frag_len
     )
     start_y = np.copy(start_x)
 
-    test_image = tile_image(test_image, fragment, (start_x, start_y), rotate=True)
+    test_image = tile_image(test_image, frag, (start_x, start_y), rotate=True)
 
-    # Insert Contour at the central Location
-    # -----------------------------------------
+    # Insert Contour
+    # --------------
     start_x = range(
-        center_neuron_loc - (contour_len / 2) * fragment_len,
-        center_neuron_loc + (contour_len / 2 + 1) * fragment_len,
-        fragment_len
+        center_neuron_loc - (contour_len / 2) * frag_len,
+        center_neuron_loc + (contour_len / 2 + 1) * frag_len,
+        frag_len
     )
-
     start_y = np.ones_like(start_x) * center_neuron_loc
 
-    test_image = tile_image(test_image, fragment, (start_x, start_y), rotate=False)
+    test_image = tile_image(test_image, frag, (start_x, start_y), rotate=False)
 
-    # Bring it back to the 0-1 range
-    # ------------------------------------
+    # Bring it back to the [0,1] range (rotation fcn scales pixels to [0, 255])
     test_image = test_image / 255.0
 
     plt.figure()
     plt.imshow(test_image)
-    plt.title("sea of randomly oriented fragments, Contour of length %d" % contour_len)
+    plt.title("Vertical contour of length %d in a sea of fragments" % contour_len)
 
-    # 5. Pass the test image through the model
+    # Pass the test image through the model
     # -------------------------------------------
-    _, l2_activations = linear_cont_int_model.plot_tgt_filters_activations(
+    _, l2_output = linear_cont_int_model.plot_tgt_filters_activations(
         model,
         test_image,
         tgt_filt_idx,
     )
     f = plt.gcf()
-    f.suptitle("Contour Length %d" % contour_len)
+    f.suptitle("Vertical Contour of Length %d" % contour_len)
 
-    return l2_activations
+    return l2_output
 
 
 if __name__ == "__main__":
@@ -182,111 +184,41 @@ if __name__ == "__main__":
     plt.ion()
 
     # 1. Load the model
-    # --------------------------------------------------
+    # ------------------
     K.set_image_dim_ordering('th')
     print("Building Contour Integration Model...")
 
-    # m_type = 'enhance'
-    # m_type = 'suppress'
-    # m_type = 'enhance_n_suppress'
-    # m_type = 'enhance_n_suppress_5'
     # m_type = 'enhance_n_suppress_non_overlap'
     m_type = 'non_overlap_full'
     contour_integration_model = nonlinear_cont_int_model.build_model(
         "trained_models/AlexNet/alexnet_weights.h5", model_type=m_type)
     # alex_net_cont_int_model.summary()
 
-    # 1. Contour of Length 3
-    # -----------------------
-    act = []
-    target_filter_index = 10
+    # 2. Vertical Contours of various lengths
+    # ----------------------------------------
+    tgt_filter_index = 10
+    tgt_neuron_loc = (27, 27)
+    tgt_neuron_l2_act = []
 
-    len1_l2_activations = main(contour_integration_model, 10, 1)
-    act.append(len1_l2_activations[0, target_filter_index, 27, 27])
+    fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
+    fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
 
-    len3_l2_activations = main(contour_integration_model, 10, 3)
-    act.append(len3_l2_activations[0, target_filter_index, 27, 27])
+    contour_lengths_arr = range(1, 11, 2)
 
-    len5_l2_activations = main(contour_integration_model, 10, 5)
-    act.append(len5_l2_activations[0, target_filter_index, 27, 27])
+    for c_len in contour_lengths_arr:
+        l2_activations = vertical_contour(
+            contour_integration_model,
+            tgt_filter_index,
+            fragment,
+            c_len,
+        )
 
-    len7_l2_activations = main(contour_integration_model, 10, 7)
-    act.append(len7_l2_activations[0, target_filter_index, 27, 27])
+        tgt_neuron_l2_act.append(
+            l2_activations[0, tgt_filter_index, tgt_neuron_loc[0], tgt_neuron_loc[1]])
 
     plt.figure()
-    plt.plot(range(1, 9, 2), act)
-    plt.xlabel("Contour length")
-    plt.ylabel("Amplitude")
-
-    # # 2. Select a Target Kernel and construct a contour fragment similar to the ones used in Ref
-    # # ------------------------------------------------------------------------------------------
-    # tgt_filt_idx = 10  # Vertical Filter
-    #
-    # conv1_weights = K.eval(contour_integration_model.layers[1].weights[0])
-    # tgt_filter = conv1_weights[:, :, :, tgt_filt_idx]
-    # tgt_filter_len = tgt_filter[0]
-    #
-    # # Simpler but similar fragment
-    # fragment = np.zeros_like(tgt_filter)
-    # fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
-    # fragment_len = fragment.shape[0]
-    #
-    # f = plt.figure()
-    # f.add_subplot(1, 2, 1)
-    # display_filt = (tgt_filter - tgt_filter.min()) * 1/(tgt_filter.max() - tgt_filter.min())
-    # plt.imshow(display_filt)
-    # plt.title("Target Filter")
-    # f.add_subplot(1, 2, 2)
-    # plt.imshow(fragment / 255.0)
-    # plt.title("Contour Fragment")
-    #
-    # # 3. Make Test Image Sea of similar but randomly oriented fragments
-    # # ------------------------------------------------------------------
-    # # Rather than tiling starting from location (0, 0). Start at the center of the RF of a central neuron.
-    # # This ensures that this central neuron is looking directly at the neuron and has a maximal response and
-    # # is similar to the Ref, where the central contour fragment was in the center of the RF of the neuron
-    # # being monitored and the origin.
-    # test_image = np.ones((227, 227, 3)) * 128.0
-    # image_len = test_image.shape[0]
-    #
-    # # Output dimensions of the first convolutional layer of Alexnet [55x55x96] and a stride=4 was used
-    # center_neuron_loc = 27 * 4
-    # num_tiles = image_len // fragment_len
-    #
-    # start_x = range(
-    #     center_neuron_loc - (num_tiles / 2) * fragment_len,
-    #     center_neuron_loc + (num_tiles / 2 + 1) * fragment_len,
-    #     fragment_len
-    # )
-    # start_y = np.copy(start_x)
-    #
-    # test_image = tile_image(test_image, fragment, (start_x, start_y), rotate=True)
-    #
-    # # Insert Contour at the central Location
-    # # -----------------------------------------
-    # contour_len = 9
-    # start_x = range(
-    #     center_neuron_loc - (contour_len / 2) * fragment_len,
-    #     center_neuron_loc + (contour_len / 2 + 1) * fragment_len,
-    #     fragment_len
-    # )
-    #
-    # start_y = np.ones_like(start_x) * center_neuron_loc
-    #
-    # test_image = tile_image(test_image, fragment, (start_x, start_y), rotate=False)
-    #
-    # # Bring it back to the 0-1 range
-    # # ------------------------------------
-    # test_image = test_image / 255.0
-    #
-    # plt.figure()
-    # plt.imshow(test_image)
-    # plt.title("sea of randomly oriented fragments")
-    #
-    # # 5. Pass the test image through the model
-    # # -------------------------------------------
-    # linear_cont_int_model.plot_tgt_filters_activations(
-    #     contour_integration_model,
-    #     test_image,
-    #     tgt_filt_idx,
-    # )
+    plt.plot(contour_lengths_arr, tgt_neuron_l2_act)
+    plt.xlabel("Contour Length")
+    plt.ylabel("Activation")
+    plt.title("Neuron @loc (%d, %d) with kernel Index %d, L2 (contour Enhanced) activation"
+              % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filter_index))
