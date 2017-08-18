@@ -41,16 +41,16 @@ def get_randomly_rotated_tile(tile, delta_rotation=45.0):
     return imrotate(tile, angle=(np.random.randint(0, num_possible_rotations) * delta_rotation))
 
 
-def tile_image(img, frag, insert_locs, rotate=True):
+def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True):
     """
     Place tile 'fragments' at the specified starting positions (x, y) in the image.
-    Each Fragment is multiplied with a Gaussian smoothing function to prevent tile edges becoming part of
-    stimuli
 
     :param frag: contour fragment to be inserted
     :param insert_locs: array of (x,y) positions to insert tiles at.
     :param img: image where tiles will be placed
     :param rotate: If true each tile is randomly rotated before insertion. Currently 8 possible orientations
+    :param gaussian_smoothing: If True, each fragment is multiplied with a Gaussian smoothing function to prevent
+            tile edges becoming part of stimuli, as they will lie in the center of the RF of my neurons.
 
     :return: tiled image
     """
@@ -80,7 +80,8 @@ def tile_image(img, frag, insert_locs, rotate=True):
             # multiply the file with the gaussian smoothing filter
             # The edges between the tiles will lie within the stimuli of some neurons.
             # to prevent these prom being interpreted as stimuli, gradually decrease them.
-            tile = tile * g_kernel
+            if gaussian_smoothing:
+                tile = tile * g_kernel
 
             img[
                 start_x_loc: stop_x_loc,
@@ -146,7 +147,7 @@ def vertical_contour(model, tgt_filt_idx, frag, contour_len):
     )
     start_y = np.copy(start_x)
 
-    test_image = tile_image(test_image, frag, (start_x, start_y), rotate=True)
+    test_image = tile_image(test_image, frag, (start_x, start_y), rotate=True, gaussian_smoothing=True)
 
     # Insert Contour
     # --------------
@@ -157,7 +158,7 @@ def vertical_contour(model, tgt_filt_idx, frag, contour_len):
     )
     start_y = np.ones_like(start_x) * center_neuron_loc
 
-    test_image = tile_image(test_image, frag, (start_x, start_y), rotate=False)
+    test_image = tile_image(test_image, frag, (start_x, start_y), rotate=False, gaussian_smoothing=True)
 
     # Bring it back to the [0,1] range (rotation fcn scales pixels to [0, 255])
     test_image = test_image / 255.0
