@@ -382,7 +382,11 @@ if __name__ == "__main__":
     # # Response to contours with various inter contour distances
     # # --------------------------------------------------------
     n_runs = 50
-    spacing_bw_tiles = np.array([0, 2, 4, 6, 8, 10])  # np.arange(1, 8)
+    fragment_len = fragment.shape[0]
+
+    relative_colinear_dist_arr = np.array([1, 1.2, 1.4, 1.6, 1.8, 1.9])
+    spacing_bw_tiles = np.floor(relative_colinear_dist_arr * fragment_len) - fragment_len
+
     tgt_neuron_l2_act = []
     tgt_neuron_loc = (27, 27)
     c_len = 7  # Ref uses a contour of length 7
@@ -401,7 +405,7 @@ if __name__ == "__main__":
                 tgt_filter_index,
                 fragment,
                 c_len,
-                space_bw_tiles=spacing,
+                space_bw_tiles=int(spacing),
                 smoothing_bw_tiles=smooth_tiles
             )
 
