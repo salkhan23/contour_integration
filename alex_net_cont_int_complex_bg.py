@@ -197,28 +197,29 @@ def plot_activations(img, l1_act, l2_act, tgt_filt_idx):
     :param tgt_filt_idx:
     :return:
     """
-    f = plt.figure()
+
+    plt.figure()
+    plt.imshow(img)
 
     min_l2_act = l1_act.min()
     max_l2_act = l2_act.max()
 
-    f.add_subplot(1, 4, 1)
-    plt.imshow(img)
+    f = plt.figure()
 
-    f.add_subplot(1, 4, 2)
+    f.add_subplot(1, 3, 1)
     plt.imshow(l1_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
     plt.title('L1 Conv Layer Activation @ idx %d' % tgt_filt_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
-    f.add_subplot(1, 4, 3)
-    plt.imshow(l1_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
-    plt.title('L2 Contour integration layer Activation @ idx %d' % tgt_filter_index)
+    f.add_subplot(1, 3, 2)
+    plt.imshow(l2_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
+    plt.title('L2 Contour Integration Layer Activation @ idx %d' % tgt_filter_index)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
     f.add_subplot(1, 4, 4)
-    plt.imshow(tgt_l2_activation - tgt_l1_activation, cmap='seismic')
+    plt.imshow(l2_act - l1_act, cmap='seismic')
     plt.title("Difference")
     plt.grid()
 
