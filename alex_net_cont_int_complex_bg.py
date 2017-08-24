@@ -96,15 +96,17 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True):
     return img
 
 
-def vertical_contour(model, tgt_filt_idx, frag, contour_len, space_bw_tiles=0, smoothing_bw_tiles=True):
+def vertical_contour(
+        l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len, space_bw_tiles=0, smoothing_bw_tiles=True):
     """
     Creates a test image of a sea of "contour fragments" by tiling random rotations of the contour
     fragment (frag), then inserts a vertical contour of the specified length into the center of
     the image Plot the l1 & l2 activations of the contour integration alexnet model.
 
+    :param l2_act_cb: Callback function to get activations of L1 convolutional layer
+    :param l1_act_cb: Callback function to get activations of L2 contour integration layer
     :param smoothing_bw_tiles: use smoothing between tiles
     :param space_bw_tiles: Amount of spacing (in pixels) between inserted tiles
-    :param model:
     :param tgt_filt_idx: target neuron activation
     :param frag: Contour fragment to be tiled.
     :param contour_len:
@@ -168,8 +170,12 @@ def vertical_contour(model, tgt_filt_idx, frag, contour_len, space_bw_tiles=0, s
     test_image = np.reshape(test_image, [1, test_image.shape[0], test_image.shape[1], test_image.shape[2]])
     # batch size is expected as the first dimension
 
-    l1_act = linear_cont_int_model.get_layer_activation(model, 1, test_image)
-    l2_act = linear_cont_int_model.get_layer_activation(model, 2, test_image)
+    # l1_act = linear_cont_int_model.get_layer_activation(model, 1, test_image)
+    # l2_act = linear_cont_int_model.get_layer_activation(model, 2, test_image)
+    l1_act = l1_act_cb([test_image, 0])
+    l1_act = np.squeeze(np.array(l1_act), axis=0)
+    l2_act = l2_act_cb([test_image, 0])
+    l2_act = np.squeeze(np.array(l2_act), axis=0)
 
     tgt_l1_act = l1_act[0, tgt_filt_idx, :, :]
     tgt_l2_act = l2_act[0, tgt_filt_idx, :, :]
@@ -217,12 +223,29 @@ def plot_activations(img, l1_act, l2_act, tgt_filt_idx):
     plt.grid()
 
 
+def get_activation_cb(model, layer_idx):
+    """
+    Return a callback to return the output activation of the specified layer
+    The callback expects input cb([input_image, 0])
+    :param model:
+    :param layer_idx:
+    :return: callback function.
+    """
+    get_layer_output = K.function(
+        [model.layers[0].input, K.learning_phase()],
+        [model.layers[layer_idx].output]
+    )
+
+    return get_layer_output
+
+
 if __name__ == "__main__":
 
     plt.ion()
 
     # 1. Load the model
     # ------------------
+    K.clear_session()
     K.set_image_dim_ordering('th')
     print("Building Contour Integration Model...")
 
@@ -231,6 +254,11 @@ if __name__ == "__main__":
     contour_integration_model = nonlinear_cont_int_model.build_model(
         "trained_models/AlexNet/alexnet_weights.h5", model_type=m_type)
     # alex_net_cont_int_model.summary()
+
+    # Define callback functions to get activations of L1 convolutional layer &
+    # L2 contour integration layer
+    l1_activations_cb = get_activation_cb(contour_integration_model, 1)
+    l2_activations_cb = get_activation_cb(contour_integration_model, 2)
 
     # -------------------------------------------------------------------------------------
     #  Figure 2 B3, Contours of Various length
@@ -250,19 +278,19 @@ if __name__ == "__main__":
     # smooth_tiles = True
 
     # Simpler 'target filter' like contour fragment
-    fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
-    fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
-    smooth_tiles = True
+    # fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
+    # fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
+    # smooth_tiles = True
 
-    # # Fragment from the Reference
-    # # Average RF size of neuron = 0.6 degrees. Alex Net Conv L1 RF size 11x11
-    # # Contour fragments placed in squares of size = 0.4 degrees. 0.4/0.6 * 11 = 7.3 = 8
-    # # Within each square, contour of size 0.2 x 0.05 degrees.( 0.2, 0.5)/0.6 * 11 = (3.6, 0.92) = (4, 1)
-    # # However, to make the fragment symmetric, increase the width of fragment to 2.
-    # fragment = np.zeros((8, 8, 3))
-    # fragment[(2, 3, 4, 5), 3, :] = 255
-    # fragment[(2, 3, 4, 5), 4, :] = 255
-    # smooth_tiles = False
+    # Fragment from the Reference
+    # Average RF size of neuron = 0.6 degrees. Alex Net Conv L1 RF size 11x11
+    # Contour fragments placed in squares of size = 0.4 degrees. 0.4/0.6 * 11 = 7.3 = 8
+    # Within each square, contour of size 0.2 x 0.05 degrees.( 0.2, 0.5)/0.6 * 11 = (3.6, 0.92) = (4, 1)
+    # However, to make the fragment symmetric, increase the width of fragment to 2.
+    fragment = np.zeros((8, 8, 3))
+    fragment[(2, 3, 4, 5), 3, :] = 255
+    fragment[(2, 3, 4, 5), 4, :] = 255
+    smooth_tiles = False
 
     # # (b) Display the target filter and the contour fragment
     # # -------------------------------------------------------
@@ -292,7 +320,8 @@ if __name__ == "__main__":
             print("Run %d, Processing Contour of length %d" % (run_idx, c_len))
 
             tgt_l1_activation, tgt_l2_activation, test_img = vertical_contour(
-                contour_integration_model,
+                l1_activations_cb,
+                l2_activations_cb,
                 tgt_filter_index,
                 fragment,
                 c_len,
@@ -309,7 +338,7 @@ if __name__ == "__main__":
     tgt_neuron_std = tgt_neuron_l2_act.std(axis=0)
 
     plt.figure()
-    plt.errorbar(contour_lengths_arr, tgt_neuron_mean, tgt_neuron_std, marker='+')
+    plt.errorbar(contour_lengths_arr, tgt_neuron_mean, tgt_neuron_std, marker='o')
     plt.xlabel("Contour Length")
     plt.ylabel("Activation")
     plt.title("L2 (contour enhanced) activation, Neuron @ (%d, %d, %d)"
@@ -339,21 +368,21 @@ if __name__ == "__main__":
     # fragment = (fragment - fragment.min())*(255 / (fragment.max() - fragment.min()))
     # smooth_tiles = True
 
-    # Simpler 'target filter' like contour fragment
-    fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
-    fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
-    smooth_tiles = True
+    # # Simpler 'target filter' like contour fragment
+    # fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
+    # fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
+    # smooth_tiles = True
 
     # Fragment from reference
-    # fragment = np.zeros((8, 8, 3))
-    # fragment[(2, 3, 4, 5), 3, :] = 255
-    # fragment[(2, 3, 4, 5), 4, :] = 255
-    # smooth_tiles = False
+    fragment = np.zeros((8, 8, 3))
+    fragment[(2, 3, 4, 5), 3, :] = 255
+    fragment[(2, 3, 4, 5), 4, :] = 255
+    smooth_tiles = False
 
     # # Response to contours with various inter contour distances
     # # --------------------------------------------------------
-    n_runs = 2
-    spacing_bw_tiles = np.array([0, 2, 4, 6, 8, 10]) # np.arange(1, 8)
+    n_runs = 50
+    spacing_bw_tiles = np.array([0, 2, 4, 6, 8, 10])  # np.arange(1, 8)
     tgt_neuron_l2_act = []
     tgt_neuron_loc = (27, 27)
     c_len = 7  # Ref uses a contour of length 7
@@ -367,7 +396,8 @@ if __name__ == "__main__":
             print("Run %d, Processing relative colinear distance of %0.2f" % (run_idx, relative_colinear_dist))
 
             tgt_l1_activation, tgt_l2_activation, test_img = vertical_contour(
-                contour_integration_model,
+                l1_activations_cb,
+                l2_activations_cb,
                 tgt_filter_index,
                 fragment,
                 c_len,
@@ -388,7 +418,7 @@ if __name__ == "__main__":
     tgt_neuron_std = tgt_neuron_l2_act.std(axis=0)
     rcd = (spacing_bw_tiles + fragment.shape[0]) / np.float(fragment.shape[0])
 
-    plt.errorbar(rcd, tgt_neuron_mean, tgt_neuron_std)
+    plt.errorbar(rcd, tgt_neuron_mean, tgt_neuron_std, marker='o')
     plt.xlabel("Contour Distance")
     plt.ylabel("Activation")
     plt.title("L2 (contour Enhanced) activation. Neuron @ (%d, %d, %d)"
