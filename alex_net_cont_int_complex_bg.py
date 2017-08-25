@@ -24,6 +24,7 @@ import learned_lateral_weights
 import utils
 import alex_net_add_cont_int as linear_cont_int_model
 import alex_net_mult_cont_int as nonlinear_cont_int_model
+
 reload(utils)
 reload(learned_lateral_weights)
 reload(alex_net)
@@ -292,14 +293,26 @@ def plot_l1_filter_and_contour_fragment(model, frag, tgt_filt_idx):
     conv1_weights = K.eval(model.layers[1].weights[0])
     tgt_filt = conv1_weights[:, :, :, tgt_filt_idx]
 
-    f = plt.figure()
-    f.add_subplot(1, 2, 1)
+    plt.figure()
+    ax = plt.subplot2grid((2, 4), (0, 0), colspan=2)
     display_filt = (tgt_filt - tgt_filt.min()) * 1 / (tgt_filt.max() - tgt_filt.min())
-    plt.imshow(display_filt)  # normalized to [0, 1]
-    plt.title("Target Filter")
-    f.add_subplot(1, 2, 2)
-    plt.imshow(frag / 255.0)
-    plt.title("Contour Fragment")
+    ax.imshow(display_filt)  # normalized to [0, 1]
+    ax.set_title("Target Filter")
+
+    ax = plt.subplot2grid((2, 4), (0, 2), colspan=2)
+    ax.imshow(frag / 255.0)
+    ax.set_title("Contour Fragment")
+
+    ax = plt.subplot2grid((2, 4), (1, 0))
+    ax.imshow(display_filt[:, :, 0], cmap='seismic')
+
+    ax = plt.subplot2grid((2, 4), (1, 1))
+    ax.imshow(display_filt[:, :, 1], cmap='seismic')
+
+    ax = plt.subplot2grid((2, 4), (1, 2))
+    ax.imshow(display_filt[:, :, 2], cmap='seismic')
+
+    plt.suptitle()
 
 
 def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, n_runs=1):
@@ -414,8 +427,8 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
     plt.title("L2 (contour Enhanced) activation. Neuron @ (%d, %d, %d)"
               % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     plt.ion()
 
     # 1. Load the model
@@ -462,7 +475,7 @@ if __name__ == "__main__":
     # fragment[(2, 3, 4, 5), 4, :] = 255
     # use_smoothing = False
 
-    plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, tgt_filter_index)
+    # plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, tgt_filter_index)
 
     main_contour_length_routine(
         fragment,
@@ -506,6 +519,8 @@ if __name__ == "__main__":
     # fragment[3, (2, 3, 4, 5), :] = 255
     # fragment[4, (2, 3, 4, 5), :] = 255
     # use_smoothing = False
+
+    plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, tgt_filter_index)
 
     main_contour_length_routine(
         fragment,
