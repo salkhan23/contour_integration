@@ -33,6 +33,22 @@ reload(nonlinear_cont_int_model)
 np.random.seed(7)  # Set the random seed for reproducibility
 
 
+def get_activation_cb(model, layer_idx):
+    """
+    Return a callback to return the output activation of the specified layer
+    The callback expects input cb([input_image, 0])
+    :param model:
+    :param layer_idx:
+    :return: callback function.
+    """
+    get_layer_output = K.function(
+        [model.layers[0].input, K.learning_phase()],
+        [model.layers[layer_idx].output]
+    )
+
+    return get_layer_output
+
+
 def get_randomly_rotated_tile(tile, delta_rotation=45.0):
     """
     randomly rotate tile by 360/delta_rotation permutations
@@ -50,7 +66,7 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True):
     Place tile 'fragments' at the specified starting positions (x, y) in the image.
 
     :param frag: contour fragment to be inserted
-    :param insert_locs: array of (x,y) positions to insert tiles at.
+    :param insert_locs: array of (x,y) starting positions of where tiles will be inserted
     :param img: image where tiles will be placed
     :param rotate: If true each tile is randomly rotated before insertion. Currently 8 possible orientations
     :param gaussian_smoothing: If True, each fragment is multiplied with a Gaussian smoothing function to prevent
@@ -96,20 +112,23 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True):
     return img
 
 
-def vertical_contour(
-        l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len, space_bw_tiles=0, smoothing_bw_tiles=True):
+def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
+                          cont_gen_cb, space_bw_tiles=0, smooth_tiles=True):
     """
     Creates a test image of a sea of "contour fragments" by tiling random rotations of the contour
     fragment (frag), then inserts a vertical contour of the specified length into the center of
     the image Plot the l1 & l2 activations of the contour integration alexnet model.
 
-    :param l2_act_cb: Callback function to get activations of L1 convolutional layer
-    :param l1_act_cb: Callback function to get activations of L2 contour integration layer
-    :param smoothing_bw_tiles: use smoothing between tiles
-    :param space_bw_tiles: Amount of spacing (in pixels) between inserted tiles
+    :param l1_act_cb: Callback function to get activations of L1 contour integration layer
+    :param l2_act_cb: Callback function to get activations of L2 contour integration layer
     :param tgt_filt_idx: target neuron activation
-    :param frag: Contour fragment to be tiled.
-    :param contour_len:
+    :param frag: Contour fragment (square) to use for creating the larger tiled image
+    :param contour_len: length of contour to generate
+    :param cont_gen_cb: Contour generating callback. Generates contours of the specified length
+                        and spacing between fragments. For format see vertical_contour_generator
+    :param space_bw_tiles: Amount of spacing (in pixels) between inserted tiles
+    :param smooth_tiles: Use gaussian smoothing on tiles to prevent tile edges from becoming part
+                         of the stimulus
 
     :return: l1 activation, l2 activation (of target filter) & generated image
     """
@@ -141,24 +160,19 @@ def vertical_contour(
         frag,
         (start_x, start_y),
         rotate=True,
-        gaussian_smoothing=smoothing_bw_tiles
+        gaussian_smoothing=smooth_tiles
     )
 
     # Insert Contour
     # --------------
-    start_x = range(
-        center_neuron_loc - (contour_len / 2) * frag_len,
-        center_neuron_loc + (contour_len / 2 + 1) * frag_len,
-        frag_len
-    )
-    start_y = np.ones_like(start_x) * center_neuron_loc
+    cont_coordinates = cont_gen_cb(frag.shape[0], space_bw_tiles, contour_len, center_neuron_loc)
 
     test_image = tile_image(
         test_image,
         frag,
-        (start_x, start_y),
+        cont_coordinates,
         rotate=False,
-        gaussian_smoothing=smoothing_bw_tiles
+        gaussian_smoothing=smooth_tiles
     )
 
     # Bring it back to the [0, 1] range (rotation fcn scales pixels to [0, 255])
@@ -170,8 +184,6 @@ def vertical_contour(
     test_image = np.reshape(test_image, [1, test_image.shape[0], test_image.shape[1], test_image.shape[2]])
     # batch size is expected as the first dimension
 
-    # l1_act = linear_cont_int_model.get_layer_activation(model, 1, test_image)
-    # l2_act = linear_cont_int_model.get_layer_activation(model, 2, test_image)
     l1_act = l1_act_cb([test_image, 0])
     l1_act = np.squeeze(np.array(l1_act), axis=0)
     l2_act = l2_act_cb([test_image, 0])
@@ -185,6 +197,29 @@ def vertical_contour(
     test_image = np.transpose(test_image, (1, 2, 0))
 
     return tgt_l1_act, tgt_l2_act, test_image
+
+
+def vertical_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_loc):
+    """
+    Generate the start co-ordinates of fragment squares that form a contour of the specified length
+    at the specified location
+
+    :param frag_len:
+    :param bw_tile_spacing: Between fragment square spacing in pixels
+    :param cont_len: length of fragment in units of fragment squares
+    :param cont_start_loc: start starting location where the contour should be places
+    :return:
+    """
+    mod_frag_len = frag_len + bw_tile_spacing
+
+    start_x = range(
+        cont_start_loc - (cont_len / 2) * mod_frag_len,
+        cont_start_loc + (cont_len / 2 + 1) * mod_frag_len,
+        mod_frag_len
+    )
+    start_y = np.ones_like(start_x) * cont_start_loc
+
+    return start_x, start_y
 
 
 def plot_activations(img, l1_act, l2_act, tgt_filt_idx):
@@ -224,22 +259,6 @@ def plot_activations(img, l1_act, l2_act, tgt_filt_idx):
     plt.grid()
 
 
-def get_activation_cb(model, layer_idx):
-    """
-    Return a callback to return the output activation of the specified layer
-    The callback expects input cb([input_image, 0])
-    :param model:
-    :param layer_idx:
-    :return: callback function.
-    """
-    get_layer_output = K.function(
-        [model.layers[0].input, K.learning_phase()],
-        [model.layers[layer_idx].output]
-    )
-
-    return get_layer_output
-
-
 if __name__ == "__main__":
 
     plt.ion()
@@ -274,12 +293,12 @@ if __name__ == "__main__":
     # fragment = conv1_weights[:, :, :, tgt_filter_index]
     # Scale the filter to lie withing [0, 255]
     # fragment = (fragment - fragment.min())*(255 / (fragment.max() - fragment.min()))
-    # smooth_tiles = True
+    # use_smoothing = True
 
     # Simpler 'target filter' like contour fragment
     fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
     fragment[:, (0, 3, 4, 5, 9, 10), :] = 255
-    smooth_tiles = True
+    use_smoothing = True
 
     # # Fragment from the Reference
     # # Average RF size of neuron = 0.6 degrees. Alex Net Conv L1 RF size 11x11
@@ -289,7 +308,7 @@ if __name__ == "__main__":
     # fragment = np.zeros((8, 8, 3))
     # fragment[(2, 3, 4, 5), 3, :] = 255
     # fragment[(2, 3, 4, 5), 4, :] = 255
-    # smooth_tiles = False
+    # use_smoothing = False
 
     # # Display the target filter and the contour fragment
     # conv1_weights = K.eval(contour_integration_model.layers[1].weights[0])
@@ -318,13 +337,14 @@ if __name__ == "__main__":
         for c_idx, c_len in enumerate(contour_lengths_arr):
             print("Run %d, Processing Contour of length %d" % (run_idx, c_len))
 
-            tgt_l1_activation, tgt_l2_activation, test_img = vertical_contour(
+            tgt_l1_activation, tgt_l2_activation, test_img = get_contour_responses(
                 l1_activations_cb,
                 l2_activations_cb,
                 tgt_filter_index,
                 fragment,
                 c_len,
-                smoothing_bw_tiles=smooth_tiles
+                vertical_contour_generator,
+                smooth_tiles=use_smoothing
             )
 
             tgt_neuron_l2_act[run_idx, c_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
@@ -361,16 +381,18 @@ if __name__ == "__main__":
     for run_idx in range(n_runs):
         for s_idx, spacing in enumerate(spacing_bw_tiles):
             relative_colinear_dist = (spacing + fragment_len) / np.float(fragment_len)
-            print("Run %d, Processing relative colinear distance of %0.2f" % (run_idx, relative_colinear_dist))
+            print("Run %d, Processing relative colinear distance of %0.2f (spacing of %d)"
+                  % (run_idx, relative_colinear_dist, spacing))
 
-            tgt_l1_activation, tgt_l2_activation, test_img = vertical_contour(
+            tgt_l1_activation, tgt_l2_activation, test_img = get_contour_responses(
                 l1_activations_cb,
                 l2_activations_cb,
                 tgt_filter_index,
                 fragment,
                 c_len,
+                vertical_contour_generator,
                 space_bw_tiles=int(spacing),
-                smoothing_bw_tiles=smooth_tiles
+                smooth_tiles=use_smoothing
             )
 
             tgt_neuron_l2_act[run_idx, s_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
