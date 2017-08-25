@@ -222,6 +222,28 @@ def vertical_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_l
     return start_x, start_y
 
 
+def horizontal_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_loc):
+    """
+
+    :param frag_len:
+    :param bw_tile_spacing:
+    :param cont_len:
+    :param cont_start_loc:
+    :return:
+    """
+    mod_frag_len = frag_len + bw_tile_spacing
+
+    start_y = range(
+        cont_start_loc - (cont_len / 2) * mod_frag_len,
+        cont_start_loc + (cont_len / 2 + 1) * mod_frag_len,
+        mod_frag_len
+    )
+
+    start_x = np.ones_like(start_y) * cont_start_loc
+
+    return start_x, start_y
+
+
 def plot_activations(img, l1_act, l2_act, tgt_filt_idx):
     """
     plot the test image, l1_activations, l2_activations and the difference between the activations
@@ -413,9 +435,9 @@ if __name__ == "__main__":
     l1_activations_cb = get_activation_cb(contour_integration_model, 1)
     l2_activations_cb = get_activation_cb(contour_integration_model, 2)
 
-    # ------------------------------------------------------------------
+    # --------------------------------------------------------------------------------------------
     #  Vertical Contours
-    # ------------------------------------------------------------------
+    # --------------------------------------------------------------------------------------------
     tgt_filter_index = 10
 
     # # Fragment is the target filter
@@ -457,6 +479,49 @@ if __name__ == "__main__":
         l1_activations_cb,
         l2_activations_cb,
         vertical_contour_generator,
+        tgt_filter_index,
+        use_smoothing,
+        n_runs=50
+    )
+
+    # --------------------------------------------------------------------------------------------
+    #  Horizontal Contours
+    # --------------------------------------------------------------------------------------------
+    tgt_filter_index = 5
+
+    # # Fragment is the target filter
+    # conv1_weights = K.eval(contour_integration_model.layers[1].weights[0])
+    # fragment = conv1_weights[:, :, :, tgt_filter_index]
+    # # Scale the filter to lie withing [0, 255]
+    # fragment = (fragment - fragment.min())*(255 / (fragment.max() - fragment.min()))
+    # use_smoothing = True
+
+    # # Simpler 'target filter' like contour fragment
+    fragment = np.zeros((11, 11, 3))  # Dimensions of the L1 convolutional layer of alexnet
+    fragment[0:6, :, :] = 255
+    use_smoothing = True
+
+    # # Fragment from the Reference
+    # fragment = np.zeros((8, 8, 3))
+    # fragment[3, (2, 3, 4, 5), :] = 255
+    # fragment[4, (2, 3, 4, 5), :] = 255
+    # use_smoothing = False
+
+    main_contour_length_routine(
+        fragment,
+        l1_activations_cb,
+        l2_activations_cb,
+        horizontal_contour_generator,
+        tgt_filter_index,
+        use_smoothing,
+        n_runs=50
+    )
+
+    main_contour_spacing_routine(
+        fragment,
+        l1_activations_cb,
+        l2_activations_cb,
+        horizontal_contour_generator,
         tgt_filter_index,
         use_smoothing,
         n_runs=50
