@@ -259,6 +259,139 @@ def plot_activations(img, l1_act, l2_act, tgt_filt_idx):
     plt.grid()
 
 
+def plot_l1_filter_and_contour_fragment(model, frag, tgt_filt_idx):
+    """
+
+    :param model:
+    :param frag:
+    :param tgt_filt_idx:
+    :return:
+    """
+    conv1_weights = K.eval(model.layers[1].weights[0])
+    tgt_filt = conv1_weights[:, :, :, tgt_filt_idx]
+
+    f = plt.figure()
+    f.add_subplot(1, 2, 1)
+    display_filt = (tgt_filt - tgt_filt.min()) * 1 / (tgt_filt.max() - tgt_filt.min())
+    plt.imshow(display_filt)  # normalized to [0, 1]
+    plt.title("Target Filter")
+    f.add_subplot(1, 2, 2)
+    plt.imshow(frag / 255.0)
+    plt.title("Contour Fragment")
+
+
+def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, n_runs=1):
+    """
+    Contours of various lengths - Figure 2, B3
+
+    :param smoothing:
+    :param cont_gen_cb:
+    :param tgt_filt_idx:
+    :param l2_act_cb:
+    :param l1_act_cb:
+    :param n_runs:
+    :param frag:
+
+    :return:
+    """
+    contour_lengths_arr = range(1, 11, 2)
+
+    tgt_neuron_loc = (27, 27)  # Neuron focused in the center of the image.
+    tgt_neuron_l2_act = np.zeros((n_runs, len(contour_lengths_arr)))
+
+    for run_idx in range(n_runs):
+        for c_idx, c_len in enumerate(contour_lengths_arr):
+            print("Run %d, Processing contour of length %d" % (run_idx, c_len))
+
+            tgt_l1_activation, tgt_l2_activation, test_img = get_contour_responses(
+                l1_act_cb,
+                l2_act_cb,
+                tgt_filt_idx,
+                frag,
+                c_len,
+                cont_gen_cb,
+                smooth_tiles=smoothing
+            )
+
+            tgt_neuron_l2_act[run_idx, c_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
+
+            # plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
+            # plt.suptitle("Vertical contour Length=%d in a sea of fragments" % c_len)
+
+    # Plot the activation of the target neuron as contour length increases
+    tgt_neuron_mean = tgt_neuron_l2_act.mean(axis=0)
+    tgt_neuron_std = tgt_neuron_l2_act.std(axis=0)
+
+    plt.figure()
+    plt.errorbar(contour_lengths_arr, tgt_neuron_mean, tgt_neuron_std, marker='o')
+    plt.xlabel("Contour Length")
+    plt.ylabel("Activation")
+    plt.title("L2 (contour enhanced) activation, Neuron @ (%d, %d, %d)"
+              % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
+
+
+def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, n_runs=1):
+    """
+    Various Contour Spacing - Figure 2, B4
+
+    :param frag:
+    :param l1_act_cb:
+    :param l2_act_cb:
+    :param cont_gen_cb:
+    :param tgt_filt_idx:
+    :param smoothing:
+    :param n_runs:
+
+    :return:
+    """
+    c_len = 7  # Ref uses a contour of length 7
+    frag_len = frag.shape[0]
+
+    # Contour spacing was specified as relative colinear spacing = the distance between the centers
+    # of adjacent fragments / length of contour fragments (fixed at 0.4 visual degrees)
+    # Relative colinear distance of [1, 1.2, 1.4, 1.6, 1.8, 1.9] were use.
+    # We simulate similar relative colinear distance by inserting spacing between the contour squares.
+    relative_colinear_dist_arr = np.array([1, 1.2, 1.4, 1.6, 1.8, 1.9])
+    spacing_bw_tiles = np.floor(relative_colinear_dist_arr * frag_len) - frag_len
+
+    tgt_neuron_loc = (27, 27)  # Neuron focused in the center of the image.
+    tgt_neuron_l2_act = np.zeros((n_runs, len(spacing_bw_tiles)))
+
+    for run_idx in range(n_runs):
+        for s_idx, spacing in enumerate(spacing_bw_tiles):
+            relative_colinear_dist = (spacing + frag_len) / np.float(frag_len)
+            print("Run %d, Processing relative colinear distance of %0.2f (spacing of %d)"
+                  % (run_idx, relative_colinear_dist, spacing))
+
+            tgt_l1_activation, tgt_l2_activation, test_img = get_contour_responses(
+                l1_act_cb,
+                l2_act_cb,
+                tgt_filt_idx,
+                frag,
+                c_len,
+                cont_gen_cb,
+                space_bw_tiles=int(spacing),
+                smooth_tiles=smoothing
+            )
+
+            tgt_neuron_l2_act[run_idx, s_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
+
+            # plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
+            # plt.suptitle("Vertical contour Length=%d, Rel. colinear dist=%0.2f in a sea of fragments"
+            #              % (c_len, (frag_len + spacing) / np.float(frag_len)))
+
+    # Plot the activation of the target neuron as contour spacing changes
+    plt.figure()
+    tgt_neuron_mean = tgt_neuron_l2_act.mean(axis=0)
+    tgt_neuron_std = tgt_neuron_l2_act.std(axis=0)
+    rcd = (spacing_bw_tiles + frag_len) / np.float(frag_len)
+
+    plt.errorbar(rcd, tgt_neuron_mean, tgt_neuron_std, marker='o')
+    plt.xlabel("Contour Distance")
+    plt.ylabel("Activation")
+    plt.title("L2 (contour Enhanced) activation. Neuron @ (%d, %d, %d)"
+              % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
+
 if __name__ == "__main__":
 
     plt.ion()
@@ -283,9 +416,6 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     #  Vertical Contours
     # ------------------------------------------------------------------
-
-    # Specify Target Neuron and Contour Fragment
-    # ---------------------------------------------
     tgt_filter_index = 10
 
     # # Fragment is the target filter
@@ -310,106 +440,24 @@ if __name__ == "__main__":
     # fragment[(2, 3, 4, 5), 4, :] = 255
     # use_smoothing = False
 
-    # # Display the target filter and the contour fragment
-    # conv1_weights = K.eval(contour_integration_model.layers[1].weights[0])
-    # tgt_filter = conv1_weights[:, :, :, tgt_filter_index]
-    #
-    # fig = plt.figure()
-    # fig.add_subplot(1, 2, 1)
-    # display_filt = (tgt_filter - tgt_filter.min()) * 1 / (tgt_filter.max() - tgt_filter.min())
-    # plt.imshow(display_filt)   # normalized to [0, 1]
-    # plt.title("Target Filter")
-    # fig.add_subplot(1, 2, 2)
-    # plt.imshow(fragment / 255.0)
-    # plt.title("Contour Fragment")
+    plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, tgt_filter_index)
 
-    fragment_len = fragment.shape[0]
-    tgt_neuron_loc = (27, 27)  # Neuron focused in the center of the image.
+    main_contour_length_routine(
+        fragment,
+        l1_activations_cb,
+        l2_activations_cb,
+        vertical_contour_generator,
+        tgt_filter_index,
+        use_smoothing,
+        n_runs=50
+    )
 
-    # -----------------------------------------------------------------------------------
-    # Contours of various lengths - Figure 2, B3
-    # -----------------------------------------------------------------------------------
-    n_runs = 50
-    contour_lengths_arr = range(1, 11, 2)
-    tgt_neuron_l2_act = np.zeros((n_runs, len(contour_lengths_arr)))
-
-    for run_idx in range(n_runs):
-        for c_idx, c_len in enumerate(contour_lengths_arr):
-            print("Run %d, Processing Contour of length %d" % (run_idx, c_len))
-
-            tgt_l1_activation, tgt_l2_activation, test_img = get_contour_responses(
-                l1_activations_cb,
-                l2_activations_cb,
-                tgt_filter_index,
-                fragment,
-                c_len,
-                vertical_contour_generator,
-                smooth_tiles=use_smoothing
-            )
-
-            tgt_neuron_l2_act[run_idx, c_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
-
-            # plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filter_index)
-            # plt.suptitle("Vertical contour Length=%d in a sea of fragments" % c_len)
-
-    # Plot the activation of the target neuron as contour length increases
-    tgt_neuron_mean = tgt_neuron_l2_act.mean(axis=0)
-    tgt_neuron_std = tgt_neuron_l2_act.std(axis=0)
-
-    plt.figure()
-    plt.errorbar(contour_lengths_arr, tgt_neuron_mean, tgt_neuron_std, marker='o')
-    plt.xlabel("Contour Length")
-    plt.ylabel("Activation")
-    plt.title("L2 (contour enhanced) activation, Neuron @ (%d, %d, %d)"
-              % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filter_index))
-
-    # -------------------------------------------------------------------------------------
-    #  Various Contour Spacing - Figure 2, B4
-    # -------------------------------------------------------------------------------------
-    n_runs = 50
-    c_len = 7  # Ref uses a contour of length 7
-
-    # Contour spacing was specified as relative colinear spacing = the distance between the centers
-    # of adjacent fragments / length of contour fragments (fixed at 0.4 visual degrees)
-    # Relative colinear distance of [1, 1.2, 1.4, 1.6, 1.8, 1.9] were use.
-    # We simulate similar relative colinear distance by inserting spacing between the contour squares.
-    relative_colinear_dist_arr = np.array([1, 1.2, 1.4, 1.6, 1.8, 1.9])
-    spacing_bw_tiles = np.floor(relative_colinear_dist_arr * fragment_len) - fragment_len
-
-    tgt_neuron_l2_act = np.zeros((n_runs, len(spacing_bw_tiles)))
-
-    for run_idx in range(n_runs):
-        for s_idx, spacing in enumerate(spacing_bw_tiles):
-            relative_colinear_dist = (spacing + fragment_len) / np.float(fragment_len)
-            print("Run %d, Processing relative colinear distance of %0.2f (spacing of %d)"
-                  % (run_idx, relative_colinear_dist, spacing))
-
-            tgt_l1_activation, tgt_l2_activation, test_img = get_contour_responses(
-                l1_activations_cb,
-                l2_activations_cb,
-                tgt_filter_index,
-                fragment,
-                c_len,
-                vertical_contour_generator,
-                space_bw_tiles=int(spacing),
-                smooth_tiles=use_smoothing
-            )
-
-            tgt_neuron_l2_act[run_idx, s_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
-
-            # plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filter_index)
-            # plt.suptitle("Vertical contour Length=%d, Rel. colinear dist=%0.2f in a sea of fragments"
-            #              % (c_len, (fragment_len + spacing) / np.float(fragment_len)))
-
-    # Plot the activation of the target neuron as contour spacing changes
-    plt.figure()
-
-    tgt_neuron_mean = tgt_neuron_l2_act.mean(axis=0)
-    tgt_neuron_std = tgt_neuron_l2_act.std(axis=0)
-    rcd = (spacing_bw_tiles + fragment_len) / np.float(fragment_len)
-
-    plt.errorbar(rcd, tgt_neuron_mean, tgt_neuron_std, marker='o')
-    plt.xlabel("Contour Distance")
-    plt.ylabel("Activation")
-    plt.title("L2 (contour Enhanced) activation. Neuron @ (%d, %d, %d)"
-              % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filter_index))
+    main_contour_spacing_routine(
+        fragment,
+        l1_activations_cb,
+        l2_activations_cb,
+        vertical_contour_generator,
+        tgt_filter_index,
+        use_smoothing,
+        n_runs=50
+    )
