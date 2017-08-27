@@ -263,33 +263,35 @@ def plot_activations(img, l1_act, l2_act, tgt_filt_idx):
     :param l1_act:
     :param l2_act:
     :param tgt_filt_idx:
-    :return:
+    :return: Handles of the two images created
     """
 
-    plt.figure()
+    f1 = plt.figure()
     plt.imshow(img)
 
     min_l2_act = l1_act.min()
     max_l2_act = l2_act.max()
 
-    f = plt.figure()
+    f2 = plt.figure()
 
-    f.add_subplot(1, 3, 1)
+    f2.add_subplot(1, 3, 1)
     plt.imshow(l1_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
     plt.title('L1 Conv Layer Activation @ idx %d' % tgt_filt_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
-    f.add_subplot(1, 3, 2)
+    f2.add_subplot(1, 3, 2)
     plt.imshow(l2_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
     plt.title('L2 Contour Integration Layer Activation @ idx %d' % tgt_filter_index)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
-    f.add_subplot(1, 4, 4)
+    f2.add_subplot(1, 4, 4)
     plt.imshow(l2_act - l1_act, cmap='seismic')
     plt.title("Difference")
     plt.grid()
+
+    return f1, f2
 
 
 def plot_l1_filter_and_contour_fragment(model, frag, tgt_filt_idx):
@@ -413,8 +415,10 @@ def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fil
 
             tgt_neuron_l2_act[run_idx, c_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
 
-            # plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
-            # plt.suptitle("Vertical contour Length=%d in a sea of fragments" % c_len)
+            # fig1, fi2 = plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
+            # title = "Vertical contour Length=%d in a sea of fragments" % c_len
+            # fig1.suptitle(title)
+            # fig2.subtitle(title)
 
     # Plot the activation of the target neuron as contour length increases
     tgt_neuron_mean = tgt_neuron_l2_act.mean(axis=0)
@@ -474,9 +478,11 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
 
             tgt_neuron_l2_act[run_idx, s_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
 
-            # plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
-            # plt.suptitle("Vertical contour Length=%d, Rel. colinear dist=%0.2f in a sea of fragments"
-            #              % (c_len, (frag_len + spacing) / np.float(frag_len)))
+            # fig1, fig2 = plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
+            # title = "Vertical contour Length=%d, Rel. colinear dist=%0.2f in a sea of fragments" \
+            #         % (c_len, (frag_len + spacing) / np.float(frag_len))
+            # fig1.suptitle(title)
+            # fig2.subtitle(title)
 
     # Plot the activation of the target neuron as contour spacing changes
     plt.figure()
