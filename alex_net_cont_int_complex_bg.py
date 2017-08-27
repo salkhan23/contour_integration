@@ -82,33 +82,40 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True):
     g_kernel = np.reshape(g_kernel, (g_kernel.shape[0], g_kernel.shape[1], 1))
     g_kernel = np.repeat(g_kernel, 3, axis=2)
 
-    for x in insert_locs[0]:
-        for y in insert_locs[1]:
-            # print("Placing Fragment at location x=(%d, %d), y =(%d, %d)"
-            #       % (x, x + tile_len, y, y + tile_len))
+    x_arr = insert_locs[0]
+    y_arr = insert_locs[1]
 
-            start_x_loc = max(x, 0)
-            stop_x_loc = min(x + tile_len, img_len)
+    if isinstance(x_arr, int):
+        x_arr = np.array([x_arr])
+    if isinstance(y_arr, int):
+        y_arr = np.array([y_arr])
 
-            start_y_loc = max(y, 0)
-            stop_y_loc = min(y + tile_len, img_len)
+    for idx in range(len(x_arr)):
+        # print("Placing Fragment at location x=(%d, %d), y =(%d, %d)"
+        #       % (x_arr[idx], x_arr[idx] + tile_len, y_arr[idx], y_arr[idx] + tile_len))
 
-            if rotate:
-                tile = get_randomly_rotated_tile(frag, 45)
-            else:
-                tile = frag
+        start_x_loc = max(x_arr[idx], 0)
+        stop_x_loc = min(x_arr[idx] + tile_len, img_len)
 
-            # multiply the file with the gaussian smoothing filter
-            # The edges between the tiles will lie within the stimuli of some neurons.
-            # to prevent these prom being interpreted as stimuli, gradually decrease them.
-            if gaussian_smoothing:
-                tile = tile * g_kernel
+        start_y_loc = max(y_arr[idx], 0)
+        stop_y_loc = min(y_arr[idx] + tile_len, img_len)
 
-            img[
-                start_x_loc: stop_x_loc,
-                start_y_loc: stop_y_loc,
-                :
-            ] = tile[0: stop_x_loc - start_x_loc, 0: stop_y_loc - start_y_loc, :]
+        if rotate:
+            tile = get_randomly_rotated_tile(frag, 45)
+        else:
+            tile = frag
+
+        # multiply the file with the gaussian smoothing filter
+        # The edges between the tiles will lie within the stimuli of some neurons.
+        # to prevent these prom being interpreted as stimuli, gradually decrease them.
+        if gaussian_smoothing:
+            tile = tile * g_kernel
+
+        img[
+            start_x_loc: stop_x_loc,
+            start_y_loc: stop_y_loc,
+            :
+        ] = tile[0: stop_x_loc - start_x_loc, 0: stop_y_loc - start_y_loc, :]
 
     return img
 
@@ -155,6 +162,9 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
         frag_len
     )
     start_y = np.copy(start_x)
+
+    start_x = np.repeat(start_x, len(start_x))
+    start_y = np.tile(start_y, len(start_y))
 
     test_image = tile_image(
         test_image,
@@ -290,8 +300,8 @@ def plot_l1_filter_and_contour_fragment(model, frag, tgt_filt_idx):
     :param tgt_filt_idx:
     :return:
     """
-    conv1_weights = K.eval(model.layers[1].weights[0])
-    tgt_filt = conv1_weights[:, :, :, tgt_filt_idx]
+    l1_weights = K.eval(model.layers[1].weights[0])
+    tgt_filt = l1_weights[:, :, :, tgt_filt_idx]
 
     plt.figure()
     ax = plt.subplot2grid((2, 4), (0, 0), colspan=2)
@@ -312,7 +322,60 @@ def plot_l1_filter_and_contour_fragment(model, frag, tgt_filt_idx):
     ax = plt.subplot2grid((2, 4), (1, 2))
     ax.imshow(display_filt[:, :, 2], cmap='seismic')
 
-    plt.suptitle()
+
+def plot_tgt_location_l1_activations(frag, l1_act_cb, tgt_loc):
+    """
+    Given fragment is placed at the specified location in a test image and then passed through the network.
+    THe activations of the kernel at the target location are plotted. Index of the most responsive kernel is
+    returned.
+
+
+    :param tgt_loc:
+    :param frag:
+    :param l1_act_cb:
+    :return:
+    """
+    start_x = tgt_loc[0] * 4   # stride of Conv L1
+    start_y = tgt_loc[1] * 4
+
+    test_image = np.zeros((227, 227, 3))
+
+    test_image = tile_image(
+        test_image,
+        frag,
+        (start_x, start_y),
+        rotate=False,
+        gaussian_smoothing=False
+    )
+
+    test_image = np.transpose(test_image, (2, 0, 1))  # Theano back-end expects channel first format
+    test_image = np.reshape(test_image, [1, test_image.shape[0], test_image.shape[1], test_image.shape[2]])
+    # batch size is expected as the first dimension
+
+    l1_act = l1_act_cb([test_image, 0])
+    l1_act = np.squeeze(np.array(l1_act), axis=0)
+
+    tgt_l1_act = l1_act[0, :, tgt_loc[0], tgt_loc[1]]
+
+    max_active_filt = tgt_l1_act.argmax()
+    max_active_value = tgt_l1_act.max()
+
+    # return the test image back to its original format
+    test_image = test_image[0, :, :, :]
+    test_image = np.transpose(test_image, (1, 2, 0))
+
+    f = plt.figure()
+    f.add_subplot(1, 2, 1)
+
+    plt.imshow(test_image / 255.0)
+    plt.title('Input')
+    f.add_subplot(1, 2, 2)
+    plt.plot(tgt_l1_act)
+    plt.xlabel('Kernel Index')
+    plt.ylabel('Activation')
+    plt.title("Max active neuron at Index %d and value %0.2f" % (max_active_filt, max_active_value))
+
+    return max_active_filt
 
 
 def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, n_runs=1):
@@ -541,3 +604,28 @@ if __name__ == "__main__":
         use_smoothing,
         n_runs=50
     )
+
+    # # --------------------------------------------------------------------------------------------
+    # #  Diagonal Filters
+    # # --------------------------------------------------------------------------------------------
+    # tgt_filter_index = 54
+    #
+    # # Fragment is the target filter
+    # conv1_weights = K.eval(contour_integration_model.layers[1].weights[0])
+    # fragment = conv1_weights[:, :, :, tgt_filter_index]
+    # # Scale the filter to lie withing [0, 255]
+    # fragment = (fragment - fragment.min())*(255 / (fragment.max() - fragment.min()))
+    # use_smoothing = True
+    #
+    # # max_active = plot_tgt_location_l1_activations(fragment, l1_activations_cb, (27, 27))
+    # # plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, max_active)
+    # # plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, 54)
+    #
+    # img = np.zeros((227, 227, 3))
+    # loc_x = np.array([86,  97, 108, 119, 130])
+    # loc_y = np.array([98, 103, 108, 113, 118])
+    #
+    # new_img = tile_image(img, fragment, (loc_x, loc_y), rotate=False, gaussian_smoothing=False)
+    #
+    # plt.figure()
+    # plt.imshow(new_img / 255.0)
