@@ -4,7 +4,7 @@
 #
 # REF: Li, Piech & Gilbert - 2006 - Contour Saliency in Primary Visual Cortex
 #
-# Two results from the paper are replicated, figure 2 B3 & B4. Firing rates of V1 neurons
+# Two results from the paper are replicated, figure 2 C3 & C4. Firing rates of V1 neurons
 # increases as (B3) the number of fragments making up the contour increase and (B4) decreases as
 # the spacing between contours increases.
 #
@@ -282,7 +282,7 @@ def plot_activations(img, l1_act, l2_act, tgt_filt_idx):
 
     f2.add_subplot(1, 3, 2)
     plt.imshow(l2_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
-    plt.title('L2 Contour Integration Layer Activation @ idx %d' % tgt_filter_index)
+    plt.title('L2 Contour Integration Layer Activation @ idx %d' % tgt_filt_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
@@ -392,12 +392,13 @@ def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fil
     :param n_runs:
     :param frag:
 
-    :return:
+    :return: handle of figure where contour length vs gain is plotted
     """
     contour_lengths_arr = range(1, 11, 2)
 
     tgt_neuron_loc = (27, 27)  # Neuron focused in the center of the image.
     tgt_neuron_l2_act = np.zeros((n_runs, len(contour_lengths_arr)))
+    tgt_neuron_l1_act = np.zeros((n_runs, len(contour_lengths_arr)))
 
     for run_idx in range(n_runs):
         for c_idx, c_len in enumerate(contour_lengths_arr):
@@ -413,23 +414,28 @@ def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fil
                 smooth_tiles=smoothing
             )
 
+            tgt_neuron_l1_act[run_idx, c_idx] = tgt_l1_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
             tgt_neuron_l2_act[run_idx, c_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
 
-            # fig1, fi2 = plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
+            # fig1, fig2 = plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
             # title = "Vertical contour Length=%d in a sea of fragments" % c_len
             # fig1.suptitle(title)
-            # fig2.subtitle(title)
+            # fig2.suptitle(title)
 
-    # Plot the activation of the target neuron as contour length increases
-    tgt_neuron_mean = tgt_neuron_l2_act.mean(axis=0)
-    tgt_neuron_std = tgt_neuron_l2_act.std(axis=0)
+    # Plot the Contour Integration Gain of the target neuron as contour length increases
+    tgt_neuron_gain = tgt_neuron_l2_act / (tgt_neuron_l1_act + 1e-5)
+    tgt_neuron_gain_mean = tgt_neuron_gain.mean(axis=0)
+    tgt_neuron_gain_std = tgt_neuron_gain.std(axis=0)
 
-    plt.figure()
-    plt.errorbar(contour_lengths_arr, tgt_neuron_mean, tgt_neuron_std, marker='o')
-    plt.xlabel("Contour Length")
-    plt.ylabel("Activation")
-    plt.title("L2 (contour enhanced) activation, Neuron @ (%d, %d, %d)"
-              % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
+    f = plt.figure()
+    ax = f.add_subplot(1, 1, 1)
+    ax.errorbar(contour_lengths_arr, tgt_neuron_gain_mean, tgt_neuron_gain_std, marker='o')
+    ax.set_xlabel("Contour Length")
+    ax.set_ylabel("Contour Integration Gain")
+    ax.set_title("L2 (contour enhanced) gain as a function of contour length for Neuron @ (%d, %d, %d)"
+                 % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
+
+    return f
 
 
 def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, n_runs=1):
@@ -444,7 +450,7 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
     :param smoothing:
     :param n_runs:
 
-    :return:
+    :return: handle of figure where contour spacing vs gain is plotted
     """
     c_len = 7  # Ref uses a contour of length 7
     frag_len = frag.shape[0]
@@ -457,6 +463,7 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
     spacing_bw_tiles = np.floor(relative_colinear_dist_arr * frag_len) - frag_len
 
     tgt_neuron_loc = (27, 27)  # Neuron focused in the center of the image.
+    tgt_neuron_l1_act = np.zeros((n_runs, len(spacing_bw_tiles)))
     tgt_neuron_l2_act = np.zeros((n_runs, len(spacing_bw_tiles)))
 
     for run_idx in range(n_runs):
@@ -476,25 +483,30 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
                 smooth_tiles=smoothing
             )
 
+            tgt_neuron_l1_act[run_idx, s_idx] = tgt_l1_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
             tgt_neuron_l2_act[run_idx, s_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
 
             # fig1, fig2 = plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
             # title = "Vertical contour Length=%d, Rel. colinear dist=%0.2f in a sea of fragments" \
             #         % (c_len, (frag_len + spacing) / np.float(frag_len))
             # fig1.suptitle(title)
-            # fig2.subtitle(title)
+            # fig2.suptitle(title)
 
-    # Plot the activation of the target neuron as contour spacing changes
-    plt.figure()
-    tgt_neuron_mean = tgt_neuron_l2_act.mean(axis=0)
-    tgt_neuron_std = tgt_neuron_l2_act.std(axis=0)
+    # Plot the Contour Integration Gain of the target neuron as between contour spacing increases
+    tgt_neuron_gain = tgt_neuron_l2_act / (tgt_neuron_l1_act + 1e-5)
+    tgt_neuron_gain_mean = tgt_neuron_gain.mean(axis=0)
+    tgt_neuron_gain_std = tgt_neuron_gain.std(axis=0)
     rcd = (spacing_bw_tiles + frag_len) / np.float(frag_len)
 
-    plt.errorbar(rcd, tgt_neuron_mean, tgt_neuron_std, marker='o')
+    f = plt.figure()
+
+    plt.errorbar(rcd, tgt_neuron_gain_mean, tgt_neuron_gain_std, marker='o')
     plt.xlabel("Contour Distance")
-    plt.ylabel("Activation")
-    plt.title("L2 (contour Enhanced) activation. Neuron @ (%d, %d, %d)"
+    plt.ylabel("Contour Integration Gain")
+    plt.title("L2 (contour enhanced) gain as a function of contour length for Neuron @ (%d, %d, %d)"
               % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
+
+    return f
 
 
 if __name__ == "__main__":
@@ -589,7 +601,7 @@ if __name__ == "__main__":
     # fragment[4, (2, 3, 4, 5), :] = 255
     # use_smoothing = False
 
-    plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, tgt_filter_index)
+    # plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, tgt_filter_index)
 
     main_contour_length_routine(
         fragment,
@@ -611,6 +623,7 @@ if __name__ == "__main__":
         n_runs=50
     )
 
+    # TODO: Complete Linear but diagonal contours
     # # --------------------------------------------------------------------------------------------
     # #  Diagonal Filters
     # # --------------------------------------------------------------------------------------------
