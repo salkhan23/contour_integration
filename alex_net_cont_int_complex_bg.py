@@ -17,11 +17,9 @@ import matplotlib.pyplot as plt
 
 import keras.backend as K
 
-import base_alex_net as alex_net
 import alex_net_cont_int_models as cont_int_models
 import alex_net_utils
 
-reload(alex_net)
 reload(cont_int_models)
 reload(alex_net_utils)
 
@@ -252,15 +250,12 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
 
 if __name__ == "__main__":
     plt.ion()
+    K.clear_session()
 
     # 1. Load/Make the model
     # ----------------------
-    K.clear_session()
     K.set_image_dim_ordering('th')
     print("Building Contour Integration Model...")
-
-    # m_type = 'enhance_n_suppress_non_overlap'
-    m_type = 'non_overlap_full'
 
     # Gaussian Multiplicative Model
     contour_integration_model = cont_int_models.build_contour_integration_model(
