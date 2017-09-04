@@ -1,0 +1,528 @@
+# -------------------------------------------------------------------------------------------------
+#  File defines multiple variants of contour integration layers and some functions to build
+#  them onto base alex net models.
+#
+# Author: Salman Khan
+# Date  : 03/09/17
+# -------------------------------------------------------------------------------------------------
+from __future__ import print_function
+import numpy as np
+import matplotlib.pyplot as plt
+
+from keras.models import Model
+from keras.layers import Input, Activation, MaxPooling2D, Conv2D, Concatenate
+from keras.layers import Dense, Flatten, ZeroPadding2D, Dropout
+from keras.preprocessing.image import img_to_array, load_img
+from keras.engine.topology import Layer
+import keras.backend as K
+
+import base_alex_net as alex_net
+import alex_net_utils as alex_net_utils
+import utils as common_utils
+
+reload(alex_net)
+reload(alex_net_utils)
+reload(common_utils)
+
+
+np.random.seed(7)  # Set the random seed for reproducibility
+
+
+def get_visually_non_overlapping_contour_kernels(weights_type, rf_len):
+    """
+    Only visually non-overlapping neighbours are connected with lateral connections. In alexnet,
+    filter size of 11x11 is used with a stride of 4. Therefore every 3rd neighbor are the visually
+    non-overlapping neurons.
+
+    :param weights_type: ['enhance', 'suppress', 'enhance_and_suppress']
+    :param rf_len: length of RF over which lateral connections are defined
+
+    :return: [96 x re_len x rf_len] array of kernels
+    """
+    half_rf = rf_len // 2
+
+    kernel = np.zeros((96, rf_len, rf_len))  # There are 96 conv layer 1 kernels in alexnet.
+
+    pre_half_range = range(0, half_rf, 3)
+    post_half_range = range(half_rf + 3, rf_len, 3)
+
+    # Vertical_kernel
+    kernel[10, pre_half_range, half_rf] = 1
+    kernel[10, post_half_range, half_rf] = 1
+    if weights_type != 'enhance':  # Suppression values
+        print("Adding suprression")
+        kernel[10, half_rf, pre_half_range] = -1
+        kernel[10, half_rf, post_half_range] = -1
+
+    # Horizontal kernel
+    kernel[5, half_rf, pre_half_range] = 1
+    kernel[5, half_rf, post_half_range] = 1
+    if weights_type != 'enhance':  # Suppression values
+        kernel[5, pre_half_range, half_rf] = -1
+        kernel[5, post_half_range, half_rf] = -1
+
+    # Diagonal Kernel (Leaning backwards)
+    kernel[54, range(0, half_rf, 3), range(0, half_rf, 3)] = 1
+    kernel[54, range(half_rf + 3, rf_len, 3), range(half_rf + 3, rf_len, 3)] = 1
+    if weights_type != 'enhance':  # Suppression values
+        kernel[54, range(rf_len-1, half_rf, -3), range(0, half_rf, 3)] = -1
+        kernel[54, range(half_rf-3, -1, -3), range(half_rf + 3, rf_len, 3)] = -1
+
+    kernel[67, :, :] = np.copy(kernel[54, :, :])
+
+    return kernel
+
+
+class AdditiveContourIntegrationLayer(Layer):
+    def __init__(self, weights_type, n=25, **kwargs):
+        """
+        Simple Linear additive contour integration model where weighted neighbor feed forward
+        responses are added to the the feed forward response of neuron. Here feed forward refers
+        to the output of the first convolutional layer of Alexnet.
+
+        A_L(x,y) = sigma(A_FF(x,y) + sum_over_m_and_n[W(m,n)*A_FF(x-m,y-m)])
+
+        :param weights_type: types of weights [enhance, suppress or enhance_and_suppress]
+        :param n: size of square contour Integration RF. The number of L1 output neighbors over
+                  which lateral connections span (not over the visual space)
+        :param kwargs:
+        """
+
+        # 7 is the smallest size to include the first visually non-overlapping neigbor
+        if n > 55 or n < 7 or (n & 1 == 0):
+            raise Exception("Invalid horizontal connections extent." +
+                            "Must match dimensions of Conv1 Layer output [7-55] & must be odd.")
+        self.n = n
+
+        if weights_type.lower() not in ['enhance', 'suppress', 'enhance_and_suppress']:
+            raise Exception("Invalid weight types. Must be [enhance, suppress or enhance_and_suppress]")
+        self.weights_type = weights_type.lower()
+
+        self.kernel = get_visually_non_overlapping_contour_kernels(self.weights_type, self.n)
+        self.kernel = K.variable(self.kernel)
+
+        super(AdditiveContourIntegrationLayer, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        """
+        No learnable parameters for this model
+
+        :param input_shape:
+        :return:
+        """
+        super(AdditiveContourIntegrationLayer, self).build(input_shape)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape  # Layer does not change the shape of the input
+
+    def call(self, inputs, **kwargs):
+        """
+
+        :param inputs:
+        :return:
+        """
+        if K.image_data_format() == 'channels_last':
+            _, r, c, ch = K.int_shape(inputs)
+        else:
+            _, ch, r, c = K.int_shape(inputs)
+        # print("Call Fcn: Input shape ", K.int_shape(inputs))
+
+        # 1. Inputs Formatting
+        # ----------------------------------
+        # Pad the rows and columns to allow full matrix multiplication
+        # Note that this function is aware of which dimension the columns and rows are
+        padded_inputs = K.spatial_2d_padding(
+            inputs,
+            ((self.n / 2, self.n / 2), (self.n / 2, self.n / 2))
+        )
+        # print("Call Fcn: padded_inputs shape ", K.int_shape(padded_inputs))
+
+        # Channel first, batch second. This is done to take the unknown batch size into the matrix multiply
+        # where it can be handled more easily
+        if K.image_data_format() == 'channels_last':
+            inputs_chan_first = K.permute_dimensions(padded_inputs, [3, 0, 1, 2])
+        else:
+            inputs_chan_first = K.permute_dimensions(padded_inputs, [1, 0, 2, 3])
+        # print("Call Fcn: inputs_chan_first shape: ", inputs_chan_first.shape)
+
+        # 2. Kernel Formatting
+        # --------------------
+        if K.image_data_format() == 'channels_last':
+            kernel_chan_first = K.permute_dimensions(self.kernel, (2, 0, 1))
+        else:
+            kernel_chan_first = self.kernel
+        # print("Call Fcn: kernel_chan_first shape", kernel_chan_first.shape)
+
+        # Flatten rows and columns into a single dimension
+        k_ch, k_r, k_c = K.int_shape(kernel_chan_first)
+        apply_kernel = K.reshape(kernel_chan_first, (k_ch, k_r * k_c, 1))
+        # print("Call Fcn: kernel for matrix multiply: ", apply_kernel.shape)
+
+        # 3. Get outputs at each spatial location
+        # ----------------------------------------
+        xs = []
+        for i in range(r):
+            for j in range(c):
+                input_slice = inputs_chan_first[:, :, i:i + self.n, j:j + self.n]
+                input_slice_apply = K.reshape(input_slice, (ch, -1, self.n ** 2))
+
+                output_slice = K.batch_dot(input_slice_apply, apply_kernel)
+                # Reshape the output slice to put batch first
+                output_slice = K.permute_dimensions(output_slice, [1, 0, 2])
+                xs.append(output_slice)
+
+        # print("Call Fcn: len of xs", len(xs))
+        # print("Call Fcn: shape of each element of xs", xs[0].shape)
+
+        # Reshape the output to correct format
+        outputs = K.concatenate(xs, axis=2)
+        outputs = K.reshape(outputs, (-1, ch, r, c))  # Break into row and column
+
+        if K.image_data_format() == 'channels_last':
+            outputs = K.permute_dimensions(outputs, [0, 2, 3, 1])  # Back to batch last
+
+        # 4. Add the lateral and the feed-forward activations
+        # ------------------------------------------------------
+        outputs += inputs
+        return outputs
+
+
+def build_contour_integration_model(contour_integration_layer_cb, weights_path=None, **kwargs):
+    """
+
+    Build an alexnet model with the specified contour integration layer inserted after the
+    first convolutional layer
+
+    :param weights_path:
+    :param contour_integration_layer_cb:
+    :param kwargs: dictionary contain parameters of the specified contour integration layer
+    :return: model
+    """
+
+    inputs = Input(shape=(3, 227, 227))
+
+    conv_1 = Conv2D(96, (11, 11), strides=(4, 4), activation='relu', name='conv_1')(inputs)
+
+    contour_int_layer = contour_integration_layer_cb(
+        name='contour_integration',
+        weights_type=kwargs['weights_type'],
+        n=kwargs['n'],
+    )(conv_1)
+
+    conv_2 = MaxPooling2D((3, 3), strides=(2, 2))(contour_int_layer)
+    conv_2 = alex_net.crosschannelnormalization(name='convpool_1')(conv_2)
+    conv_2 = ZeroPadding2D((2, 2))(conv_2)
+
+    conv_2_1 = Conv2D(128, (5, 5), activation='relu', name='conv_2_1') \
+        (alex_net.splittensor(ratio_split=2, id_split=0)(conv_2))
+    conv_2_2 = Conv2D(128, (5, 5), activation='relu', name='conv_2_2') \
+        (alex_net.splittensor(ratio_split=2, id_split=1)(conv_2))
+    conv_2 = Concatenate(axis=1, name='conv_2')([conv_2_1, conv_2_2])
+
+    conv_3 = MaxPooling2D((3, 3), strides=(2, 2))(conv_2)
+    conv_3 = alex_net.crosschannelnormalization()(conv_3)
+    conv_3 = ZeroPadding2D((1, 1))(conv_3)
+    conv_3 = Conv2D(384, (3, 3), activation='relu', name='conv_3')(conv_3)
+
+    conv_4 = ZeroPadding2D((1, 1))(conv_3)
+    conv_4_1 = Conv2D(192, (3, 3), activation='relu', name='conv_4_1') \
+        (alex_net.splittensor(ratio_split=2, id_split=0)(conv_4))
+    conv_4_2 = Conv2D(192, (3, 3), activation='relu', name='conv_4_2') \
+        (alex_net.splittensor(ratio_split=2, id_split=1)(conv_4))
+    conv_4 = Concatenate(axis=1, name='conv_4')([conv_4_1, conv_4_2])
+
+    conv_5 = ZeroPadding2D((1, 1))(conv_4)
+    conv_5_1 = Conv2D(128, (3, 3), activation='relu', name='conv_5_1') \
+        (alex_net.splittensor(ratio_split=2, id_split=0)(conv_5))
+    conv_5_2 = Conv2D(128, (3, 3), activation='relu', name='conv_5_2') \
+        (alex_net.splittensor(ratio_split=2, id_split=1)(conv_5))
+    conv_5 = Concatenate(axis=1, name='conv_5')([conv_5_1, conv_5_2])
+
+    dense_1 = MaxPooling2D((3, 3), strides=(2, 2), name='convpool_5')(conv_5)
+    dense_1 = Flatten(name='flatten')(dense_1)
+    dense_1 = Dense(4096, activation='relu', name='dense_1')(dense_1)
+
+    dense_2 = Dropout(0.5)(dense_1)
+    dense_2 = Dense(4096, activation='relu', name='dense_2')(dense_2)
+
+    dense_3 = Dropout(0.5)(dense_2)
+    dense_3 = Dense(1000, name='dense_3')(dense_3)
+    prediction = Activation('softmax', name='softmax')(dense_3)
+
+    model = Model(inputs=inputs, outputs=prediction)
+
+    if weights_path:
+        model.load_weights(weights_path, by_name=True)
+
+    return model
+
+
+def main(model, fragment, f_idx, l1_act_cb, l2_act_cb):
+    """
+    This is the main routine for this file. First, the given contour fragment is tiled into
+    a test image to form variously oriented contours. This is then passed to the model to
+    visualize the activations of the first convolutional layer and contour integration layer
+
+    :param model: contour integration model to use
+    :param fragment: contour fragment from which contours are generated
+    :param f_idx: target L2 filter index
+    :param l2_act_cb: callback to get activations of L1 conv layer
+    :param l1_act_cb: callback to get activations of L2 contour integration layer
+
+    :return:
+    """
+
+    tgt_conv1_filter = K.eval(model.layers[1].weights[0])
+    tgt_conv1_filter = tgt_conv1_filter[:, :, :, f_idx]
+
+    tgt_cont_int_filter = K.eval(model.layers[2].kernel)
+    tgt_cont_int_filter = tgt_cont_int_filter[f_idx, :, :]
+
+    contour_test_image = generate_test_contour_image_from_fragment(fragment)
+
+    f = plt.figure()
+    ax = plt.subplot2grid((3, 8), (0, 0), colspan=2)
+    display_filt = (tgt_conv1_filter - tgt_conv1_filter.min()) * 1 / (tgt_conv1_filter.max() - tgt_conv1_filter.min())
+    ax.imshow(display_filt)
+    ax.set_title('Conv 1 Filter @ idx %d' % f_idx)
+
+    ax1 = plt.subplot2grid((3, 8), (0, 2), colspan=2)
+    ax1.imshow(fragment)
+    ax1.set_title('Contour Fragment')
+
+    ax2 = plt.subplot2grid((3, 8), (0, 4), colspan=4, rowspan=3)
+    ax2.imshow(contour_test_image)
+    ax2.set_title('Test image')
+
+    ax3 = plt.subplot2grid((3, 8), (1, 0), colspan=2)
+    ax3.imshow(tgt_cont_int_filter, cmap='seismic')
+    ax3.set_title('Cont. Int. Filter @ idx %d' % f_idx)
+
+    # Show individual slices of the conv filter
+    tgt_conv_filter_min = tgt_conv1_filter.min()
+    tgt_conv_filter_max = tgt_conv1_filter.max()
+    ax4 = plt.subplot2grid((3, 8), (2, 0))
+    ax4.imshow(tgt_conv1_filter[:, :, 0], cmap='seismic', vmin=tgt_conv_filter_min, vmax=tgt_conv_filter_max)
+    ax5 = plt.subplot2grid((3, 8), (2, 1))
+    ax5.imshow(tgt_conv1_filter[:, :, 1], cmap='seismic', vmin=tgt_conv_filter_min, vmax=tgt_conv_filter_max)
+    ax6 = plt.subplot2grid((3, 8), (2, 2))
+    ax_for_cb = \
+        ax6.imshow(tgt_conv1_filter[:, :, 2], cmap='seismic', vmin=tgt_conv_filter_min, vmax=tgt_conv_filter_max)
+    f.colorbar(ax_for_cb, )
+
+    # contour_test_image = np.transpose(contour_test_image, (2, 0, 1))
+    # contour_test_image = np.expand_dims(contour_test_image, axis=0)
+    # l1_act = np.array(l1_act_cb([contour_test_image, 0]))
+    # l2_act = np.array(l2_act_cb([contour_test_image, 0]))
+    #
+    # l1_act = np.squeeze(l1_act, axis=0)
+    # l2_act = np.squeeze(l2_act, axis=0)
+    #
+    # contour_test_image = contour_test_image[0, :, :, :]
+    # contour_test_image = np.transpose(contour_test_image, (1, 2, 0))
+
+    alex_net_utils.plot_activations(contour_test_image, l1_act_cb, l2_act_cb, f_idx)
+
+
+def generate_test_contour_image_from_fragment(fragment, overlap=4, img_dim=227):
+    """
+     Generates contours by spatially tiling fragments
+
+    :param img_dim:  dimension of the generated image (square image generated)
+    :param overlap:  Number of pixels that overlap between tiled fragments (stride of the convolutional layer)
+    :param fragment:
+    :return:
+    """
+    test_image = np.zeros((img_dim, img_dim, 3))
+
+    # Single Point
+    add_fragment_at_location(test_image, fragment, 10, 10)
+
+    # VERTICAL: Overlapping fragments
+    # # contour_2 = np.zeros(((conv_1_stride * (5 - 1) + 11), 11, 3))
+    # # contour_2[:, (0, 3, 4, 5, 9, 10), :] = 1
+    # # add_fragment_at_location(test_image, contour_2, 5, 20)
+    add_fragment_at_location(test_image, fragment, 5, 20)
+    add_fragment_at_location(test_image, fragment, 6, 20)
+    add_fragment_at_location(test_image, fragment, 7, 20)
+    add_fragment_at_location(test_image, fragment, 8, 20)
+    add_fragment_at_location(test_image, fragment, 9, 20)
+    test_image = np.clip(test_image, 0, 1)
+
+    # VERTICAL: Non-overlapping fragments
+    add_fragment_at_location(test_image, fragment, 16, 20)
+    add_fragment_at_location(test_image, fragment, 20, 20)
+    add_fragment_at_location(test_image, fragment, 24, 20)
+    add_fragment_at_location(test_image, fragment, 28, 20)
+
+    # HORIZONTAL: Overlapping fragments
+    add_fragment_at_location(test_image, fragment, 5, 40)
+    add_fragment_at_location(test_image, fragment, 5, 41)
+    add_fragment_at_location(test_image, fragment, 5, 42)
+    add_fragment_at_location(test_image, fragment, 5, 43)
+    test_image = np.clip(test_image, 0, 1)
+
+    # HORIZONTAL: Non-overlapping fragments
+    add_fragment_at_location(test_image, fragment, 15, 40)
+    add_fragment_at_location(test_image, fragment, 15, 44)
+    add_fragment_at_location(test_image, fragment, 15, 48)
+    add_fragment_at_location(test_image, fragment, 15, 52)
+
+    # HORIZONTAL: Visually Non-overlapping fragments. Spatially adjacent with no gaps
+    start_x = 25 * overlap  # Starting at location 25, 40
+    start_y = 40 * overlap
+    for ii in range(4):
+        test_image[start_x: start_x + 11, start_y + ii * 11: start_y + (ii + 1) * 11, :] = fragment
+
+    # DIAGONAL (backward slash): overlapping
+    add_fragment_at_location(test_image, fragment, 30, 5)
+    add_fragment_at_location(test_image, fragment, 31, 6)
+    add_fragment_at_location(test_image, fragment, 32, 7)
+    add_fragment_at_location(test_image, fragment, 33, 8)
+    add_fragment_at_location(test_image, fragment, 34, 9)
+    test_image = np.clip(test_image, 0, 1)
+
+    # DIAGONAL (backward slash): Visually Non-overlapping fragments. Spatially adjacent with no gaps
+    start_x = 40 * overlap
+    start_y = 5 * overlap
+    for ii in range(5):
+        test_image[
+            start_x + ii * 11: start_x + (ii + 1) * 11,
+            start_y + ii * 11: start_y + (ii + 1) * 11,
+            :
+        ] = fragment
+
+    # DIAGONAL (forward slash): Visually Non-overlapping fragments. Spatially adjacent with no gaps
+    start_x = 51 * overlap
+    start_y = 30 * overlap
+    for ii in range(5):
+        test_image[
+            start_x - (ii * 11): start_x - (ii * 11) + 11,
+            start_y + (ii * 11): start_y + (ii + 1) * 11,
+            :
+        ] = fragment
+
+    return test_image
+
+
+def add_fragment_at_location(image, fragment, loc_x, loc_y):
+    """
+
+    :param image:
+    :param fragment:
+    :param loc_x:
+    :param loc_y:
+    :return:
+    """
+    stride = 4  # The Stride using the in convolutional layer
+    filt_dim_r = fragment.shape[0]
+    filt_dim_c = fragment.shape[1]
+
+    print("Fragment Placed at x: %d-%d, y: %d-%d"
+          % (loc_x * stride, loc_x * stride + filt_dim_r, loc_y * stride, loc_y * stride + filt_dim_c))
+
+    image[
+        loc_x * stride: loc_x * stride + filt_dim_r,
+        loc_y * stride: loc_y * stride + filt_dim_c,
+        :,
+    ] += fragment
+
+    return image
+
+
+def replace_fragment_at_location(image, fragment, loc_x, loc_y):
+    """
+    Similar to add_fragment_at_location, but instead of adding the fragment, replaces it
+
+    :param image:
+    :param fragment:
+    :param loc_x:
+    :param loc_y:
+    :return:
+    """
+    stride = 4  # The Stride using the in convolutional layer
+    filt_dim_r = fragment.shape[0]
+    filt_dim_c = fragment.shape[1]
+
+    print("Fragment Placed at x: %d-%d, y: %d-%d"
+          % (loc_x * stride, loc_x * stride + filt_dim_r, loc_y * stride, loc_y * stride + filt_dim_c))
+
+    image[
+        loc_x * stride: loc_x * stride + filt_dim_r,
+        loc_y * stride: loc_y * stride + filt_dim_c,
+        :,
+    ] = fragment
+
+    return image
+
+
+if __name__ == "__main__":
+    plt.ion()
+    K.clear_session()
+
+    # 1. Build the model
+    # ------------------
+    K.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
+    print("Building Contour Integration Model...")
+
+    cont_int_model = build_contour_integration_model(
+        AdditiveContourIntegrationLayer,
+        "trained_models/AlexNet/alexnet_weights.h5",
+        weights_type='enhance',
+        n=7
+    )
+
+    # callbacks to get activations of L1 & L2. Defined once only to optimize memory usage and
+    # prevent the underlying tensorflow graph from growing unnecessarily
+    l1_activations_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
+    l2_activations_cb = alex_net_utils.get_activation_cb(cont_int_model, 2)
+
+    # # 2. Display Conv 1 and Contour integration layer Kernels
+    # # -------------------------------------------------------
+    # weights_ch_last = cont_int_model.layers[1].weights[0]
+    # common_utils.display_filters(weights_ch_last)
+    #
+    # weights_ch_last = cont_int_model.layers[2].kernel
+    # common_utils.display_filters(weights_ch_last)
+    #
+    # # 3. Display the activations of a test image
+    # # ------------------------------------------
+    # # img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
+    # img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    # plt.figure()
+    # plt.imshow(img)
+    # plt.title('Original Image')
+    #
+    # x = img_to_array(img)
+    # x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
+    #
+    # y_hat = cont_int_model.predict(x, batch_size=1, verbose=1)
+    # print("Prediction %s" % np.argmax(y_hat))
+    #
+    # common_utils.display_layer_activations(cont_int_model, 1, x)
+    # common_utils.display_layer_activations(cont_int_model, 2, x)
+
+    # 4. Contour Enhancement Visualizations
+    # ---------------------------------------------------------------------
+    # Vertical Filter
+    tgt_filt_idx = 10
+    frag_1 = np.zeros((11, 11, 3))
+    frag_1[:, (0, 3, 4, 5, 9, 10), :] = 1
+    main(cont_int_model, frag_1, tgt_filt_idx, l1_activations_cb, l2_activations_cb)
+
+    # Horizontal Filter
+    tgt_filt_idx = 5
+    frag_2 = np.zeros((11, 11, 3))
+    frag_2[0:6, :, :] = 1
+    main(cont_int_model, frag_2, tgt_filt_idx, l1_activations_cb, l2_activations_cb)
+
+    # # 5. Output of contour enhancement on real images
+    # # ----------------------------------------------------------------------
+    # test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    # # test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
+    #
+    # tgt_filt_idx = 5
+    # alex_net_utils.plot_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)
+    #
+    # tgt_filt_idx = 10
+    # alex_net_utils.plot_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)
