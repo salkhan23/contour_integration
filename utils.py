@@ -21,19 +21,23 @@ def deprocess_image(x):
     values in this range rather than [0, 255] which scipy.misc.imshow prefers. The later hangs
      the code until the figure is closed.
 
+    Updated this function to do a more controlled 'linear normalization'
+
     :param x: image of dimension [r, c, ch]
     :return:
     """
-    x -= x.mean()
-    x /= (x.std() + 1e-5)
-
-    # Clip to [0, 1]
-    x += 0.5
-    x = np.clip(x, 0, 1)
+    # x -= x.mean()
+    # x /= (x.std() + 1e-5)
+    #
+    # # Clip to [0, 1]
+    # x += 0.5
+    # x = np.clip(x, 0, 1)
 
     # # This is not needed
     # if K.image_data_format() == 'channels_first':  # [ch,r, c]
     #     x = x.transpose((1, 2, 0))  # this is similar to K.permute dimensions but outside keras/TF
+
+    x = (x - x.min()) * 1 / (x.max() - x.min())
 
     return x
 
@@ -119,7 +123,7 @@ def display_filters(weights, margin=1):
     plt.figure()
 
     if 1 == in_ch:
-        plt.imshow(tiled_filters[:, :, 0], cmap='Greys')  # force to 2D. Expected by imshow
+        plt.imshow(tiled_filters[:, :, 0], cmap='seismic')  # force to 2D. Expected by imshow
     else:
         plt.imshow(tiled_filters)
     plt.colorbar()
