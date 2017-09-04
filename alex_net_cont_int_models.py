@@ -256,7 +256,7 @@ class GaussianMultiplicativeContourIntegrationLayer(Layer):
 
     def build(self, input_shape):
         """
-        Two learnable parameters, alpha and bias
+        Two learnable parameters, alpha (96x1x1) and bias (96x1x1)
 
         :param input_shape:
         :return:
@@ -664,7 +664,7 @@ def main(model, fragment, f_idx, l1_act_cb, l2_act_cb):
         ax6.imshow(tgt_conv1_filter[:, :, 2], cmap='seismic', vmin=tgt_conv_filter_min, vmax=tgt_conv_filter_max)
     f.colorbar(ax_for_cb, )
 
-    alex_net_utils.plot_activations(contour_test_image, l1_act_cb, l2_act_cb, f_idx)
+    alex_net_utils.plot_l1_and_l2_activations(contour_test_image, l1_act_cb, l2_act_cb, f_idx)
 
 
 def generate_test_contour_image_from_fragment(fragment, overlap=4, img_dim=227):
@@ -883,7 +883,7 @@ if __name__ == "__main__":
     # test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
 
     tgt_filt_idx = 5
-    alex_net_utils.plot_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)
+    alex_net_utils.plot_l1_and_l2_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)
 
     tgt_filt_idx = 10
-    alex_net_utils.plot_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)
+    alex_net_utils.plot_l1_and_l2_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)

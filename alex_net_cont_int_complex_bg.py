@@ -11,113 +11,22 @@
 # Author: Salman Khan
 # Date  : 11/08/17
 # -------------------------------------------------------------------------------------------------
-
 from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.misc import imrotate
 
 import keras.backend as K
 
 import base_alex_net as alex_net
-import learned_lateral_weights
-import utils
-import alex_net_add_cont_int as linear_cont_int_model
-import alex_net_mult_cont_int as nonlinear_cont_int_model
+import alex_net_cont_int_models as cont_int_models
+import alex_net_utils
 
-reload(utils)
-reload(learned_lateral_weights)
 reload(alex_net)
-reload(linear_cont_int_model)
-reload(nonlinear_cont_int_model)
+reload(cont_int_models)
+reload(alex_net_utils)
+
 
 np.random.seed(7)  # Set the random seed for reproducibility
-
-
-def get_activation_cb(model, layer_idx):
-    """
-    Return a callback to return the output activation of the specified layer
-    The callback expects input cb([input_image, 0])
-    :param model:
-    :param layer_idx:
-    :return: callback function.
-    """
-    get_layer_output = K.function(
-        [model.layers[0].input, K.learning_phase()],
-        [model.layers[layer_idx].output]
-    )
-
-    return get_layer_output
-
-
-def get_randomly_rotated_tile(tile, delta_rotation=45.0):
-    """
-    randomly rotate tile by 360/delta_rotation permutations
-
-    :param delta_rotation:
-    :param tile:
-    :return:
-    """
-    num_possible_rotations = 360 // delta_rotation
-    return imrotate(tile, angle=(np.random.randint(0, num_possible_rotations) * delta_rotation))
-
-
-def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True):
-    """
-    Place tile 'fragments' at the specified starting positions (x, y) in the image.
-
-    :param frag: contour fragment to be inserted
-    :param insert_locs: array of (x,y) starting positions of where tiles will be inserted
-    :param img: image where tiles will be placed
-    :param rotate: If true each tile is randomly rotated before insertion. Currently 8 possible orientations
-    :param gaussian_smoothing: If True, each fragment is multiplied with a Gaussian smoothing function to prevent
-            tile edges becoming part of stimuli, as they will lie in the center of the RF of my neurons.
-
-    :return: tiled image
-    """
-    img_len = img.shape[0]
-    tile_len = frag.shape[0]
-
-    g_kernel = linear_cont_int_model.get_2d_gaussian_kernel((tile_len, tile_len), sigma=4.0)
-    g_kernel = np.reshape(g_kernel, (g_kernel.shape[0], g_kernel.shape[1], 1))
-    g_kernel = np.repeat(g_kernel, 3, axis=2)
-
-    x_arr = insert_locs[0]
-    y_arr = insert_locs[1]
-
-    if isinstance(x_arr, int):
-        x_arr = np.array([x_arr])
-    if isinstance(y_arr, int):
-        y_arr = np.array([y_arr])
-
-    for idx in range(len(x_arr)):
-        # print("Placing Fragment at location x=(%d, %d), y =(%d, %d)"
-        #       % (x_arr[idx], x_arr[idx] + tile_len, y_arr[idx], y_arr[idx] + tile_len))
-
-        start_x_loc = max(x_arr[idx], 0)
-        stop_x_loc = min(x_arr[idx] + tile_len, img_len)
-
-        start_y_loc = max(y_arr[idx], 0)
-        stop_y_loc = min(y_arr[idx] + tile_len, img_len)
-
-        if rotate:
-            tile = get_randomly_rotated_tile(frag, 45)
-        else:
-            tile = frag
-
-        # multiply the file with the gaussian smoothing filter
-        # The edges between the tiles will lie within the stimuli of some neurons.
-        # to prevent these prom being interpreted as stimuli, gradually decrease them.
-        if gaussian_smoothing:
-            tile = tile * g_kernel
-
-        img[
-            start_x_loc: stop_x_loc,
-            start_y_loc: stop_y_loc,
-            :
-        ] = tile[0: stop_x_loc - start_x_loc, 0: stop_y_loc - start_y_loc, :]
-
-    return img
 
 
 def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
@@ -166,7 +75,7 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
     start_x = np.repeat(start_x, len(start_x))
     start_y = np.tile(start_y, len(start_y))
 
-    test_image = tile_image(
+    test_image = alex_net_utils.tile_image(
         test_image,
         frag,
         (start_x, start_y),
@@ -178,7 +87,7 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
     # --------------
     cont_coordinates = cont_gen_cb(frag.shape[0], space_bw_tiles, contour_len, center_neuron_loc)
 
-    test_image = tile_image(
+    test_image = alex_net_utils.tile_image(
         test_image,
         frag,
         cont_coordinates,
@@ -208,176 +117,6 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
     test_image = np.transpose(test_image, (1, 2, 0))
 
     return tgt_l1_act, tgt_l2_act, test_image
-
-
-def vertical_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_loc):
-    """
-    Generate the start co-ordinates of fragment squares that form a contour of the specified length
-    at the specified location
-
-    :param frag_len:
-    :param bw_tile_spacing: Between fragment square spacing in pixels
-    :param cont_len: length of fragment in units of fragment squares
-    :param cont_start_loc: start starting location where the contour should be places
-    :return:
-    """
-    mod_frag_len = frag_len + bw_tile_spacing
-
-    start_x = range(
-        cont_start_loc - (cont_len / 2) * mod_frag_len,
-        cont_start_loc + (cont_len / 2 + 1) * mod_frag_len,
-        mod_frag_len
-    )
-    start_y = np.ones_like(start_x) * cont_start_loc
-
-    return start_x, start_y
-
-
-def horizontal_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_loc):
-    """
-
-    :param frag_len:
-    :param bw_tile_spacing:
-    :param cont_len:
-    :param cont_start_loc:
-    :return:
-    """
-    mod_frag_len = frag_len + bw_tile_spacing
-
-    start_y = range(
-        cont_start_loc - (cont_len / 2) * mod_frag_len,
-        cont_start_loc + (cont_len / 2 + 1) * mod_frag_len,
-        mod_frag_len
-    )
-
-    start_x = np.ones_like(start_y) * cont_start_loc
-
-    return start_x, start_y
-
-
-def plot_activations(img, l1_act, l2_act, tgt_filt_idx):
-    """
-    plot the test image, l1_activations, l2_activations and the difference between the activations
-
-    :param img:
-    :param l1_act:
-    :param l2_act:
-    :param tgt_filt_idx:
-    :return: Handles of the two images created
-    """
-
-    f1 = plt.figure()
-    plt.imshow(img)
-
-    min_l2_act = l1_act.min()
-    max_l2_act = l2_act.max()
-
-    f2 = plt.figure()
-
-    f2.add_subplot(1, 3, 1)
-    plt.imshow(l1_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
-    plt.title('L1 Conv Layer Activation @ idx %d' % tgt_filt_idx)
-    plt.colorbar(orientation='horizontal')
-    plt.grid()
-
-    f2.add_subplot(1, 3, 2)
-    plt.imshow(l2_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
-    plt.title('L2 Contour Integration Layer Activation @ idx %d' % tgt_filt_idx)
-    plt.colorbar(orientation='horizontal')
-    plt.grid()
-
-    f2.add_subplot(1, 4, 4)
-    plt.imshow(l2_act - l1_act, cmap='seismic')
-    plt.title("Difference")
-    plt.grid()
-
-    return f1, f2
-
-
-def plot_l1_filter_and_contour_fragment(model, frag, tgt_filt_idx):
-    """
-
-    :param model:
-    :param frag:
-    :param tgt_filt_idx:
-    :return:
-    """
-    l1_weights = K.eval(model.layers[1].weights[0])
-    tgt_filt = l1_weights[:, :, :, tgt_filt_idx]
-
-    plt.figure()
-    ax = plt.subplot2grid((2, 4), (0, 0), colspan=2)
-    display_filt = (tgt_filt - tgt_filt.min()) * 1 / (tgt_filt.max() - tgt_filt.min())
-    ax.imshow(display_filt)  # normalized to [0, 1]
-    ax.set_title("Target Filter")
-
-    ax = plt.subplot2grid((2, 4), (0, 2), colspan=2)
-    ax.imshow(frag / 255.0)
-    ax.set_title("Contour Fragment")
-
-    ax = plt.subplot2grid((2, 4), (1, 0))
-    ax.imshow(display_filt[:, :, 0], cmap='seismic')
-
-    ax = plt.subplot2grid((2, 4), (1, 1))
-    ax.imshow(display_filt[:, :, 1], cmap='seismic')
-
-    ax = plt.subplot2grid((2, 4), (1, 2))
-    ax.imshow(display_filt[:, :, 2], cmap='seismic')
-
-
-def plot_tgt_location_l1_activations(frag, l1_act_cb, tgt_loc):
-    """
-    Given fragment is placed at the specified location in a test image and then passed through the network.
-    THe activations of the kernel at the target location are plotted. Index of the most responsive kernel is
-    returned.
-
-
-    :param tgt_loc:
-    :param frag:
-    :param l1_act_cb:
-    :return:
-    """
-    start_x = tgt_loc[0] * 4   # stride of Conv L1
-    start_y = tgt_loc[1] * 4
-
-    test_image = np.zeros((227, 227, 3))
-
-    test_image = tile_image(
-        test_image,
-        frag,
-        (start_x, start_y),
-        rotate=False,
-        gaussian_smoothing=False
-    )
-
-    test_image = np.transpose(test_image, (2, 0, 1))  # Theano back-end expects channel first format
-    test_image = np.reshape(test_image, [1, test_image.shape[0], test_image.shape[1], test_image.shape[2]])
-    # batch size is expected as the first dimension
-
-    l1_act = l1_act_cb([test_image, 0])
-    l1_act = np.squeeze(np.array(l1_act), axis=0)
-
-    tgt_l1_act = l1_act[0, :, tgt_loc[0], tgt_loc[1]]
-
-    max_active_filt = tgt_l1_act.argmax()
-    max_active_value = tgt_l1_act.max()
-
-    # return the test image back to its original format
-    test_image = test_image[0, :, :, :]
-    test_image = np.transpose(test_image, (1, 2, 0))
-
-    f = plt.figure()
-    f.add_subplot(1, 2, 1)
-
-    plt.imshow(test_image / 255.0)
-    plt.title('Input')
-    f.add_subplot(1, 2, 2)
-    plt.plot(tgt_l1_act)
-    plt.xlabel('Kernel Index')
-    plt.ylabel('Activation')
-    plt.title("Max active neuron at Index %d and value %0.2f" % (max_active_filt, max_active_value))
-
-    return max_active_filt
 
 
 def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, n_runs=1):
@@ -417,10 +156,11 @@ def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fil
             tgt_neuron_l1_act[run_idx, c_idx] = tgt_l1_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
             tgt_neuron_l2_act[run_idx, c_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
 
-            # fig1, fig2 = plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
-            # title = "Vertical contour Length=%d in a sea of fragments" % c_len
-            # fig1.suptitle(title)
-            # fig2.suptitle(title)
+            if n_runs == 1:
+                fig1, fig2 = alex_net_utils.plot_l1_and_l2_activations(test_img, l1_act_cb, l2_act_cb, tgt_filt_idx)
+                title = "Vertical contour Length=%d in a sea of fragments" % c_len
+                fig1.suptitle(title)
+                fig2.suptitle(title)
 
     # Plot the Contour Integration Gain of the target neuron as contour length increases
     tgt_neuron_gain = tgt_neuron_l2_act / (tgt_neuron_l1_act + 1e-5)
@@ -486,11 +226,12 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
             tgt_neuron_l1_act[run_idx, s_idx] = tgt_l1_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
             tgt_neuron_l2_act[run_idx, s_idx] = tgt_l2_activation[tgt_neuron_loc[0], tgt_neuron_loc[1]]
 
-            # fig1, fig2 = plot_activations(test_img, tgt_l1_activation, tgt_l2_activation, tgt_filt_idx)
-            # title = "Vertical contour Length=%d, Rel. colinear dist=%0.2f in a sea of fragments" \
-            #         % (c_len, (frag_len + spacing) / np.float(frag_len))
-            # fig1.suptitle(title)
-            # fig2.suptitle(title)
+            if n_runs == 1:
+                fig1, fig2 = alex_net_utils.plot_l1_and_l2_activations(test_img, l1_act_cb, l2_act_cb, tgt_filt_idx)
+                title = "Vertical contour Length=%d, Rel. colinear dist=%0.2f in a sea of fragments" \
+                        % (c_len, (frag_len + spacing) / np.float(frag_len))
+                fig1.suptitle(title)
+                fig2.suptitle(title)
 
     # Plot the Contour Integration Gain of the target neuron as between contour spacing increases
     tgt_neuron_gain = tgt_neuron_l2_act / (tgt_neuron_l1_act + 1e-5)
@@ -512,22 +253,29 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
 if __name__ == "__main__":
     plt.ion()
 
-    # 1. Load the model
-    # ------------------
+    # 1. Load/Make the model
+    # ----------------------
     K.clear_session()
     K.set_image_dim_ordering('th')
     print("Building Contour Integration Model...")
 
     # m_type = 'enhance_n_suppress_non_overlap'
     m_type = 'non_overlap_full'
-    contour_integration_model = nonlinear_cont_int_model.build_model(
-        "trained_models/AlexNet/alexnet_weights.h5", model_type=m_type)
-    # alex_net_cont_int_model.summary()
+
+    # Gaussian Multiplicative Model
+    contour_integration_model = cont_int_models.build_contour_integration_model(
+        "gaussian_multiplicative",
+        "trained_models/AlexNet/alexnet_weights.h5",
+        weights_type='enhance_and_suppress',
+        n=25,
+        sigma=6.0
+    )
+    # contour_integration_model.summary()
 
     # Define callback functions to get activations of L1 convolutional layer &
     # L2 contour integration layer
-    l1_activations_cb = get_activation_cb(contour_integration_model, 1)
-    l2_activations_cb = get_activation_cb(contour_integration_model, 2)
+    l1_activations_cb = alex_net_utils.get_activation_cb(contour_integration_model, 1)
+    l2_activations_cb = alex_net_utils.get_activation_cb(contour_integration_model, 2)
 
     # --------------------------------------------------------------------------------------------
     #  Vertical Contours
@@ -556,13 +304,13 @@ if __name__ == "__main__":
     # fragment[(2, 3, 4, 5), 4, :] = 255
     # use_smoothing = False
 
-    # plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, tgt_filter_index)
+    alex_net_utils.plot_l1_and_l2_kernel_and_contour_fragment(contour_integration_model, tgt_filter_index, fragment)
 
     main_contour_length_routine(
         fragment,
         l1_activations_cb,
         l2_activations_cb,
-        vertical_contour_generator,
+        alex_net_utils.vertical_contour_generator,
         tgt_filter_index,
         use_smoothing,
         n_runs=50
@@ -572,7 +320,7 @@ if __name__ == "__main__":
         fragment,
         l1_activations_cb,
         l2_activations_cb,
-        vertical_contour_generator,
+        alex_net_utils.vertical_contour_generator,
         tgt_filter_index,
         use_smoothing,
         n_runs=50
@@ -601,13 +349,13 @@ if __name__ == "__main__":
     # fragment[4, (2, 3, 4, 5), :] = 255
     # use_smoothing = False
 
-    # plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, tgt_filter_index)
+    alex_net_utils.plot_l1_and_l2_kernel_and_contour_fragment(contour_integration_model, tgt_filter_index, fragment)
 
     main_contour_length_routine(
         fragment,
         l1_activations_cb,
         l2_activations_cb,
-        horizontal_contour_generator,
+        alex_net_utils.horizontal_contour_generator,
         tgt_filter_index,
         use_smoothing,
         n_runs=50
@@ -617,7 +365,7 @@ if __name__ == "__main__":
         fragment,
         l1_activations_cb,
         l2_activations_cb,
-        horizontal_contour_generator,
+        alex_net_utils.horizontal_contour_generator,
         tgt_filter_index,
         use_smoothing,
         n_runs=50
@@ -636,9 +384,9 @@ if __name__ == "__main__":
     # fragment = (fragment - fragment.min())*(255 / (fragment.max() - fragment.min()))
     # use_smoothing = True
     #
-    # # max_active = plot_tgt_location_l1_activations(fragment, l1_activations_cb, (27, 27))
-    # # plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, max_active)
-    # # plot_l1_filter_and_contour_fragment(contour_integration_model, fragment, 54)
+    # # max_active = alex_net_utils.find_most_active_l1_kernel_index(fragment, l1_activations_cb, (27, 27))
+    # # alex_net_utils.plot_l1_and_l2_kernel_and_contour_fragment(contour_integration_model, max_active, fragment)
+    # # alex_net_utils.plot_l1_and_l2_kernel_and_contour_fragment(contour_integration_model, 54, fragment)
     #
     # img = np.zeros((227, 227, 3))
     # loc_x = np.array([86,  97, 108, 119, 130])
