@@ -10,6 +10,23 @@ import numpy as np
 import keras.backend as K
 
 
+def get_2d_gaussian_kernel(shape, sigma=1.0):
+    """
+    Returns a 2d (unnormalized) Gaussian kernel of the specified shape.
+
+    :param shape: x,y dimensions of the gaussian
+    :param sigma: standard deviation of generated Gaussian
+    :return:
+    """
+    ax = np.arange(-shape[0] // 2 + 1, shape[0] // 2 + 1)
+    ay = np.arange(-shape[1] // 2 + 1, shape[1] // 2 + 1)
+
+    xx, yy = np.meshgrid(ax, ay)
+    kernel = np.exp(-(xx ** 2 + yy ** 2) / (2 * sigma ** 2))
+
+    return kernel
+
+
 def get_activation_cb(model, layer_idx):
     """
     Return a callback that returns the output activation of the specified layer

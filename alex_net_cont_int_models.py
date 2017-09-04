@@ -50,7 +50,6 @@ def get_visually_non_overlapping_contour_kernels(weights_type, rf_len):
     kernel[10, pre_half_range, half_rf] = 1
     kernel[10, post_half_range, half_rf] = 1
     if weights_type != 'enhance':  # Suppression values
-        print("Adding suprression")
         kernel[10, half_rf, pre_half_range] = -1
         kernel[10, half_rf, post_half_range] = -1
 
@@ -76,11 +75,19 @@ def get_visually_non_overlapping_contour_kernels(weights_type, rf_len):
 class AdditiveContourIntegrationLayer(Layer):
     def __init__(self, weights_type, n=25, **kwargs):
         """
-        Simple Linear additive contour integration model where weighted neighbor feed forward
+        Linear additive contour integration model where weighted neighbor feed forward
         responses are added to the the feed forward response of neuron. Here feed forward refers
         to the output of the first convolutional layer of Alexnet.
 
+        For each L1 feature map:
         A_L(x,y) = sigma(A_FF(x,y) + sum_over_m_and_n[W(m,n)*A_FF(x-m,y-m)])
+
+        where
+            A_L(x,y) = output of the contour enhancement layer @ (x, y)
+            A_FF(x,y) = feed-forward output of conv Layer 1 @ (x, y)
+            sigma = non-linearity (currently none)
+            m & n are the row and column indices of the contour enhancement layer mask.
+            W(m,n) = weight of contribution from neuron @ (m,n) from (x,y)
 
         :param weights_type: types of weights [enhance, suppress or enhance_and_suppress]
         :param n: size of square contour Integration RF. The number of L1 output neighbors over
@@ -88,7 +95,7 @@ class AdditiveContourIntegrationLayer(Layer):
         :param kwargs:
         """
 
-        # 7 is the smallest size to include the first visually non-overlapping neigbor
+        # 7 is the smallest size to include the first visually non-overlapping neighbor
         if n > 55 or n < 7 or (n & 1 == 0):
             raise Exception("Invalid horizontal connections extent." +
                             "Must match dimensions of Conv1 Layer output [7-55] & must be odd.")
@@ -187,27 +194,205 @@ class AdditiveContourIntegrationLayer(Layer):
         return outputs
 
 
-def build_contour_integration_model(contour_integration_layer_cb, weights_path=None, **kwargs):
-    """
+class GaussianMultiplicativeContourIntegrationLayer(Layer):
 
+    def __init__(self, weights_type, n=25, sigma=6.0, **kwargs):
+        """
+
+        Multiplicative integration model where the weighted sum of neighbor feed forward
+        responses is multiplied with the the feed forward response of neuron. Here feed forward refers
+        to the output of the first convolutional layer of Alexnet.
+
+        The objective of this multiplication is to model the observed property that contour enhancement
+        happens only when there is a signal in the classical RF(when it has a non-zero L1 feed forward output).
+        This is not modeled by the AdditiveContourIntegrationLayer.
+
+        Additionally, the relative gain of adding neighbors that are further away from the target neuron
+        decreases with distance. This is modeled by casting a gaussian mask centered at the RF to decrease
+        the relative gains of far away neighbors.
+
+        Because we are multiplying multiplying feed-forward inputs that can be quite large, two learnable
+        parameters are added to scale (alpha) and shift(bias) the contour enhancement gain. Default values of
+        this parameters are 1 and 0 for each feature map. However, best fit values, found by matching
+        neurophysiology data are available. (TO BE ADDED)
+
+        For each L1 feature map:
+            A_L(x,y) = sigma(A_FF(x,y) + alpha[sum_over_m_and_n[G(m,n)*W(m,n)*A_FF(x-m,y-m) + bias])
+
+        where
+            A_L(x,y) = output of the contour enhancement layer @ (x, y)
+            A_FF(x,y) = feed-forward output of conv Layer 1 @ (x, y)
+            sigma = non-linearity (currently none)
+            m & n are the row and column indices of the contour enhancement layer mask.
+            W(m,n) = weight of contribution from neuron @ (m,n) from (x,y)
+            G(m,n) = The weight W(m,n) is further scaled by a Gaussian (0, sigma)
+            alpha = learnable scaling factor. Default = 1.
+            bias = learnable shifting factor. Default = 0.
+
+        :param weights_type: types of weights [enhance, suppress or enhance_and_suppress]
+        :param n: size of square contour Integration RF. The number of L1 output neighbors over
+                  which lateral connections span (not over the visual space). Default=25.
+        :param sigma: standard deviation of gaussian mask.
+        :param kwargs:
+        """
+
+        # 7 is the smallest size to include the first visually non-overlapping neighbor
+        if n > 55 or n < 7 or (n & 1 == 0):
+            raise Exception("Invalid horizontal connections extent." +
+                            "Must match dimensions of Conv1 Layer output [7-55] & must be odd.")
+        self.n = n
+
+        if weights_type.lower() not in ['enhance', 'suppress', 'enhance_and_suppress']:
+            raise Exception("Invalid weight types. Must be [enhance, suppress or enhance_and_suppress]")
+        self.weights_type = weights_type.lower()
+
+        self.kernel = get_visually_non_overlapping_contour_kernels(self.weights_type, self.n)
+
+        g_kernel = alex_net_utils.get_2d_gaussian_kernel((n, n), sigma)
+        self.kernel = np.array([k * g_kernel for k in self.kernel])
+
+        self.kernel = K.variable(self.kernel)
+
+        super(GaussianMultiplicativeContourIntegrationLayer, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        """
+        Two learnable parameters, alpha and bias
+
+        :param input_shape:
+        :return:
+        """
+        if K.image_data_format() == 'channels_last':
+            _, r, c, ch = input_shape
+        else:
+            _, ch, r, c = input_shape
+        # print("Build Fcn: ", K.image_data_format(), ". shape= ",  input_shape)
+
+        self.bias = self.add_weight(
+            shape=(ch, 1, 1),
+            initializer='zeros',
+            name='bias',
+            trainable=True
+        )
+
+        self.alpha = self.add_weight(
+            shape=(ch, 1, 1),
+            initializer='ones',
+            name='alpha',
+            trainable=True
+        )
+
+        super(GaussianMultiplicativeContourIntegrationLayer, self).build(input_shape)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape  # Layer does not change the shape of the input
+
+    def call(self, inputs, **kwargs):
+
+        if K.image_data_format() == 'channels_last':
+            _, r, c, ch = K.int_shape(inputs)
+        else:
+            _, ch, r, c = K.int_shape(inputs)
+        # print("Call Fcn: ", K.image_data_format(), ". shape= ",  input_shape)
+
+        # 1. Inputs Formatting
+        # ----------------------------------
+        # Pad the rows and columns to allow full matrix multiplication
+        # Note that this function is aware of which dimension the columns and rows are
+        padded_inputs = K.spatial_2d_padding(
+            inputs,
+            ((self.n / 2, self.n / 2), (self.n / 2, self.n / 2))
+        )
+        # print("Call Fcn: padded_inputs shape ", K.int_shape(padded_inputs))
+
+        # Channel first, batch second. This is done to take the unknown batch size into the matrix multiply
+        # where it can be handled more easily
+        if K.image_data_format() == 'channels_last':
+            inputs_chan_first = K.permute_dimensions(padded_inputs, [3, 0, 1, 2])
+        else:
+            inputs_chan_first = K.permute_dimensions(padded_inputs, [1, 0, 2, 3])
+        # print("Call Fcn: inputs_chan_first shape: ", inputs_chan_first.shape)
+
+        # 2. Kernel Formatting
+        # --------------------
+        if K.image_data_format() == 'channels_last':
+
+            kernel_chan_first = K.permute_dimensions(self.kernel, (2, 0, 1))
+        else:
+            kernel_chan_first = self.kernel
+        # print("Call Fcn: kernel_chan_first shape", kernel_chan_first.shape)
+
+        # Flatten rows and columns into a single dimension
+        k_ch, k_r, k_c = K.int_shape(kernel_chan_first)
+        apply_kernel = K.reshape(kernel_chan_first, (k_ch, k_r * k_c, 1))
+        # print("Call Fcn: kernel for matrix multiply: ", apply_kernel.shape)
+
+        # 3. Get outputs at each spatial location
+        # ----------------------------------------
+        xs = []
+        for i in range(r):
+            for j in range(c):
+                input_slice = inputs_chan_first[:, :, i:i + self.n, j:j + self.n]
+                input_slice_apply = K.reshape(input_slice, (ch, -1, self.n ** 2))
+
+                output_slice = K.batch_dot(input_slice_apply, apply_kernel) * self.alpha
+
+                # Reshape the output slice to put batch first
+                output_slice = K.permute_dimensions(output_slice, [1, 0, 2])
+                xs.append(output_slice)
+
+        # print("Call Fcn: len of xs", len(xs))
+        # print("Call Fcn: shape of each element of xs", xs[0].shape)
+
+        # Reshape the output to correct format
+        outputs = K.concatenate(xs, axis=2)
+        outputs = K.reshape(outputs, (-1, ch, r, c))  # Break into row and column
+
+        if K.image_data_format() == 'channels_last':
+            outputs = K.permute_dimensions(outputs, [0, 2, 3, 1])  # Back to batch last
+            outputs = outputs
+
+        # 4. Add the lateral and the feed-forward activations
+        # ------------------------------------------------------
+        outputs = outputs * inputs + self.bias
+
+        return outputs + inputs
+
+
+def build_contour_integration_model(cont_int_type, weights_path=None, **kwargs):
+    """
     Build an alexnet model with the specified contour integration layer inserted after the
     first convolutional layer
 
     :param weights_path:
-    :param contour_integration_layer_cb:
+    :param cont_int_type: the type of contour integration layer to build
     :param kwargs: dictionary contain parameters of the specified contour integration layer
+
     :return: model
     """
+
+    valid_cont_int_layer_types = ['additive', 'gaussian_multiplicative']
+    if cont_int_type.lower() not in valid_cont_int_layer_types:
+        raise Exception("Invalid Contour Integration Layer type! Must be from %s" % valid_cont_int_layer_types)
+    cont_int_type = cont_int_type.lower()
 
     inputs = Input(shape=(3, 227, 227))
 
     conv_1 = Conv2D(96, (11, 11), strides=(4, 4), activation='relu', name='conv_1')(inputs)
 
-    contour_int_layer = contour_integration_layer_cb(
-        name='contour_integration',
-        weights_type=kwargs['weights_type'],
-        n=kwargs['n'],
-    )(conv_1)
+    if cont_int_type == 'additive':
+        contour_int_layer = AdditiveContourIntegrationLayer(
+            name='contour_integration',
+            weights_type=kwargs['weights_type'],
+            n=kwargs['n'],
+        )(conv_1)
+    else:
+        contour_int_layer = GaussianMultiplicativeContourIntegrationLayer(
+            name='contour_integration',
+            weights_type=kwargs['weights_type'],
+            n=kwargs['n'],
+            sigma=kwargs['sigma']
+        )(conv_1)
 
     conv_2 = MaxPooling2D((3, 3), strides=(2, 2))(contour_int_layer)
     conv_2 = alex_net.crosschannelnormalization(name='convpool_1')(conv_2)
@@ -309,17 +494,6 @@ def main(model, fragment, f_idx, l1_act_cb, l2_act_cb):
     ax_for_cb = \
         ax6.imshow(tgt_conv1_filter[:, :, 2], cmap='seismic', vmin=tgt_conv_filter_min, vmax=tgt_conv_filter_max)
     f.colorbar(ax_for_cb, )
-
-    # contour_test_image = np.transpose(contour_test_image, (2, 0, 1))
-    # contour_test_image = np.expand_dims(contour_test_image, axis=0)
-    # l1_act = np.array(l1_act_cb([contour_test_image, 0]))
-    # l2_act = np.array(l2_act_cb([contour_test_image, 0]))
-    #
-    # l1_act = np.squeeze(l1_act, axis=0)
-    # l2_act = np.squeeze(l2_act, axis=0)
-    #
-    # contour_test_image = contour_test_image[0, :, :, :]
-    # contour_test_image = np.transpose(contour_test_image, (1, 2, 0))
 
     alex_net_utils.plot_activations(contour_test_image, l1_act_cb, l2_act_cb, f_idx)
 
@@ -465,11 +639,21 @@ if __name__ == "__main__":
     K.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
     print("Building Contour Integration Model...")
 
+    # # Additive Model
+    # cont_int_model = build_contour_integration_model(
+    #     "Additive",
+    #     "trained_models/AlexNet/alexnet_weights.h5",
+    #     weights_type='enhance',
+    #     n=7
+    # )
+
+    # Gaussian Multiplicative Model
     cont_int_model = build_contour_integration_model(
-        AdditiveContourIntegrationLayer,
+        "gaussian_multiplicative",
         "trained_models/AlexNet/alexnet_weights.h5",
         weights_type='enhance',
-        n=7
+        n=25,
+        sigma=6.0
     )
 
     # callbacks to get activations of L1 & L2. Defined once only to optimize memory usage and
@@ -477,30 +661,30 @@ if __name__ == "__main__":
     l1_activations_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
     l2_activations_cb = alex_net_utils.get_activation_cb(cont_int_model, 2)
 
-    # # 2. Display Conv 1 and Contour integration layer Kernels
-    # # -------------------------------------------------------
-    # weights_ch_last = cont_int_model.layers[1].weights[0]
-    # common_utils.display_filters(weights_ch_last)
-    #
-    # weights_ch_last = cont_int_model.layers[2].kernel
-    # common_utils.display_filters(weights_ch_last)
-    #
-    # # 3. Display the activations of a test image
-    # # ------------------------------------------
-    # # img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
-    # img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
-    # plt.figure()
-    # plt.imshow(img)
-    # plt.title('Original Image')
-    #
-    # x = img_to_array(img)
-    # x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
-    #
-    # y_hat = cont_int_model.predict(x, batch_size=1, verbose=1)
-    # print("Prediction %s" % np.argmax(y_hat))
-    #
-    # common_utils.display_layer_activations(cont_int_model, 1, x)
-    # common_utils.display_layer_activations(cont_int_model, 2, x)
+    # 2. Display Conv 1 and Contour integration layer Kernels
+    # -------------------------------------------------------
+    weights_ch_last = cont_int_model.layers[1].weights[0]
+    common_utils.display_filters(weights_ch_last)
+
+    weights_ch_last = cont_int_model.layers[2].kernel
+    common_utils.display_filters(weights_ch_last)
+
+    # 3. Display the activations of a test image
+    # ------------------------------------------
+    # img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
+    img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    plt.figure()
+    plt.imshow(img)
+    plt.title('Original Image')
+
+    x = img_to_array(img)
+    x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
+
+    y_hat = cont_int_model.predict(x, batch_size=1, verbose=1)
+    print("Prediction %s" % np.argmax(y_hat))
+
+    common_utils.display_layer_activations(cont_int_model, 1, x)
+    common_utils.display_layer_activations(cont_int_model, 2, x)
 
     # 4. Contour Enhancement Visualizations
     # ---------------------------------------------------------------------
@@ -516,13 +700,13 @@ if __name__ == "__main__":
     frag_2[0:6, :, :] = 1
     main(cont_int_model, frag_2, tgt_filt_idx, l1_activations_cb, l2_activations_cb)
 
-    # # 5. Output of contour enhancement on real images
-    # # ----------------------------------------------------------------------
-    # test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
-    # # test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
-    #
-    # tgt_filt_idx = 5
-    # alex_net_utils.plot_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)
-    #
-    # tgt_filt_idx = 10
-    # alex_net_utils.plot_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)
+    # 5. Output of contour enhancement on real images
+    # ----------------------------------------------------------------------
+    test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    # test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
+
+    tgt_filt_idx = 5
+    alex_net_utils.plot_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)
+
+    tgt_filt_idx = 10
+    alex_net_utils.plot_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)
