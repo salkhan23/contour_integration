@@ -177,4 +177,4 @@ if __name__ == "__main__":
     plt.plot(data['contour_len_avg_len'], l2_act[:, 10, 27, 27] / l1_act[:, 10, 27, 27], label='model')
     plt.legend()
     plt.xlabel("Contour Length")
-    plt.ylabel("Contour Enhancement gain")
+    plt.ylabel("Contour Enhancement Gain")
