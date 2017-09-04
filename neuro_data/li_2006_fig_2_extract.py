@@ -75,9 +75,3 @@ plt.plot(new_data['contour_len_avg_len'], new_data['contour_len_avg_gain'])
 plt.title("restored data")
 plt.figure()
 plt.plot(new_data['contour_separation_avg_rcd'], new_data['contour_separation_avg_gain'])
-
-
-
-
-
-
