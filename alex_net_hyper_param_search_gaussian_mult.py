@@ -8,6 +8,9 @@
 # best fit alpha and bias terms that minimizes the loss. A stack of images containing contours of
 # various lengths and spacing are jointly optimized.
 #
+# TODO: General for other target filters.
+# TODO: Include contour separation figures as well
+#
 # Author: Salman Khan
 # Date  : 27/08/17
 # -------------------------------------------------------------------------------------------------
