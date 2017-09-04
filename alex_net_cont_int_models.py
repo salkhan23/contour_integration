@@ -233,7 +233,6 @@ class GaussianMultiplicativeContourIntegrationLayer(Layer):
         :param n: size of square contour Integration RF. The number of L1 output neighbors over
                   which lateral connections span (not over the visual space). Default=25.
         :param sigma: standard deviation of gaussian mask.
-        :param kwargs:
         """
 
         # 7 is the smallest size to include the first visually non-overlapping neighbor
@@ -359,6 +358,168 @@ class GaussianMultiplicativeContourIntegrationLayer(Layer):
         return outputs + inputs
 
 
+class MultiplicativeContourIntegrationLayer(Layer):
+
+    def __init__(self, weights_type, n=25, **kwargs):
+        """
+
+        Multiplicative integration model where the weighted sum of neighbor feed forward
+        responses is multiplied with the the feed forward response of the neuron. Here feed forward refers
+        to the output of the first convolutional layer of Alexnet.
+
+        The objective of this multiplication is to model the observed property that contour enhancement
+        happens only when there is a signal in the classical RF(when it has a non-zero L1 feed forward output).
+        This is not modeled by the AdditiveContourIntegrationLayer.
+
+        Compared to the Gaussian Multiplicative Contour Integration model, no additional mask is used. Instead
+        all allowed L2 kernels weights are learnable. A mask is used to define which of the neighbors are
+        allowed and therefore learnable. Default values of the weights are ones for neighbors that are allowed
+        and zero otherwise. However, best fit values, found by matching neurophysiology data are available.
+        (TO BE ADDED)
+
+        For each L1 feature map:
+            A_L(x,y) = sigma(A_FF(x,y) + [sum_over_m_and_n[W(m,n)*A_FF(x-m,y-m) + bias])
+
+        where
+            A_L(x,y) = output of the contour enhancement layer @ (x, y)
+            A_FF(x,y) = feed-forward output of conv Layer 1 @ (x, y)
+            sigma = non-linearity (currently none)
+            m & n are the row and column indices of the contour enhancement layer mask.
+            W(m,n) = weight of contribution from neuron @ (m,n) from (x,y). Default values are 1 for all neurons
+            that are coaxially aligned with non-overlapping visual fields.
+            bias = learnable shifting factor. Default = 0.
+
+        :param weights_type: types of weights [enhance, suppress or enhance_and_suppress]
+        :param n: size of square contour Integration RF. The number of L1 output neighbors over
+                  which lateral connections span (not over the visual space). Default=25.
+        """
+
+        # 7 is the smallest size to include the first visually non-overlapping neighbor
+        if n > 55 or n < 7 or (n & 1 == 0):
+            raise Exception("Invalid horizontal connections extent." +
+                            "Must match dimensions of Conv1 Layer output [7-55] & must be odd.")
+        self.n = n
+
+        if weights_type.lower() not in ['enhance', 'suppress', 'enhance_and_suppress']:
+            raise Exception("Invalid weight types. Must be [enhance, suppress or enhance_and_suppress]")
+        self.weights_type = weights_type.lower()
+
+        self.mask = get_visually_non_overlapping_contour_kernels(self.weights_type, self.n)
+
+        self.mask = K.variable(self.mask)
+
+        super(MultiplicativeContourIntegrationLayer, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        """
+        2 learnable parameters, but first one is a matrix over all L2 neighbors. However, we only care about
+        certain neighbors. Those for which the output of raw_kernel * mask is nonzero
+
+        :param input_shape:
+        :return:
+        """
+        if K.image_data_format() == 'channels_last':
+            _, r, c, ch = input_shape
+            # print("Build Fcn: Channel Last Input shape ", input_shape)
+        else:
+            _, ch, r, c = input_shape
+            # print("Build Fcn: Channel First Input shape ", input_shape)
+
+        self.raw_kernel = self.add_weight(
+            shape=(ch, self.n, self.n,),
+            initializer='ones',
+            name='raw_kernel',
+            trainable=True
+        )
+
+        self.bias = self.add_weight(
+            shape=(ch, 1, 1),
+            initializer='zeros',
+            name='bias',
+            trainable=True
+        )
+
+        super(MultiplicativeContourIntegrationLayer, self).build(input_shape)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape  # Layer does not change the shape of the input
+
+    def call(self, inputs, **kwargs):
+
+        if K.image_data_format() == 'channels_last':
+            _, r, c, ch = K.int_shape(inputs)
+            # print("Call Fcn: Channel Last Input shape ", K.int_shape(inputs))
+        else:
+            _, ch, r, c = K.int_shape(inputs)
+            # print("Call Fcn: Channel First Input shape ", K.int_shape(inputs))
+
+        # 1. Inputs Formatting
+        # ----------------------------------
+        # Pad the rows and columns to allow full matrix multiplication
+        # Note that this function is aware of which dimension the columns and rows are
+        padded_inputs = K.spatial_2d_padding(
+            inputs,
+            ((self.n / 2, self.n / 2), (self.n / 2, self.n / 2))
+        )
+        # print("Call Fcn: padded_inputs shape ", K.int_shape(padded_inputs))
+
+        # Channel first, batch second. This is done to take the unknown batch size into the matrix multiply
+        # where it can be handled more easily
+        if K.image_data_format() == 'channels_last':
+            inputs_chan_first = K.permute_dimensions(padded_inputs, [3, 0, 1, 2])
+        else:
+            inputs_chan_first = K.permute_dimensions(padded_inputs, [1, 0, 2, 3])
+        # print("Call Fcn: inputs_chan_first shape: ", inputs_chan_first.shape)
+
+        # 2. Kernel Formatting
+        # --------------------
+        # mask the kernel to keep only neighbors with overlapping RFs
+        self.kernel = self.raw_kernel * self.mask
+
+        if K.image_data_format() == 'channels_last':
+
+            kernel_chan_first = K.permute_dimensions(self.kernel, (2, 0, 1))
+        else:
+            kernel_chan_first = self.kernel
+        # print("Call Fcn: kernel_chan_first shape", kernel_chan_first.shape)
+
+        # Flatten rows and columns into a single dimension
+        k_ch, k_r, k_c = K.int_shape(kernel_chan_first)
+        apply_kernel = K.reshape(kernel_chan_first, (k_ch, k_r * k_c, 1))
+        # print("Call Fcn: kernel for matrix multiply: ", apply_kernel.shape)
+
+        # 3. Get outputs at each spatial location
+        # ----------------------------------------
+        xs = []
+        for i in range(r):
+            for j in range(c):
+                input_slice = inputs_chan_first[:, :, i:i + self.n, j:j + self.n]
+                input_slice_apply = K.reshape(input_slice, (ch, -1, self.n ** 2))
+
+                output_slice = K.batch_dot(input_slice_apply, apply_kernel)
+
+                # Reshape the output slice to put batch first
+                output_slice = K.permute_dimensions(output_slice, [1, 0, 2])
+                xs.append(output_slice)
+
+        # print("Call Fcn: len of xs", len(xs))
+        # print("Call Fcn: shape of each element of xs", xs[0].shape)
+
+        # Reshape the output to correct format
+        outputs = K.concatenate(xs, axis=2)
+        outputs = K.reshape(outputs, (-1, ch, r, c))  # Break into row and column
+
+        if K.image_data_format() == 'channels_last':
+            outputs = K.permute_dimensions(outputs, [0, 2, 3, 1])  # Back to batch last
+            outputs = outputs
+
+        # 4. Add the lateral and the feed-forward activations
+        # ------------------------------------------------------
+        outputs = outputs * inputs + self.bias
+
+        return outputs + inputs
+
+
 def build_contour_integration_model(cont_int_type, weights_path=None, **kwargs):
     """
     Build an alexnet model with the specified contour integration layer inserted after the
@@ -371,7 +532,7 @@ def build_contour_integration_model(cont_int_type, weights_path=None, **kwargs):
     :return: model
     """
 
-    valid_cont_int_layer_types = ['additive', 'gaussian_multiplicative']
+    valid_cont_int_layer_types = ['additive', 'gaussian_multiplicative', 'multiplicative']
     if cont_int_type.lower() not in valid_cont_int_layer_types:
         raise Exception("Invalid Contour Integration Layer type! Must be from %s" % valid_cont_int_layer_types)
     cont_int_type = cont_int_type.lower()
@@ -386,12 +547,20 @@ def build_contour_integration_model(cont_int_type, weights_path=None, **kwargs):
             weights_type=kwargs['weights_type'],
             n=kwargs['n'],
         )(conv_1)
-    else:
+
+    elif cont_int_type == 'gaussian_multiplicative':
         contour_int_layer = GaussianMultiplicativeContourIntegrationLayer(
             name='contour_integration',
             weights_type=kwargs['weights_type'],
             n=kwargs['n'],
             sigma=kwargs['sigma']
+        )(conv_1)
+
+    else:
+        contour_int_layer = MultiplicativeContourIntegrationLayer(
+            name='contour_integration',
+            weights_type=kwargs['weights_type'],
+            n=kwargs['n'],
         )(conv_1)
 
     conv_2 = MaxPooling2D((3, 3), strides=(2, 2))(contour_int_layer)
@@ -647,13 +816,21 @@ if __name__ == "__main__":
     #     n=7
     # )
 
-    # Gaussian Multiplicative Model
+    # # Gaussian Multiplicative Model
+    # cont_int_model = build_contour_integration_model(
+    #     "gaussian_multiplicative",
+    #     "trained_models/AlexNet/alexnet_weights.h5",
+    #     weights_type='enhance',
+    #     n=25,
+    #     sigma=6.0
+    # )
+
+    # Multiplicative Model
     cont_int_model = build_contour_integration_model(
-        "gaussian_multiplicative",
+        "multiplicative",
         "trained_models/AlexNet/alexnet_weights.h5",
         weights_type='enhance',
         n=25,
-        sigma=6.0
     )
 
     # callbacks to get activations of L1 & L2. Defined once only to optimize memory usage and
