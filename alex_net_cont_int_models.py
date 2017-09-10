@@ -15,6 +15,7 @@ from keras.layers import Dense, Flatten, ZeroPadding2D, Dropout
 from keras.preprocessing.image import img_to_array, load_img
 from keras.engine.topology import Layer
 import keras.backend as K
+import keras.activations as activations
 
 import base_alex_net as alex_net
 import alex_net_utils as alex_net_utils
@@ -104,7 +105,7 @@ def get_non_overlapping_kernels(rf_len):
 
 
 class AdditiveContourIntegrationLayer(Layer):
-    def __init__(self, weights_type, n=25, **kwargs):
+    def __init__(self, weights_type, n=25,  activation=None, **kwargs):
         """
         Linear additive contour integration model where weighted neighbor feed forward
         responses are added to the the feed forward response of neuron. Here feed forward refers
@@ -141,6 +142,8 @@ class AdditiveContourIntegrationLayer(Layer):
 
         self.kernel = get_non_overlapping_coaligned_kernels(self.weights_type, self.n)
         self.kernel = K.variable(self.kernel)
+
+        self.activation = activations.get(activation)
 
         super(AdditiveContourIntegrationLayer, self).__init__(**kwargs)
 
@@ -224,13 +227,14 @@ class AdditiveContourIntegrationLayer(Layer):
 
         # 4. Add the lateral and the feed-forward activations
         # ------------------------------------------------------
+        outputs = self.activation(outputs)
         outputs += inputs
         return outputs
 
 
 class GaussianMultiplicativeContourIntegrationLayer(Layer):
 
-    def __init__(self, weights_type, n=25, sigma=6.0, **kwargs):
+    def __init__(self, weights_type, n=25, sigma=6.0, activation=None, **kwargs):
         """
 
         Multiplicative integration model where the weighted sum of neighbor feed forward
@@ -287,8 +291,9 @@ class GaussianMultiplicativeContourIntegrationLayer(Layer):
 
         g_kernel = alex_net_utils.get_2d_gaussian_kernel((n, n), sigma)
         self.kernel = np.array([k * g_kernel for k in self.kernel])
-
         self.kernel = K.variable(self.kernel)
+
+        self.activation = activations.get(activation)
 
         super(GaussianMultiplicativeContourIntegrationLayer, self).__init__(**kwargs)
 
@@ -392,13 +397,14 @@ class GaussianMultiplicativeContourIntegrationLayer(Layer):
         # 4. Add the lateral and the feed-forward activations
         # ------------------------------------------------------
         outputs = outputs * inputs + self.bias
+        outputs = self.activation(outputs)
 
         return outputs + inputs
 
 
 class MaskedMultiplicativeContourIntegrationLayer(Layer):
 
-    def __init__(self, weights_type, n=25, **kwargs):
+    def __init__(self, weights_type, n=25, activation=None, **kwargs):
         """
 
         Multiplicative integration model where the weighted sum of neighbor feed forward
@@ -446,8 +452,9 @@ class MaskedMultiplicativeContourIntegrationLayer(Layer):
         self.weights_type = weights_type.lower()
 
         self.mask = get_non_overlapping_coaligned_kernels(self.weights_type, self.n)
-
         self.mask = K.variable(self.mask)
+
+        self.activation = activations.get(activation)
 
         super(MaskedMultiplicativeContourIntegrationLayer, self).__init__(**kwargs)
 
@@ -552,18 +559,18 @@ class MaskedMultiplicativeContourIntegrationLayer(Layer):
 
         if K.image_data_format() == 'channels_last':
             outputs = K.permute_dimensions(outputs, [0, 2, 3, 1])  # Back to batch last
-            outputs = outputs
 
         # 4. Add the lateral and the feed-forward activations
         # ------------------------------------------------------
         outputs = outputs * inputs + self.bias
+        outputs = self.activation(outputs)
 
         return outputs + inputs
 
 
 class MultiplicativeContourIntegrationLayer(Layer):
 
-    def __init__(self, n=25, **kwargs):
+    def __init__(self, n=25, activation=None, **kwargs):
         """
 
         Multiplicative integration model where the weighted sum of neighbor feed forward
@@ -615,6 +622,8 @@ class MultiplicativeContourIntegrationLayer(Layer):
         self.mask = get_non_overlapping_kernels(self.n)
         self.mask = K.variable(self.mask)
 
+        self.activation = activations.get(activation)
+
         super(MultiplicativeContourIntegrationLayer, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -634,7 +643,7 @@ class MultiplicativeContourIntegrationLayer(Layer):
 
         self.raw_kernel = self.add_weight(
             shape=(ch, self.n, self.n,),
-            initializer='ones',
+            initializer='glorot_uniform',
             name='raw_kernel',
             trainable=True
         )
@@ -718,11 +727,11 @@ class MultiplicativeContourIntegrationLayer(Layer):
 
         if K.image_data_format() == 'channels_last':
             outputs = K.permute_dimensions(outputs, [0, 2, 3, 1])  # Back to batch last
-            outputs = outputs
 
         # 4. Add the lateral and the feed-forward activations
         # ------------------------------------------------------
         outputs = outputs * inputs + self.bias
+        outputs = self.activation(outputs)
 
         return outputs + inputs
 
@@ -753,6 +762,7 @@ def build_contour_integration_model(cont_int_type, weights_path=None, **kwargs):
             name='contour_integration',
             weights_type=kwargs['weights_type'],
             n=kwargs['n'],
+            activation=kwargs.get('activation')
         )(conv_1)
 
     elif cont_int_type == 'gaussian_multiplicative':
@@ -760,7 +770,8 @@ def build_contour_integration_model(cont_int_type, weights_path=None, **kwargs):
             name='contour_integration',
             weights_type=kwargs['weights_type'],
             n=kwargs['n'],
-            sigma=kwargs['sigma']
+            sigma=kwargs['sigma'],
+            activation=kwargs.get('activation')
         )(conv_1)
 
     elif cont_int_type == 'masked_multiplicative':
@@ -768,11 +779,13 @@ def build_contour_integration_model(cont_int_type, weights_path=None, **kwargs):
             name='contour_integration',
             weights_type=kwargs['weights_type'],
             n=kwargs['n'],
+            activation=kwargs.get('activation')
         )(conv_1)
     else:
         contour_int_layer = MultiplicativeContourIntegrationLayer(
             name='contour_integration',
-            n=kwargs['n']
+            n=kwargs['n'],
+            activation=kwargs.get('activation')
         )(conv_1)
 
     conv_2 = MaxPooling2D((3, 3), strides=(2, 2))(contour_int_layer)
