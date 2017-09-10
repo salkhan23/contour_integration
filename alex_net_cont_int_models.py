@@ -61,11 +61,14 @@ def get_visually_non_overlapping_contour_kernels(weights_type, rf_len):
         kernel[5, post_half_range, half_rf] = -1
 
     # Diagonal Kernel (Leaning backwards)
-    kernel[54, range(0, half_rf, 3), range(0, half_rf, 3)] = 1
-    kernel[54, range(half_rf + 3, rf_len, 3), range(half_rf + 3, rf_len, 3)] = 1
+    kernel[54, (0, 3, 6, 9, 15, 18, 21, 24), (8, 9, 10, 11, 13, 14, 15, 16)] = 1
+    # TODO: Add suppression values
+
+    kernel[64, range(0, half_rf, 3), range(0, half_rf, 3)] = 1
+    kernel[64, range(half_rf + 3, rf_len, 3), range(half_rf + 3, rf_len, 3)] = 1
     if weights_type != 'enhance':  # Suppression values
-        kernel[54, range(rf_len-1, half_rf, -3), range(0, half_rf, 3)] = -1
-        kernel[54, range(half_rf-3, -1, -3), range(half_rf + 3, rf_len, 3)] = -1
+        kernel[64, range(rf_len - 1, half_rf, -3), range(0, half_rf, 3)] = -1
+        kernel[64, range(half_rf - 3, -1, -3), range(half_rf + 3, rf_len, 3)] = -1
 
     kernel[67, :, :] = np.copy(kernel[54, :, :])
 
