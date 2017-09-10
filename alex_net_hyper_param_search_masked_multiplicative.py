@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     # Gaussian Multiplicative Model
     contour_integration_model = cont_int_models.build_contour_integration_model(
-        "multiplicative",
+        "masked_multiplicative",
         "trained_models/AlexNet/alexnet_weights.h5",
         weights_type='enhance',
         n=25,

@@ -80,17 +80,20 @@ class AdditiveContourIntegrationLayer(Layer):
         """
         Linear additive contour integration model where weighted neighbor feed forward
         responses are added to the the feed forward response of neuron. Here feed forward refers
-        to the output of the first convolutional layer of Alexnet.
+        to the output of the first convolutional layer of Alexnet. Additionally a mask that identifies
+        non-overlapping and co-aligned and orthogonal to co-aligned neighbors.
 
         For each L1 feature map:
-        A_L(x,y) = sigma(A_FF(x,y) + sum_over_m_and_n[W(m,n)*A_FF(x-m,y-m)])
+        A_L(x,y) = sigma(A_FF(x,y) + sum_over_m_and_n[W(m,n) * M(m, n) * A_FF(x-m,y-m)])
 
         where
             A_L(x,y) = output of the contour enhancement layer @ (x, y)
             A_FF(x,y) = feed-forward output of conv Layer 1 @ (x, y)
             sigma = non-linearity (currently none)
-            m & n are the row and column indices of the contour enhancement layer mask.
+            m & n are the row and column indices of the contour enhancement layer neurons.
             W(m,n) = weight of contribution from neuron @ (m,n) from (x,y)
+            M(m,n) = Manually defined mask that identifies coaligned and orthogonal neurons with
+            non-overlapping visual fields.
 
         :param weights_type: types of weights [enhance, suppress or enhance_and_suppress]
         :param n: size of square contour Integration RF. The number of L1 output neighbors over
@@ -220,14 +223,18 @@ class GaussianMultiplicativeContourIntegrationLayer(Layer):
         neurophysiology data are available. (TO BE ADDED)
 
         For each L1 feature map:
-            A_L(x,y) = sigma(A_FF(x,y) + alpha[sum_over_m_and_n[G(m,n)*W(m,n)*A_FF(x-m,y-m) + bias])
+            A_L(x,y) = sigma( A_FF(x,y) +
+                A_FF(x,y) * alpha * sum_over_m_and_n[G(m,n) * M(m, n) * W(m,n) * A_FF(x-m,y-m) + bias])
 
         where
             A_L(x,y) = output of the contour enhancement layer @ (x, y)
             A_FF(x,y) = feed-forward output of conv Layer 1 @ (x, y)
             sigma = non-linearity (currently none)
-            m & n are the row and column indices of the contour enhancement layer mask.
+            m & n are the row and column indices of the contour enhancement layer neurons.
             W(m,n) = weight of contribution from neuron @ (m,n) from (x,y)
+            M(m,n) = Manually defined mask that identifies coaligned and orthogonal neurons with
+            non-overlapping visual fields.
+
             G(m,n) = The weight W(m,n) is further scaled by a Gaussian (0, sigma)
             alpha = learnable scaling factor. Default = 1.
             bias = learnable shifting factor. Default = 0.
@@ -361,7 +368,7 @@ class GaussianMultiplicativeContourIntegrationLayer(Layer):
         return outputs + inputs
 
 
-class MultiplicativeContourIntegrationLayer(Layer):
+class MaskedMultiplicativeContourIntegrationLayer(Layer):
 
     def __init__(self, weights_type, n=25, **kwargs):
         """
@@ -374,22 +381,25 @@ class MultiplicativeContourIntegrationLayer(Layer):
         happens only when there is a signal in the classical RF(when it has a non-zero L1 feed forward output).
         This is not modeled by the AdditiveContourIntegrationLayer.
 
-        Compared to the Gaussian Multiplicative Contour Integration model, no additional mask is used. Instead
-        all allowed L2 kernels weights are learnable. A mask is used to define which of the neighbors are
-        allowed and therefore learnable. Default values of the weights are ones for neighbors that are allowed
-        and zero otherwise. However, best fit values, found by matching neurophysiology data are available.
-        (TO BE ADDED)
+        Compared to the Gaussian Multiplicative Contour Integration model, no constraint on the weightings
+        of neighbors is assumed. Instead, the weights of neighbors are learnt though gradient descent to match
+        neurological data (gains). Note a mask is still used to define which of the neighbors are coaligned and
+        (orthogonal to coaligned). Initial values of these allowed weights are ones However, best fit values
+        found by the optimization process are available. (TO BE ADDED)
 
         For each L1 feature map:
-            A_L(x,y) = sigma(A_FF(x,y) + [sum_over_m_and_n[W(m,n)*A_FF(x-m,y-m) + bias])
+            A_L(x,y) = sigma(A_FF(x,y) +
+               A_FF(x,y) * sum_over_m_and_n[ W(m,n) * M(m,n) * A_FF(x-m,y-m) + bias])
 
         where
             A_L(x,y) = output of the contour enhancement layer @ (x, y)
             A_FF(x,y) = feed-forward output of conv Layer 1 @ (x, y)
             sigma = non-linearity (currently none)
-            m & n are the row and column indices of the contour enhancement layer mask.
-            W(m,n) = weight of contribution from neuron @ (m,n) from (x,y). Default values are 1 for all neurons
-            that are coaxially aligned with non-overlapping visual fields.
+            m & n are the row and column indices of the contour enhancement layer neurons.
+            W(m,n) = weight of contribution from neuron @ (m,n) from (x,y)
+            M(m,n) = Manually defined mask that identifies coaligned and orthogonal neurons with
+            non-overlapping visual fields.
+
             bias = learnable shifting factor. Default = 0.
 
         :param weights_type: types of weights [enhance, suppress or enhance_and_suppress]
@@ -411,7 +421,7 @@ class MultiplicativeContourIntegrationLayer(Layer):
 
         self.mask = K.variable(self.mask)
 
-        super(MultiplicativeContourIntegrationLayer, self).__init__(**kwargs)
+        super(MaskedMultiplicativeContourIntegrationLayer, self).__init__(**kwargs)
 
     def build(self, input_shape):
         """
@@ -442,7 +452,7 @@ class MultiplicativeContourIntegrationLayer(Layer):
             trainable=True
         )
 
-        super(MultiplicativeContourIntegrationLayer, self).build(input_shape)
+        super(MaskedMultiplicativeContourIntegrationLayer, self).build(input_shape)
 
     def compute_output_shape(self, input_shape):
         return input_shape  # Layer does not change the shape of the input
@@ -535,7 +545,7 @@ def build_contour_integration_model(cont_int_type, weights_path=None, **kwargs):
     :return: model
     """
 
-    valid_cont_int_layer_types = ['additive', 'gaussian_multiplicative', 'multiplicative']
+    valid_cont_int_layer_types = ['additive', 'gaussian_multiplicative', 'masked_multiplicative']
     if cont_int_type.lower() not in valid_cont_int_layer_types:
         raise Exception("Invalid Contour Integration Layer type! Must be from %s" % valid_cont_int_layer_types)
     cont_int_type = cont_int_type.lower()
@@ -559,8 +569,8 @@ def build_contour_integration_model(cont_int_type, weights_path=None, **kwargs):
             sigma=kwargs['sigma']
         )(conv_1)
 
-    else:
-        contour_int_layer = MultiplicativeContourIntegrationLayer(
+    elif cont_int_type == 'masked_multiplicative':
+        contour_int_layer = MaskedMultiplicativeContourIntegrationLayer(
             name='contour_integration',
             weights_type=kwargs['weights_type'],
             n=kwargs['n'],
@@ -830,7 +840,7 @@ if __name__ == "__main__":
 
     # Multiplicative Model
     cont_int_model = build_contour_integration_model(
-        "multiplicative",
+        "masked_multiplicative",
         "trained_models/AlexNet/alexnet_weights.h5",
         weights_type='enhance',
         n=25,
