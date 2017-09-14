@@ -73,13 +73,19 @@ if __name__ == "__main__":
 
     # 3. Get the optimum weights
     # ----------------------------------------------------------------------
-    tgt_filter_idx = 10
+    tgt_filter_idx = 5
     tgt_neuron_loc = 27
     tgt_neuron_visual_rf_start = 27 * 4
 
     # Fragment
+    # fragment = np.zeros((11, 11, 3))
+    # fragment[:, (0, 3, 4, 5, 9, 10), :] = 255.0
+    # fragment_len = fragment.shape[0]
+    # smooth_tiles = True
+
+    # Horizontal Filter
     fragment = np.zeros((11, 11, 3))
-    fragment[:, (0, 3, 4, 5, 9, 10), :] = 255.0
+    fragment[0:6, :, :] = 255.0
     fragment_len = fragment.shape[0]
     smooth_tiles = True
 
@@ -103,7 +109,7 @@ if __name__ == "__main__":
     iterate = K.function([input_cb], [loss, grads[0], grads[1]])
 
     # Loop Initializations
-    n_runs = 200
+    n_runs = 500
     step = 0.00025
     old_loss = 10000000
 
@@ -114,6 +120,12 @@ if __name__ == "__main__":
 
     l1_act = 0
     l2_act = 0 + 1e-5
+
+    m_W = 0
+    v_W = 0
+
+    m_b = 0
+    v_b = 0
 
     for run_idx in range(n_runs):
 
@@ -145,7 +157,7 @@ if __name__ == "__main__":
             )
 
             # Place contour in image
-            start_x, start_y = alex_net_utils.vertical_contour_generator(
+            start_x, start_y = alex_net_utils.horizontal_contour_generator(
                 fragment.shape[0],
                 bw_tile_spacing=0,
                 cont_len=c_len,
@@ -182,11 +194,21 @@ if __name__ == "__main__":
         weights, bias = contour_integration_model.layers[2].get_weights()
 
         if loss_value.mean() > old_loss:
-            step /= 2.0
-            print("Lowering step value to %f" % step)
+            # step /= 2.0
+            # print("Lowering step value to %f" % step)
+            pass
         else:
-            new_weights = weights - grad_value[0] * step
-            new_bias = bias - grad_value[1] * step
+            # new_weights = weights - grad_value[0] * step
+            # new_bias = bias - grad_value[1] * step
+            m_W = 0.9 * m_W + (1 - 0.9) * grad_value[0]
+            v_W = 0.999 * v_W + (1 - 0.999) * (grad_value[0])**2
+
+            new_weights = weights - step * m_W / (np.sqrt(v_W) + 1e-8)
+
+            m_b = 0.9 * m_b + (1 - 0.9) * grad_value[1]
+            v_b = 0.999 * v_b + (1 - 0.999) * (grad_value[1]) ** 2
+
+            new_bias = bias - step * m_b / (np.sqrt(v_b) + 1e-8)
 
             # Print Contour Enhancement Gains
             l1_act = np.array(l1_activations_cb([images_arr, 0]))
@@ -214,8 +236,8 @@ if __name__ == "__main__":
     mask = K.eval(contour_integration_model.layers[2].mask)
 
     fig.add_subplot(1, 2, 2)
-    plt.imshow(mask[10, :, :] * weights[10, :, :])
-    plt.title("Best weights 7bias=%0.4f" % bias[10])
+    plt.imshow(mask[tgt_filter_idx, :, :] * weights[tgt_filter_idx, :, :])
+    plt.title("Best weights 7bias=%0.4f" % bias[tgt_filter_idx])
 
     # 5 Plot the gain curve and compare with neuroData
     # # -------------------------------------------------
