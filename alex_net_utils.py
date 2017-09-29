@@ -242,28 +242,50 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True, sig
         y_arr = np.array([y_arr])
 
     for idx in range(len(x_arr)):
-        # print("Placing Fragment at location x=(%d, %d), y =(%d, %d)"
-        #       % (x_arr[idx], x_arr[idx] + tile_len, y_arr[idx], y_arr[idx] + tile_len))
 
-        start_x_loc = max(x_arr[idx], 0)
-        stop_x_loc = min(x_arr[idx] + tile_len, img_len)
+        # print("Processing Fragment @ (%d,%d)" % (x_arr[idx], y_arr[idx]))
 
-        start_y_loc = max(y_arr[idx], 0)
-        stop_y_loc = min(y_arr[idx] + tile_len, img_len)
+        if (-tile_len < x_arr[idx] < img_len) and (-tile_len < y_arr[idx] < img_len):
 
-        if rotate:
-            tile = randomly_rotate_tile(frag, 45)
-        else:
-            tile = frag
+            start_x_loc = max(x_arr[idx], 0)
+            stop_x_loc = min(x_arr[idx] + tile_len, img_len)
 
-        # multiply the file with the gaussian smoothing filter
-        # The edges between the tiles will lie within the stimuli of some neurons.
-        # to prevent these prom being interpreted as stimuli, gradually decrease them.
-        if gaussian_smoothing:
-            tile = tile * g_kernel
+            start_y_loc = max(y_arr[idx], 0)
+            stop_y_loc = min(y_arr[idx] + tile_len, img_len)
 
-        img[start_x_loc: stop_x_loc, start_y_loc: stop_y_loc, :] = \
-            tile[0: stop_x_loc - start_x_loc, 0: stop_y_loc - start_y_loc, :]
+            # print("Placing Fragment at location  x=(%d, %d), y = (%d, %d),"
+            #       % (start_x_loc, stop_x_loc, start_y_loc, stop_y_loc))
+
+            # Adjust incomplete beginning tiles
+            if x_arr[idx] < 0:
+                tile_x_start = tile_len - (stop_x_loc - start_x_loc)
+            else:
+                tile_x_start = 0
+
+            if y_arr[idx] < 0:
+                tile_y_start = tile_len - (stop_y_loc - start_y_loc)
+            else:
+                tile_y_start = 0
+            #
+            # print("Tile indices x = (%d,%d), y = (%d, %d)" % (
+            #       tile_x_start, tile_x_start + stop_x_loc - start_x_loc,
+            #       tile_y_start, tile_y_start + stop_y_loc - start_y_loc))
+
+            if rotate:
+                tile = randomly_rotate_tile(frag, 45)
+            else:
+                tile = frag
+
+            # multiply the file with the gaussian smoothing filter
+            # The edges between the tiles will lie within the stimuli of some neurons.
+            # to prevent these prom being interpreted as stimuli, gradually decrease them.
+            if gaussian_smoothing:
+                tile = tile * g_kernel
+
+            # only plot fragments who's start locations is within the image dimensions
+                img[start_x_loc: stop_x_loc, start_y_loc: stop_y_loc, :] = \
+                    tile[tile_x_start: tile_x_start + stop_x_loc - start_x_loc,
+                         tile_y_start: tile_y_start + stop_y_loc - start_y_loc, :]
 
     return img
 
