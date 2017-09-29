@@ -210,6 +210,64 @@ def horizontal_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start
     return start_x, start_y
 
 
+def get_background_tiles_locations(frag_len, img_len, row_offset, space_bw_tiles, tgt_n_visual_rf_start):
+    """
+    Starting locations for non-overlapping fragment tiles to cover the whole image.
+    if row_offset is non-zero, tiles in each row are shifted by specified amount as you move further away
+    from the center row.
+
+    :param space_bw_tiles:
+    :param tgt_n_visual_rf_start:
+    :param row_offset:
+    :param frag_len:
+    :param img_len:
+
+    :return: start_x, start_y
+    """
+    n_tiles = img_len // (frag_len + space_bw_tiles)
+    frag_spacing = frag_len + space_bw_tiles
+
+    # for non-zero row_offsets, we need an additional tile to make sure the row is complete
+    if row_offset or space_bw_tiles:
+        additional_tile = 2
+    else:
+        additional_tile = 0
+
+    zero_offset_starts = range(
+        tgt_n_visual_rf_start - (n_tiles / 2) * frag_spacing,
+        tgt_n_visual_rf_start + (n_tiles / 2 + 1 + additional_tile) * frag_spacing,
+        frag_spacing,
+    )
+
+    # Fist dimension stays the same
+    start_x = np.repeat(zero_offset_starts, len(zero_offset_starts))
+
+    # In the second dimension each row is shifted by offset from the center row
+
+    # # If there is nonzero spacing between tiles, the offset needs to be updated
+    if space_bw_tiles:
+        row_offset = np.int(frag_spacing / np.float(frag_len) * row_offset)
+
+    start_y = []
+    for row_idx in range(-n_tiles / 2, (n_tiles / 2) + 1 + additional_tile):
+
+        # print("processing row at idx %d" % row_idx)
+        ys = np.array(zero_offset_starts) + (row_idx * row_offset)
+
+        while ys[0] < - frag_spacing:
+            ys += frag_spacing
+
+        while ys[-1] > img_len + frag_spacing or (ys[0] > 0):
+            ys -= frag_spacing
+
+        start_y.append(ys)
+
+    start_y = np.array(start_y)
+    start_y = np.reshape(start_y, (start_y.shape[0] * start_y.shape[1]))
+
+    return start_x, start_y
+
+
 def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True, sigma=4.0):
     """
     Place tile 'fragments' at the specified starting positions (x, y) in the image.

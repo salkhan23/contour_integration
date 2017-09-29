@@ -34,9 +34,10 @@ np.random.seed(7)  # Set the random seed for reproducibility
 
 
 def optimize_contour_enhancement_layer_weights(
-        model, tgt_filt_idx, frag, contour_generator_cb, n_runs, learning_rate=0.00025):
+        model, tgt_filt_idx, frag, contour_generator_cb, n_runs, learning_rate=0.00025, offset=0):
     """
 
+    :param offset: the pixel offset by which each row should be shifted by as it moves away from the center row
     :param model:
     :param tgt_filt_idx:
     :param frag:
@@ -103,18 +104,11 @@ def optimize_contour_enhancement_layer_weights(
         for c_len in contour_len_arr:
 
             test_image = np.zeros((227, 227, 3))
-            n_tiles = test_image.shape[0] // frag_len
+            test_image_len = test_image.shape[0]
 
-            # Place randomly oriented fragments in the image
-            start_x = range(
-                tgt_n_visual_rf_start - (n_tiles / 2) * frag_len,
-                tgt_n_visual_rf_start + (n_tiles / 2 + 1) * frag_len,
-                frag_len,
-            )
-            start_y = np.copy(start_x)
-
-            start_x = np.repeat(start_x, len(start_x))
-            start_y = np.tile(start_y, len(start_y))
+            # Background Tiles
+            start_x, start_y = alex_net_utils.get_background_tiles_locations(
+                frag_len, test_image_len, offset, 0, tgt_n_visual_rf_start)
 
             test_image = alex_net_utils.tile_image(
                 test_image,

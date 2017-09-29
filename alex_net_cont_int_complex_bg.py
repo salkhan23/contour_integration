@@ -28,7 +28,7 @@ np.random.seed(7)  # Set the random seed for reproducibility
 
 
 def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
-                          cont_gen_cb, space_bw_tiles=0, smooth_tiles=True):
+                          cont_gen_cb, space_bw_tiles=0, offset=0, smooth_tiles=True):
     """
     Creates a test image of a sea of "contour fragments" by tiling random rotations of the contour
     fragment (frag), then inserts a vertical contour of the specified length into the center of
@@ -42,13 +42,20 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
     :param cont_gen_cb: Contour generating callback. Generates contours of the specified length
                         and spacing between fragments. For format see vertical_contour_generator
     :param space_bw_tiles: Amount of spacing (in pixels) between inserted tiles
+    :param offset: the offset by which a tile row should be shifted by as it moves away from center row
     :param smooth_tiles: Use gaussian smoothing on tiles to prevent tile edges from becoming part
                          of the stimulus
 
     :return: l1 activation, l2 activation (of target filter) & generated image
     """
 
-    frag_len = frag.shape[0] + space_bw_tiles
+    test_image = np.zeros((227, 227, 3))
+    test_image_len = test_image.shape[0]
+
+    frag_len = frag.shape[0]
+
+    # Output dimensions of the first convolutional layer of Alexnet [55x55x96] and a stride=4 was used
+    center_neuron_loc = 27 * 4  # Starting Visual Field Location of neuron @ location (27,27)
 
     # Sea of similar but randomly oriented fragments
     # -----------------------------------------------
@@ -56,22 +63,8 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
     # This ensures that this central neuron is looking directly at the fragment and has a maximal response.
     # This is similar to the Ref, where the center contour fragment was in the center of the RF of the neuron
     # being monitored and the origin of the visual field
-    test_image = np.zeros((227, 227, 3))
-    image_len = test_image.shape[0]
-
-    # Output dimensions of the first convolutional layer of Alexnet [55x55x96] and a stride=4 was used
-    center_neuron_loc = 27 * 4  # Starting Visual Field Location of neuron @ location (27,27)
-    num_tiles = image_len // frag_len
-
-    start_x = range(
-        center_neuron_loc - (num_tiles / 2) * frag_len,
-        center_neuron_loc + (num_tiles / 2 + 1) * frag_len,
-        frag_len
-    )
-    start_y = np.copy(start_x)
-
-    start_x = np.repeat(start_x, len(start_x))
-    start_y = np.tile(start_y, len(start_y))
+    start_x, start_y = alex_net_utils.get_background_tiles_locations(
+        frag_len, test_image_len, offset, space_bw_tiles, center_neuron_loc)
 
     test_image = alex_net_utils.tile_image(
         test_image,
@@ -386,7 +379,7 @@ if __name__ == "__main__":
     # img = np.zeros((227, 227, 3))
     # loc_x = np.array([86,  97, 108, 119, 130])
     # loc_y = np.array([98, 103, 108, 113, 118])
-    #
+
     # new_img = tile_image(img, fragment, (loc_x, loc_y), rotate=False, gaussian_smoothing=False)
     #
     # plt.figure()
