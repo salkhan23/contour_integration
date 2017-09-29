@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------------------------------------
-#  Find the parameters of the best fit 2D Gabor Filter for a given l1 layer kernel. Bet fit Gabors
+#  Find the parameters of the best fit 2D Gabor Filter for a given L1 layer kernel. Bet fit Gabors
 #  for each channel are found independently.
 #
 # Author: Salman Khan
@@ -186,7 +186,7 @@ def plot_kernel_and_best_fit_gabors(kernel, kernel_idx, fitted_gabors_params):
             display_gabor = (fitted_gabor - fitted_gabor.min()) / (fitted_gabor.max() - fitted_gabor.min())
             plt.imshow(display_gabor, cmap='seismic')
 
-    f.suptitle("Target Filter Index %d" % kernel_idx)
+    f.suptitle("2D Gabor Fits for L1 Filter @ Index %d" % kernel_idx)
 
 
 if __name__ == "__main__":
@@ -211,16 +211,16 @@ if __name__ == "__main__":
 
     # 2. Select the target L1 filter to find the
     # ---------------------------------------------------------------------
-    # # A. For a particular target filter
-    # tgt_filter_idx = 54
+    # A. For a particular target filter
+    tgt_filter_idx = 54
+
+    tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
+    optimal_params = find_best_fit_2d_gabor(tgt_filter)
+    plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
+
+    # B. For a range of target filters
+    # for tgt_filter_idx in np.arange(76, 96):
+    #     tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
     #
-    # tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
-    # optimal_params = find_best_fit_2d_gabor(tgt_filter)
-    # plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
-
-    # B. For a rage of target filters
-    for tgt_filter_idx in np.arange(76, 96):
-        tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
-
-        optimal_params = find_best_fit_2d_gabor(tgt_filter)
-        plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
+    #     optimal_params = find_best_fit_2d_gabor(tgt_filter)
+    #     plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
