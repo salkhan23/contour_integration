@@ -110,17 +110,19 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
     return tgt_l1_act, tgt_l2_act, test_image
 
 
-def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, n_runs=1):
+def main_contour_length_routine(
+        frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, row_offset=0, n_runs=1):
     """
     Contours of various lengths - Figure 2, B3
 
-    :param smoothing:
+    :param frag:
+    :param l1_act_cb:
+    :param l2_act_cb:
     :param cont_gen_cb:
     :param tgt_filt_idx:
-    :param l2_act_cb:
-    :param l1_act_cb:
+    :param smoothing:
+    :param row_offset:
     :param n_runs:
-    :param frag:
 
     :return: handle of figure where contour length vs gain is plotted
     """
@@ -141,6 +143,7 @@ def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fil
                 frag,
                 c_len,
                 cont_gen_cb,
+                offset=row_offset,
                 smooth_tiles=smoothing
             )
 
@@ -169,7 +172,8 @@ def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fil
     return f
 
 
-def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, n_runs=1):
+def main_contour_spacing_routine(
+        frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, row_offset=0, n_runs=1):
     """
     Various Contour Spacing - Figure 2, B4
 
@@ -179,6 +183,7 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
     :param cont_gen_cb:
     :param tgt_filt_idx:
     :param smoothing:
+    :param row_offset:
     :param n_runs:
 
     :return: handle of figure where contour spacing vs gain is plotted
@@ -211,6 +216,7 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
                 c_len,
                 cont_gen_cb,
                 space_bw_tiles=int(spacing),
+                offset=row_offset,
                 smooth_tiles=smoothing
             )
 
@@ -301,6 +307,7 @@ if __name__ == "__main__":
         alex_net_utils.vertical_contour_generator,
         tgt_filter_index,
         use_smoothing,
+        row_offset=0,
         n_runs=50
     )
 
@@ -311,6 +318,7 @@ if __name__ == "__main__":
         alex_net_utils.vertical_contour_generator,
         tgt_filter_index,
         use_smoothing,
+        row_offset=0,
         n_runs=50
     )
 
@@ -346,6 +354,7 @@ if __name__ == "__main__":
         alex_net_utils.horizontal_contour_generator,
         tgt_filter_index,
         use_smoothing,
+        row_offset=0,
         n_runs=50
     )
 
@@ -356,6 +365,7 @@ if __name__ == "__main__":
         alex_net_utils.horizontal_contour_generator,
         tgt_filter_index,
         use_smoothing,
+        row_offset=0,
         n_runs=50
     )
 

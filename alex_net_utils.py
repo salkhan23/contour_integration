@@ -161,7 +161,7 @@ def randomly_rotate_tile(tile, delta_rotation=45.0):
     return imrotate(tile, angle=(np.random.randint(0, np.int(num_possible_rotations)) * delta_rotation))
 
 
-def vertical_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_loc):
+def vertical_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_loc, row_offset=0):
     """
     Generate the start co-ordinates of fragment squares that form a vertical contour of the
     specified length at the specified location
@@ -170,6 +170,8 @@ def vertical_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_l
     :param bw_tile_spacing: Between fragment square spacing in pixels
     :param cont_len: length of fragment in units of fragment squares
     :param cont_start_loc: start starting location where the contour should be places
+    :param offset: Parameter not used for vertical contour generation. It is added because
+           this function is used as a callback which requires this parameter.
 
     :return: tuple of (start_x, start_y)
     """
@@ -185,7 +187,7 @@ def vertical_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_l
     return start_x, start_y
 
 
-def horizontal_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_loc):
+def horizontal_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start_loc, row_offset=0):
     """
     Generate the start co-ordinates of fragment squares that form a horizontal contour of
     the specified length at the specified location
@@ -194,6 +196,8 @@ def horizontal_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start
     :param bw_tile_spacing:
     :param cont_len:
     :param cont_start_loc:
+    :param offset: Parameter not used for vertical contour generation. It is added because
+           this function is used as a callback which requires this parameter.
 
     :return: tuple of (start_x, start_y)
     """

@@ -123,12 +123,13 @@ def optimize_contour_enhancement_layer_weights(
                 frag_len,
                 bw_tile_spacing=0,
                 cont_len=c_len,
-                cont_start_loc=tgt_n_visual_rf_start
+                cont_start_loc=tgt_n_visual_rf_start,
+                row_offset=offset
             )
 
             test_image = alex_net_utils.tile_image(
                 test_image,
-                fragment,
+                frag,
                 (start_x, start_y),
                 rotate=False,
                 gaussian_smoothing=smooth_edges
@@ -142,11 +143,12 @@ def optimize_contour_enhancement_layer_weights(
         images = np.stack(images, axis=0)
 
         # # Plot the generated images
-        # f = plt.figure()
-        # for img_idx, img in enumerate(images):
-        #     display_img = np.transpose(img, (1, 2, 0))
-        #     f.add_subplot(2, 3, img_idx + 1)
-        #     plt.imshow(display_img)
+        if n_runs <= 5:
+            f = plt.figure()
+            for img_idx, img in enumerate(images):
+                display_img = np.transpose(img, (1, 2, 0))
+                f.add_subplot(2, 3, img_idx + 1)
+                plt.imshow(display_img)
 
         # now iterate
         loss_value, grad_w, grad_b, l1_out, l2_out = iterate([images])
