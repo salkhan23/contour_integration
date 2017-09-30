@@ -345,9 +345,9 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True, sig
                 tile = tile * g_kernel
 
             # only plot fragments who's start locations is within the image dimensions
-                img[start_x_loc: stop_x_loc, start_y_loc: stop_y_loc, :] = \
-                    tile[tile_x_start: tile_x_start + stop_x_loc - start_x_loc,
-                         tile_y_start: tile_y_start + stop_y_loc - start_y_loc, :]
+            img[start_x_loc: stop_x_loc, start_y_loc: stop_y_loc, :] = \
+                tile[tile_x_start: tile_x_start + stop_x_loc - start_x_loc,
+                     tile_y_start: tile_y_start + stop_y_loc - start_y_loc, :]
 
     return img
 
