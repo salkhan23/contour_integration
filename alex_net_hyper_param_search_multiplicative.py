@@ -177,8 +177,8 @@ def optimize_contour_enhancement_layer_weights(
                    l1_out[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc]))
 
             model.layers[2].set_weights([new_w, new_b])
+            old_loss = loss_value.mean()
 
-        old_loss = loss_value.mean()
         losses.append(loss_value.mean())
 
     # At the end of simulation plot loss vs iteration
