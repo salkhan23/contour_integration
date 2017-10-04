@@ -76,7 +76,13 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
 
     # Insert Contour
     # --------------
-    cont_coordinates = cont_gen_cb(frag.shape[0], space_bw_tiles, contour_len, center_neuron_loc)
+    cont_coordinates = cont_gen_cb(
+        frag_len,
+        bw_tile_spacing=0,
+        cont_len=contour_len,
+        cont_start_loc=center_neuron_loc,
+        row_offset=offset
+    )
 
     test_image = alex_net_utils.tile_image(
         test_image,
