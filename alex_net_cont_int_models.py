@@ -95,11 +95,10 @@ def get_non_overlapping_kernels(rf_len):
 
     mask = np.zeros((rf_len, rf_len))
     mask[xx, yy] = 1
+    # set the weight contribution of the center neuron to zero
+    mask[rf_len // 2, rf_len // 2] = 0
 
     kernel = np.repeat(mask[np.newaxis, :, :], 96, axis=0)
-
-    # set the weight contribution of the center neuron to zero
-    kernel[:, rf_len // 2, rf_len // 2] = 0
 
     return kernel
 
@@ -643,7 +642,7 @@ class MultiplicativeContourIntegrationLayer(Layer):
 
         self.raw_kernel = self.add_weight(
             shape=(ch, self.n, self.n,),
-            initializer='glorot_uniform',
+            initializer='glorot_normal',
             name='raw_kernel',
             trainable=True
         )
