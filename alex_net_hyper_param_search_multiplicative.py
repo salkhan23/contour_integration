@@ -177,8 +177,8 @@ def optimize_contour_enhancement_layer_weights(
                    l1_out[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc]))
 
             model.layers[2].set_weights([new_w, new_b])
-            old_loss = loss_value.mean()
 
+        old_loss = loss_value.mean()
         losses.append(loss_value.mean())
 
     # At the end of simulation plot loss vs iteration
@@ -240,7 +240,7 @@ if __name__ == "__main__":
         tgt_filter_idx,
         fragment,
         alex_net_utils.vertical_contour_generator,
-        200,
+        2000,
     )
 
     plot_optimized_weights(contour_integration_model, tgt_filter_idx, start_weights, start_bias)
@@ -256,7 +256,7 @@ if __name__ == "__main__":
         tgt_filter_idx,
         fragment,
         alex_net_utils.horizontal_contour_generator,
-        200,
+        2000,
     )
 
     plot_optimized_weights(contour_integration_model, tgt_filter_idx, start_weights, start_bias)
