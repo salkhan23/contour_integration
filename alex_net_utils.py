@@ -45,6 +45,27 @@ def get_activation_cb(model, layer_idx):
     return get_layer_output
 
 
+def get_l1_and_l2_activations(img, l1_act_cb, l2_act_cb):
+    """
+
+    :param img:
+    :param l1_act_cb:
+    :param l2_act_cb:
+    :return:
+    """
+
+    img = np.transpose(img, (2, 0, 1))
+    img = np.expand_dims(img, axis=0)
+
+    l1_act = np.array(l1_act_cb([img, 0]))
+    l2_act = np.array(l2_act_cb([img, 0]))
+
+    l1_act = np.squeeze(l1_act, axis=0)
+    l2_act = np.squeeze(l2_act, axis=0)
+
+    return l1_act, l2_act
+
+
 def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx):
     """
     Plot 2 figures:
@@ -62,14 +83,7 @@ def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx):
     f1 = plt.figure()
     plt.imshow(img)
 
-    img = np.transpose(img, (2, 0, 1))
-    img = np.expand_dims(img, axis=0)
-
-    l1_act = np.array(l1_act_cb([img, 0]))
-    l2_act = np.array(l2_act_cb([img, 0]))
-
-    l1_act = np.squeeze(l1_act, axis=0)
-    l2_act = np.squeeze(l2_act, axis=0)
+    l1_act, l2_act = get_l1_and_l2_activations(img, l1_act_cb, l2_act_cb)
 
     l1_act = l1_act[0, tgt_filt_idx, :, :]
     l2_act = l2_act[0, tgt_filt_idx, :, :]
