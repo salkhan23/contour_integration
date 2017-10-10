@@ -208,13 +208,21 @@ def plot_optimized_weights(model, tgt_filt_idx, start_w, start_b):
     mask = K.eval(model.layers[2].mask)  # mask does not change
     opt_w, opt_b = model.layers[2].get_weights()
 
+    print(opt_w.max(), start_w.max())
+
+    # # Use the same scale for plotting the kernel
+    # max_v = max(opt_w.max(), start_w.max())
+    # min_v = min(opt_w.min(), start_w.min())
+
     f = plt.figure()
     f.add_subplot(1, 2, 1)
     plt.imshow(start_w[tgt_filt_idx, :, :] * mask[tgt_filt_idx, :, :])
+    plt.colorbar(orientation='horizontal')
     plt.title("Start weights & bias=%0.4f" % start_b[tgt_filt_idx])
 
     f.add_subplot(1, 2, 2)
     plt.imshow(mask[tgt_filt_idx, :, :] * opt_w[tgt_filt_idx, :, :])
+    plt.colorbar(orientation='horizontal')
     plt.title("Best weights & bias=%0.4f" % opt_b[tgt_filt_idx])
 
 
