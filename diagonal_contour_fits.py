@@ -1,9 +1,3 @@
-# -------------------------------------------------------------------------------------------------
-#  Search for optimal weights for a diagonal contour using the multiplicative model
-#
-# Author: Salman Khan
-# Date  : 27/09/17
-# -------------------------------------------------------------------------------------------------
 from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,14 +8,18 @@ import keras.backend as K
 import alex_net_cont_int_models as cont_int_models
 import gabor_fits
 import alex_net_utils
+import alex_net_hyper_param_search_multiplicative as multiplicative_model
+import alex_net_cont_int_complex_bg as complex_bg
 
 reload(cont_int_models)
 reload(alex_net_utils)
+reload(multiplicative_model)
+reload(complex_bg)
 
 np.random.seed(10)  # Set the random seed for reproducibility
 
 
-def get_l1_filter_orientation_and_offset(tgt_filt, tgt_filt_idx):
+def get_l1_filter_orientation_and_offset(tgt_filt, tgt_filt_idx, show_plots=True):
     """
     Given a Target AlexNet L1 Convolutional Filter, fit to a 2D spatial Gabor. Use this to as
     the orientation of the filter and calculate the row shift offset to use when tiling fragments.
@@ -31,6 +29,7 @@ def get_l1_filter_orientation_and_offset(tgt_filt, tgt_filt_idx):
     Raises an exception if no best fit parameters are found for any of the channels of the target
     filter.
 
+    :param show_plots:
     :param tgt_filt_idx:
     :param tgt_filt:
 
@@ -41,7 +40,8 @@ def get_l1_filter_orientation_and_offset(tgt_filt, tgt_filt_idx):
     best_fit_params_list = gabor_fits.find_best_fit_2d_gabor(tgt_filt)
 
     # Plot the best fit params
-    gabor_fits.plot_kernel_and_best_fit_gabors(tgt_filt, tgt_filt_idx, best_fit_params_list)
+    if show_plots:
+        gabor_fits.plot_kernel_and_best_fit_gabors(tgt_filt, tgt_filt_idx, best_fit_params_list)
 
     # Remove all empty entries
     best_fit_params_list = [params for params in best_fit_params_list if params is not None]
@@ -77,22 +77,21 @@ def get_l1_filter_orientation_and_offset(tgt_filt, tgt_filt_idx):
     return theta_opt, row_offset
 
 
-def diagonal_contour_generator(frag_len, row_offset, cont_len, space_bw_tiles, cont_start_loc):
+def diagonal_contour_generator(frag_len, row_offset, bw_tile_spacing, cont_len, cont_start_loc):
     """
-
     Generate the start co-ordinates of fragment squares that form a diagonal contour of
-    the specified length at the specified location
+    the specified length & row_offset at the specified location
 
-    :param space_bw_tiles:
     :param frag_len:
     :param row_offset: row_offset to complete contours, found from the orientation of the fragment.
-            See get_l1_filter_orientation_and_offset.
+        See get_l1_filter_orientation_and_offset.
+    :param bw_tile_spacing:
     :param cont_len:
     :param cont_start_loc: Start visual RF location of center neuron.
 
-    :return: start_x, start_y locations of fragments that form the contour
+    :return: start_x_arr, start_y_arr locations of fragments that form the contour
     """
-    frag_spacing = frag_len + space_bw_tiles
+    frag_spacing = frag_len + bw_tile_spacing
 
     # 1st dimension stays the same
     start_x = range(
@@ -102,7 +101,7 @@ def diagonal_contour_generator(frag_len, row_offset, cont_len, space_bw_tiles, c
     )
 
     # If there is nonzero spacing between tiles, the offset needs to be updated
-    if space_bw_tiles:
+    if bw_tile_spacing:
         row_offset = np.int(frag_spacing / np.float(frag_len) * row_offset)
 
     # 2nd dimension shifts with distance from the center row
@@ -118,6 +117,30 @@ def diagonal_contour_generator(frag_len, row_offset, cont_len, space_bw_tiles, c
     return start_x, start_y
 
 
+def plot_visual_rf(location, img, axis=None):
+    """
+
+    :param location:
+    :param img:
+    :param axis:
+
+    :return: the extracted component of visual field
+    """
+    if axis is None:
+        f, axis = plt.subplots()
+
+    stride = 4
+    tgt_filt_len = 11
+    neuron_visual_rf = img[
+        location[0] * stride: location[0] * stride + tgt_filt_len,
+        location[1] * stride: location[1] * stride + tgt_filt_len, :
+    ]
+
+    axis.imshow(neuron_visual_rf)
+
+    return neuron_visual_rf
+
+
 if __name__ == "__main__":
     plt.ion()
     K.clear_session()
@@ -129,14 +152,20 @@ if __name__ == "__main__":
 
     # Multiplicative Model
     contour_integration_model = cont_int_models.build_contour_integration_model(
-        "multiplicative",
+        "masked_multiplicative",
         "trained_models/AlexNet/alexnet_weights.h5",
+        weights_type='enhance',
         n=25,
         activation='relu'
     )
     # contour_integration_model.summary()
 
     l1_weights = K.eval(contour_integration_model.layers[1].weights[0])
+
+    # Define callback functions to get activations of L1 convolutional layer &
+    # L2 contour integration layer
+    l1_activations_cb = alex_net_utils.get_activation_cb(contour_integration_model, 1)
+    l2_activations_cb = alex_net_utils.get_activation_cb(contour_integration_model, 2)
 
     # Store the start weights & bias for comparison later
     start_weights, start_bias = contour_integration_model.layers[2].get_weights()
@@ -153,37 +182,138 @@ if __name__ == "__main__":
     tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
     tgt_filter_len = tgt_filter.shape[0]
 
-    target_neuron_rf_start = 27 * 4  # Visual RF start of center L2 neuron
+    tgt_neuron_loc = (27, 27)
+    target_neuron_rf_start = tgt_neuron_loc[0] * 4  # Visual RF start of center L2 neuron
     fragment_spacing = 0
+
+    # Define the fragment
+    fragment = np.copy(tgt_filter)
+    fragment = fragment.sum(axis=2)
+    fragment[fragment > 0] = 1
+    fragment[fragment <= 0] = 0
+    fragment = fragment * 255
+    fragment = np.repeat(fragment[:, :, np.newaxis], 3, axis=2)
 
     # 4. Get the Orientation of the Target Filter
     # --------------------------------------------------------------------------
-    theta, offset = get_l1_filter_orientation_and_offset(tgt_filter, tgt_filter_idx)
+    theta, offset = get_l1_filter_orientation_and_offset(tgt_filter, tgt_filter_idx, show_plots=False)
 
-    # After finding the offset, scale the target filter to range [0, 255]
-    tgt_filter = (tgt_filter - tgt_filter.min()) / (tgt_filter.max() - tgt_filter.min()) * 255
+    multiplicative_model.plot_optimized_weights(
+        contour_integration_model,
+        tgt_filter_idx,
+        start_weights,
+        start_bias
+    )
 
-    # 5. Validation step: Generate a test image with background tiles with row offset
-    # --------------------------------------------------------------------------
-    start_x_arr, start_y_arr = alex_net_utils.get_background_tiles_locations(
-        tgt_filter_len, test_image_len, offset, fragment_spacing, target_neuron_rf_start)
+    # 4. Verification: Add a contour in the center of image. Get L2 response of the target neuron
+    # and match it manually.
+    # ----------------------------------------------------------------------------------------------
+    contour_len = 9
 
-    test_image = alex_net_utils.tile_image(
-        test_image, tgt_filter, (start_x_arr, start_y_arr), rotate=True, gaussian_smoothing=True)
-
-    # plt.figure()
-    # display_image = (test_image - test_image.min()) / (test_image.max() - test_image.min())
-    # plt.imshow(display_image)
-    #
-    # 6. Validation step: Generate a test image with a contour of the specified length
-    # --------------------------------------------------------------------------
-    contour_len = 7
     start_x_arr, start_y_arr = diagonal_contour_generator(
-        tgt_filter_len, offset, contour_len, fragment_spacing, target_neuron_rf_start)
+        tgt_filter_len,
+        offset,
+        fragment_spacing,
+        contour_len,
+        target_neuron_rf_start,
+    )
 
     test_image = alex_net_utils.tile_image(
-        test_image, tgt_filter, (start_x_arr, start_y_arr), rotate=False, gaussian_smoothing=True)
+        test_image,
+        fragment,
+        (start_x_arr, start_y_arr),
+        rotate=False,
+        gaussian_smoothing=False
+    )
 
-    plt.figure()
-    display_image = (test_image - test_image.min()) / (test_image.max() - test_image.min())
-    plt.imshow(display_image)
+    # Get & plot the activations of the target neuron
+    test_image = test_image / 255.0
+    l1_act, l2_act = alex_net_utils.get_l1_and_l2_activations(test_image, l1_activations_cb, l2_activations_cb)
+    l1_act = l1_act[0, tgt_filter_idx, :, :]
+    l2_act = l2_act[0, tgt_filter_idx, :, :]
+    fig = plt.figure()
+    fig.add_subplot(1, 2, 1)
+    plt.imshow(l1_act, cmap='seismic')
+    plt.title("l1_activation")
+    fig.add_subplot(1, 2, 2)
+    plt.imshow(l2_act, cmap='seismic')
+    plt.title("l2_activation")
+
+    # get the nonzero l2 kernel indices for the target filter
+    l2_weights = K.eval(contour_integration_model.layers[2].mask)
+    tgt_l2_weights = l2_weights[tgt_filter_idx, :, :]
+    non_zero_x, non_zero_y = tgt_l2_weights.nonzero()
+
+    non_zero_x = non_zero_x - tgt_neuron_loc[0] // 2 + tgt_neuron_loc[0] + 1
+    non_zero_y = non_zero_y - tgt_neuron_loc[1] // 2 + tgt_neuron_loc[1] + 1
+
+    manual_center_neuron_out = l1_act[non_zero_x, non_zero_y].sum() * l1_act[tgt_neuron_loc] \
+        + l1_act[tgt_neuron_loc]
+    print("Model calculated activation %0.4f, manually calculated activation %0.4f"
+          % (l2_act[tgt_neuron_loc], manual_center_neuron_out))
+
+    # 5. Plot Gain vs Contour Length Curve Before Optimization
+    # --------------------------------------------------------------------------------------
+    complex_bg.main_contour_length_routine(
+        fragment,
+        l1_activations_cb,
+        l2_activations_cb,
+        diagonal_contour_generator,
+        tgt_filter_idx,
+        smoothing=True,
+        row_offset=offset,
+        n_runs=10,
+    )
+
+    fig = plt.gcf()
+    fig.suptitle("Uninitialized weights")
+
+    # 6. Find Best Fit L2 weights
+    # ---------------------------------------------------------------------------------
+    # learning_rate_array = [0.0025, 0.001, 0.00025, 0.0001, 0.00005]
+    learning_rate_array = [0.0025]
+
+    fig, ax = plt.subplots()
+
+    for learning_rate in learning_rate_array:
+
+        print("############ Processing Learning Rate %0.8f ###########" % learning_rate)
+
+        contour_integration_model.layers[2].set_weights((start_weights, start_bias))
+
+        images = multiplicative_model.optimize_contour_enhancement_layer_weights(
+            contour_integration_model,
+            tgt_filter_idx,
+            fragment,
+            diagonal_contour_generator,
+            offset=offset,
+            n_runs=1000,
+            learning_rate=learning_rate,
+            axis=ax
+        )
+        ax.legend()
+
+        multiplicative_model.plot_optimized_weights(
+            contour_integration_model,
+            tgt_filter_idx,
+            start_weights,
+            start_bias
+        )
+        fig = plt.gcf()
+        fig.suptitle("learning rate = %f" % learning_rate)
+
+    # 7. Plot Gain vs Contour Length Curve after Optimization
+    # --------------------------------------------------------------------------------------
+    complex_bg.main_contour_length_routine(
+        fragment,
+        l1_activations_cb,
+        l2_activations_cb,
+        diagonal_contour_generator,
+        tgt_filter_idx,
+        smoothing=True,
+        row_offset=offset,
+        n_runs=10,
+    )
+
+    fig = plt.gcf()
+    fig.suptitle("After Weight Optimization")
