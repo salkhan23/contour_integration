@@ -14,6 +14,7 @@
 from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 import keras.backend as K
 
@@ -169,11 +170,22 @@ def main_contour_length_routine(
 
     f = plt.figure()
     ax = f.add_subplot(1, 1, 1)
-    ax.errorbar(contour_lengths_arr, tgt_neuron_gain_mean, tgt_neuron_gain_std, marker='o')
+    ax.errorbar(contour_lengths_arr, tgt_neuron_gain_mean, tgt_neuron_gain_std, marker='o', label='model', color='b')
     ax.set_xlabel("Contour Length")
     ax.set_ylabel("Contour Integration Gain")
     ax.set_title("L2 (contour enhanced) gain as a function of contour length for Neuron @ (%d, %d, %d)"
                  % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
+
+    # Plot Neurophysiological data Data from [Li-2006]
+    with open('.//neuro_data//Li2006.pickle', 'rb') as handle:
+        data = pickle.load(handle)
+
+    ax.plot(data['contour_len_ma_len'], data['contour_len_ma_gain'],
+            label='ma', color='r', marker='d', linestyle='dashed')
+    ax.plot(data['contour_len_mb_len'], data['contour_len_mb_gain'],
+            label='mb', color='g', marker='s', linestyle='dashed')
+
+    ax.legend(loc='best')
 
     return f
 
@@ -243,12 +255,24 @@ def main_contour_spacing_routine(
     rcd = (spacing_bw_tiles + frag_len) / np.float(frag_len)
 
     f = plt.figure()
+    ax = f.add_subplot(1, 1, 1)
 
-    plt.errorbar(rcd, tgt_neuron_gain_mean, tgt_neuron_gain_std, marker='o')
-    plt.xlabel("Contour Distance")
-    plt.ylabel("Contour Integration Gain")
-    plt.title("L2 (contour enhanced) gain as a function of contour length for Neuron @ (%d, %d, %d)"
-              % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
+    ax.errorbar(rcd, tgt_neuron_gain_mean, tgt_neuron_gain_std, marker='o')
+    ax.set_xlabel("Contour Distance")
+    ax.set_ylabel("Contour Integration Gain")
+    ax.set_title("L2 (contour enhanced) gain as a function of contour length for Neuron @ (%d, %d, %d)"
+                 % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
+
+    # Plot Neurophysiological data Data from [Li-2006]
+    with open('.//neuro_data//Li2006.pickle', 'rb') as handle:
+        data = pickle.load(handle)
+
+    ax.plot(data['contour_separation_ma_rcd'], data['contour_separation_ma_gain'],
+            label='ma', color='r', marker='d', linestyle='dashed')
+    ax.plot(data['contour_separation_mb_rcd'], data['contour_separation_mb_gain'],
+            label='mb', color='g', marker='s', linestyle='dashed')
+
+    ax.legend(loc='best')
 
     return f
 
