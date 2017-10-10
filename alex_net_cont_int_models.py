@@ -66,7 +66,8 @@ def get_non_overlapping_coaligned_kernels(weights_type, rf_len):
         kernel[5, post_half_range, half_rf] = -1
 
     # Diagonal Kernel (Leaning backwards)
-    kernel[54, (0, 3, 6, 9, 15, 18, 21, 24), (8, 9, 10, 11, 13, 14, 15, 16)] = 1
+    # kernel[54, (0, 3, 6, 9, 15, 18, 21, 24), (8, 9, 10, 11, 13, 14, 15, 16)] = 1
+    kernel[54, (1, 4, 6, 9, 15, 17, 20, 23), (8, 9, 10, 11, 13, 14, 15, 16)] = 1
     # TODO: Add suppression values
 
     kernel[64, range(0, half_rf, 3), range(0, half_rf, 3)] = 1
@@ -474,7 +475,8 @@ class MaskedMultiplicativeContourIntegrationLayer(Layer):
 
         self.raw_kernel = self.add_weight(
             shape=(ch, self.n, self.n,),
-            initializer='ones',
+            # initializer='ones',
+            initializer='glorot_normal',
             name='raw_kernel',
             trainable=True
         )
