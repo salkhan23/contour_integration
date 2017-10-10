@@ -34,18 +34,27 @@ np.random.seed(7)  # Set the random seed for reproducibility
 
 
 def optimize_contour_enhancement_layer_weights(
-        model, tgt_filt_idx, frag, contour_generator_cb, n_runs, learning_rate=0.00025, offset=0):
+        model, tgt_filt_idx, frag, contour_generator_cb, n_runs, learning_rate=0.00025, offset=0, axis=None):
     """
+    Optimize the l2 kernel (contour integration) weights corresponding to the specified target L1 kernel.
+    A loss function is defined that compares the model l2 gain (L2 activation /L2 activation) and compares with the
+    expected contour integration gain from Li-2006.
 
-    :param offset: the pixel offset by which each row should be shifted by as it moves away from the center row
-    :param model:
+    At the moment, only contour lengths of different sizes are used.
+    # TODO: Add contour spacing figures
+
+    :param model: contour integration model
     :param tgt_filt_idx:
     :param frag:
     :param contour_generator_cb:
+    :param n_runs: Number of loops to iterate over. If n_runs is < 5, input images for each run are shown.
     :param learning_rate: THe learning rate (the size of the step in the gradient direction)
-    :param n_runs: Number of loops to iterate over
+    :param offset: the pixel offset by which each row should be shifted by as it moves away from the center row.
+         Used by diagonal contour optimization.
+    :param axis: Figure axis on which the loss function over time should be plotted. If None, a new figure
+         is created. Default = None.
 
-    :return:
+    :return: None
     """
     tgt_n_loc = 27  # neuron looking @ center of RF
     tgt_n_visual_rf_start = tgt_n_loc * 4
@@ -182,8 +191,9 @@ def optimize_contour_enhancement_layer_weights(
         losses.append(loss_value.mean())
 
     # At the end of simulation plot loss vs iteration
-    plt.figure()
-    plt.plot(range(n_runs), losses)
+    if axis is None:
+        f, axis = plt.subplots()
+    axis.plot(range(n_runs), losses, label='learning rate = %0.8f' % learning_rate)
 
 
 def plot_optimized_weights(model, tgt_filt_idx, start_w, start_b):
@@ -240,7 +250,7 @@ if __name__ == "__main__":
         tgt_filter_idx,
         fragment,
         alex_net_utils.vertical_contour_generator,
-        2000,
+        200,
     )
 
     plot_optimized_weights(contour_integration_model, tgt_filter_idx, start_weights, start_bias)
@@ -256,7 +266,7 @@ if __name__ == "__main__":
         tgt_filter_idx,
         fragment,
         alex_net_utils.horizontal_contour_generator,
-        2000,
+        200,
     )
 
     plot_optimized_weights(contour_integration_model, tgt_filter_idx, start_weights, start_bias)
