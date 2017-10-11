@@ -476,7 +476,8 @@ class MaskedMultiplicativeContourIntegrationLayer(Layer):
         self.raw_kernel = self.add_weight(
             shape=(ch, self.n, self.n,),
             # initializer='ones',
-            initializer='glorot_normal',
+            # initializer='glorot_normal',
+            initializer='he_normal',  # Recommended for Relu nonlinearity.
             name='raw_kernel',
             trainable=True
         )
