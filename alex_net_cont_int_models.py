@@ -78,6 +78,9 @@ def get_non_overlapping_coaligned_kernels(weights_type, rf_len):
 
     kernel[67, :, :] = np.copy(kernel[54, :, :])
 
+    kernel[78, (1, 3, 5, 8, 10, 14, 16, 19, 21, 23), (17, 16, 15, 14, 13, 11, 10, 9, 8, 7)] = 1
+    # TODO: Add suppression values
+
     return kernel
 
 
