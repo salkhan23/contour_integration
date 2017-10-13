@@ -242,18 +242,23 @@ def get_background_tiles_locations(frag_len, img_len, row_offset, space_bw_tiles
 
     :return: start_x, start_y
     """
-    n_tiles = img_len // (frag_len + space_bw_tiles)
     frag_spacing = frag_len + space_bw_tiles
+    n_tiles = img_len // frag_spacing
 
-    # for non-zero row_offsets, we need an additional tile to make sure the row is complete
-    if row_offset or space_bw_tiles:
-        additional_tile = 2
-    else:
-        additional_tile = 0
+    # To handle non-zero row shift, we have to add additional tiles, so that the whole image is populated
+    add_tiles = 0
+    if row_offset:
+        max_shift = (n_tiles // 2 + 1) * row_offset
+        add_tiles = abs(max_shift) // frag_spacing + 1
+    # print("Number of tiles in image %d, number of additional tiles %d" % (n_tiles, add_tiles))
+
+    n_tiles += add_tiles
+    if n_tiles & 1 == 1:  # make even
+        n_tiles += 1
 
     zero_offset_starts = range(
         tgt_n_visual_rf_start - (n_tiles / 2) * frag_spacing,
-        tgt_n_visual_rf_start + (n_tiles / 2 + 1 + additional_tile) * frag_spacing,
+        tgt_n_visual_rf_start + (n_tiles / 2 + 1) * frag_spacing,
         frag_spacing,
     )
 
@@ -267,17 +272,11 @@ def get_background_tiles_locations(frag_len, img_len, row_offset, space_bw_tiles
         row_offset = np.int(frag_spacing / np.float(frag_len) * row_offset)
 
     start_y = []
-    for row_idx in range(-n_tiles / 2, (n_tiles / 2) + 1 + additional_tile):
+    for row_idx in range(-n_tiles / 2, (n_tiles / 2) + 1):
 
-        # print("processing row at idx %d" % row_idx)
+        # print("processing row at idx %d, offset=%d" % (row_idx, row_idx * row_offset))
+
         ys = np.array(zero_offset_starts) + (row_idx * row_offset)
-
-        while ys[0] < - frag_spacing:
-            ys += frag_spacing
-
-        while ys[-1] > img_len + frag_spacing or (ys[0] > 0):
-            ys -= frag_spacing
-
         start_y.append(ys)
 
     start_y = np.array(start_y)
