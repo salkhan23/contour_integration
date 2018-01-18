@@ -92,7 +92,7 @@ def alex_net(weights_path):
     conv_1 = Conv2D(96, (11, 11), strides=(4, 4), activation='relu', name='conv_1')(inputs)
 
     conv_2 = MaxPooling2D((3, 3), strides=(2, 2))(conv_1)
-    conv_2 = crosschannelnormalization(name='convpool_1')(conv_2)
+    conv_2 = crosschannelnormalization(name='Contrast Normalization')(conv_2)
     conv_2 = ZeroPadding2D((2, 2))(conv_2)
 
     conv_2_1 = Conv2D(128, (5, 5), activation='relu', name='conv_2_1')(splittensor(ratio_split=2, id_split=0)(conv_2))
