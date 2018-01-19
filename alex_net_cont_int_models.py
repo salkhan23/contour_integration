@@ -29,18 +29,23 @@ reload(common_utils)
 np.random.seed(7)  # Set the random seed for reproducibility
 
 
-def get_non_overlapping_coaligned_kernels(weights_type, rf_len):
+def get_coaligned_masks(weights_type, rf_len, non_overlapping_rfs=True):
     """
-    Returns coaligned and orthogonal to coaligned mask of neighbors of the specified size for each of
-    96  L1 conv Layer of alexnet.
+    Returns a mask of coaligned (and optionally orthogonal to coaligned) neighbors for
+    each of the 96 feature extracting kernels of the first convolutional layer of Alexnet.
 
-    Only visually non-overlapping neighbours are connected with lateral connections. In alexnet,
-    filter size of 11x11 is used with a stride of 4. Therefore every 3rd neighbor are the visually
-    non-overlapping neurons. Furthermore, this function defines a mask that identifies coaligned
-    and orthogonal to coaligned neighbors.
+    Masks are manually defined.
 
     :param weights_type: ['enhance', 'suppress', 'enhance_and_suppress']
+            enhance  = coaligned neighbors only
+            suppress = orthogonal to coaligned neighbors only
+            enhance_and_suppress = both.
+
     :param rf_len: length of RF over which lateral connections are defined
+
+    :param non_overlapping_rfs:[True(default), False]
+            True  = include neighbors with non-overlapping visual fields,
+            False = include neighbors with overlapping visual fields
 
     :return: [96 x re_len x rf_len] array of kernels
     """
@@ -48,8 +53,15 @@ def get_non_overlapping_coaligned_kernels(weights_type, rf_len):
 
     kernel = np.zeros((96, rf_len, rf_len))  # There are 96 conv layer 1 kernels in alexnet.
 
-    pre_half_range = range(0, half_rf, 3)
-    post_half_range = range(half_rf + 3, rf_len, 3)
+    if non_overlapping_rfs:
+        # In alexnet, filter size of 11x11 is used with a stride of 4. Therefore every third
+        # neighbor has a non-overlapping receptive field.
+        step_size = 3
+    else:
+        step_size = 1
+
+    pre_half_range = range(0, half_rf, step_size)
+    post_half_range = range(half_rf + step_size, rf_len, step_size)
 
     # Vertical_kernel
     kernel[10, pre_half_range, half_rf] = 1
@@ -84,64 +96,18 @@ def get_non_overlapping_coaligned_kernels(weights_type, rf_len):
     return kernel
 
 
-def get_overlapping_coaligned_kernels(weights_type, rf_len):
-    """
-    This is the same as the above, but with a step size of 1. As such, adjacent neigbors with overlapping RFs are
-    also included
-
-    :param weights_type:
-    :param rf_len:
-    :return:
-    """
-    half_rf = rf_len // 2
-
-    kernel = np.zeros((96, rf_len, rf_len))  # There are 96 conv layer 1 kernels in alexnet.
-
-    pre_half_range = range(0, half_rf, 1)
-    post_half_range = range(half_rf + 1, rf_len, 1)
-
-    # Vertical_kernel
-    kernel[10, pre_half_range, half_rf] = 1
-    kernel[10, post_half_range, half_rf] = 1
-    # if weights_type != 'enhance':  # Suppression values
-    #     kernel[10, half_rf, pre_half_range] = -1
-    #     kernel[10, half_rf, post_half_range] = -1
-
-    # Horizontal kernel
-    kernel[5, half_rf, pre_half_range] = 1
-    kernel[5, half_rf, post_half_range] = 1
-    # if weights_type != 'enhance':  # Suppression values
-    #     kernel[5, pre_half_range, half_rf] = -1
-    #     kernel[5, post_half_range, half_rf] = -1
-    #
-    # # Diagonal Kernel (Leaning backwards)
-    # # kernel[54, (0, 3, 6, 9, 15, 18, 21, 24), (8, 9, 10, 11, 13, 14, 15, 16)] = 1
-    # kernel[54, (1, 4, 6, 9, 15, 17, 20, 23), (8, 9, 10, 11, 13, 14, 15, 16)] = 1
-    # # TODO: Add suppression values
-    #
-    # kernel[64, range(0, half_rf, 3), range(0, half_rf, 3)] = 1
-    # kernel[64, range(half_rf + 3, rf_len, 3), range(half_rf + 3, rf_len, 3)] = 1
-    # if weights_type != 'enhance':  # Suppression values
-    #     kernel[64, range(rf_len - 1, half_rf, -3), range(0, half_rf, 3)] = -1
-    #     kernel[64, range(half_rf - 3, -1, -3), range(half_rf + 3, rf_len, 3)] = -1
-    #
-    # kernel[67, :, :] = np.copy(kernel[54, :, :])
-    #
-    # kernel[78, (1, 3, 7, 10, 14, 17, 21, 23), (17, 16, 14, 13, 11, 10, 8, 7)] = 1
-    # # TODO: Add suppression values
-
-    return kernel
-
-
 def get_non_overlapping_kernels(rf_len):
     """
-    Return a mask that identifies alex_net l1_neighbors that are looking at non-overlapping visual fields.
+    For a neuron centered @ (0, 0) returns a surrounding mask identifying neighbors over a
+    [rf_len x rf_len] set that have nonoverlapping visual fields.
 
-    Only visually non-overlapping neighbours are connected with lateral connections. In alexnet,
-    filter size of 11x11 is used with a stride of 4. Therefore every 3rd neighbor neurons is visually
-    non-overlapping.
+    Only visually non-overlapping neighbours are connected with lateral connections.
+
+    In Alexnet, convolutional layer 1 has a filter size of 11x11 and uses a stride of 4.
+    Therefore every 3rd neighbor is visually non-overlapping.
 
     :param rf_len:
+
     :return: [96 x re_len x rf_len] array of kernels
     """
     xx, yy = np.meshgrid(range(0, rf_len, 3), range(0, rf_len, 3))
@@ -192,7 +158,7 @@ class AdditiveContourIntegrationLayer(Layer):
             raise Exception("Invalid weight types. Must be [enhance, suppress or enhance_and_suppress]")
         self.weights_type = weights_type.lower()
 
-        self.kernel = get_non_overlapping_coaligned_kernels(self.weights_type, self.n)
+        self.kernel = get_coaligned_masks(self.weights_type, self.n)
         self.kernel = K.variable(self.kernel)
 
         self.activation = activations.get(activation)
@@ -340,9 +306,9 @@ class GaussianMultiplicativeContourIntegrationLayer(Layer):
         self.weights_type = weights_type.lower()
 
         if self.weights_type == 'overlap':
-            self.kernel = get_overlapping_coaligned_kernels(self.weights_type, self.n)
+            self.kernel = get_coaligned_masks(weights_type=self.weights_type, rf_len=self.n, non_overlapping_rfs=False)
         else:
-            self.kernel = get_non_overlapping_coaligned_kernels(self.weights_type, self.n)
+            self.kernel = get_coaligned_masks(self.weights_type, self.n)
 
         g_kernel = alex_net_utils.get_2d_gaussian_kernel((n, n), sigma)
         self.kernel = np.array([k * g_kernel for k in self.kernel])
@@ -506,7 +472,7 @@ class MaskedMultiplicativeContourIntegrationLayer(Layer):
             raise Exception("Invalid weight types. Must be [enhance, suppress or enhance_and_suppress]")
         self.weights_type = weights_type.lower()
 
-        self.mask = get_non_overlapping_coaligned_kernels(self.weights_type, self.n)
+        self.mask = get_coaligned_masks(self.weights_type, self.n)
         self.mask = K.variable(self.mask)
 
         self.activation = activations.get(activation)
