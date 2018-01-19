@@ -9,6 +9,7 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize as optimize
+import diagonal_contour_fits as diag_cont_fits
 
 import keras.backend as K
 
@@ -17,6 +18,7 @@ import alex_net_utils
 
 reload(cont_int_models)
 reload(alex_net_utils)
+reload(diag_cont_fits)
 
 np.random.seed(7)  # Set the random seed for reproducibility
 
@@ -107,15 +109,15 @@ def find_best_fit_2d_gabor(kernel):
                     opt_params_found = True
                     opt_params_list.append(popt)
 
-                    print("Optimal Parameter for channel %d:" % chan_idx)
-                    print( "(x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, lambda=%0.2f, "
-                           "psi=%0.2f, gamma=%0.2f"
-                           % (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7]))
-
-                    print("Err: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, "
-                          "lambda=%0.2f, psi=%0.2f, gamma=%0.2f"
-                          % (one_sd_error[0], one_sd_error[1], one_sd_error[2], one_sd_error[3], one_sd_error[4],
-                             one_sd_error[5], one_sd_error[6], one_sd_error[7]))
+                    # print("Optimal Parameter for channel %d:" % chan_idx)
+                    # print( "(x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, lambda=%0.2f, "
+                    #        "psi=%0.2f, gamma=%0.2f"
+                    #        % (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7]))
+                    #
+                    # print("Err: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, "
+                    #       "lambda=%0.2f, psi=%0.2f, gamma=%0.2f"
+                    #       % (one_sd_error[0], one_sd_error[1], one_sd_error[2], one_sd_error[3], one_sd_error[4],
+                    #          one_sd_error[5], one_sd_error[6], one_sd_error[7]))
                 else:
                     theta += 10
 
@@ -123,12 +125,12 @@ def find_best_fit_2d_gabor(kernel):
                 theta += 10
 
                 if theta == 180:
-                    print("Optimal parameters could not be found")
+                    # print("Optimal parameters could not be found")
                     opt_params_found = True
                     opt_params_list.append(None)
 
             except ValueError:
-                print("Optimal parameters could not be found")
+                # print("Optimal parameters could not be found")
                 opt_params_found = True
                 opt_params_list.append(None)
 
@@ -211,16 +213,24 @@ if __name__ == "__main__":
 
     # 2. Select the target L1 filter to find the
     # ---------------------------------------------------------------------
-    # A. For a particular target filter
-    tgt_filter_idx = 54
-
-    tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
-    optimal_params = find_best_fit_2d_gabor(tgt_filter)
-    plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
+    # # A. For a particular target filter
+    # tgt_filter_idx = 2
+    #
+    # tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
+    # optimal_params = find_best_fit_2d_gabor(tgt_filter)
+    # plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
 
     # B. For a range of target filters
-    # for tgt_filter_idx in np.arange(76, 96):
-    #     tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
-    #
-    #     optimal_params = find_best_fit_2d_gabor(tgt_filter)
-    #     plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
+    optimum_orientation_list = []
+    for tgt_filter_idx in np.arange(96):
+        tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
+
+        optimal_params = find_best_fit_2d_gabor(tgt_filter)
+        # plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
+
+        theta, offset = diag_cont_fits.get_l1_filter_orientation_and_offset(
+            tgt_filter, tgt_filter_idx, show_plots=False)
+
+        optimum_orientation_list.append(theta)
+
+        print('kernel @ %d: %s' % (tgt_filter_idx, theta))
