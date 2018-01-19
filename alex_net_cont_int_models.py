@@ -78,8 +78,57 @@ def get_non_overlapping_coaligned_kernels(weights_type, rf_len):
 
     kernel[67, :, :] = np.copy(kernel[54, :, :])
 
-    kernel[78, (1, 3, 5, 8, 10, 14, 16, 19, 21, 23), (17, 16, 15, 14, 13, 11, 10, 9, 8, 7)] = 1
+    kernel[78, (1, 3, 7, 10, 14, 17, 21, 23), (17, 16, 14, 13, 11, 10, 8, 7)] = 1
     # TODO: Add suppression values
+
+    return kernel
+
+
+def get_overlapping_coaligned_kernels(weights_type, rf_len):
+    """
+    This is the same as the above, but with a step size of 1. As such, adjacent neigbors with overlapping RFs are
+    also included
+
+    :param weights_type:
+    :param rf_len:
+    :return:
+    """
+    half_rf = rf_len // 2
+
+    kernel = np.zeros((96, rf_len, rf_len))  # There are 96 conv layer 1 kernels in alexnet.
+
+    pre_half_range = range(0, half_rf, 1)
+    post_half_range = range(half_rf + 1, rf_len, 1)
+
+    # Vertical_kernel
+    kernel[10, pre_half_range, half_rf] = 1
+    kernel[10, post_half_range, half_rf] = 1
+    # if weights_type != 'enhance':  # Suppression values
+    #     kernel[10, half_rf, pre_half_range] = -1
+    #     kernel[10, half_rf, post_half_range] = -1
+
+    # Horizontal kernel
+    kernel[5, half_rf, pre_half_range] = 1
+    kernel[5, half_rf, post_half_range] = 1
+    # if weights_type != 'enhance':  # Suppression values
+    #     kernel[5, pre_half_range, half_rf] = -1
+    #     kernel[5, post_half_range, half_rf] = -1
+    #
+    # # Diagonal Kernel (Leaning backwards)
+    # # kernel[54, (0, 3, 6, 9, 15, 18, 21, 24), (8, 9, 10, 11, 13, 14, 15, 16)] = 1
+    # kernel[54, (1, 4, 6, 9, 15, 17, 20, 23), (8, 9, 10, 11, 13, 14, 15, 16)] = 1
+    # # TODO: Add suppression values
+    #
+    # kernel[64, range(0, half_rf, 3), range(0, half_rf, 3)] = 1
+    # kernel[64, range(half_rf + 3, rf_len, 3), range(half_rf + 3, rf_len, 3)] = 1
+    # if weights_type != 'enhance':  # Suppression values
+    #     kernel[64, range(rf_len - 1, half_rf, -3), range(0, half_rf, 3)] = -1
+    #     kernel[64, range(half_rf - 3, -1, -3), range(half_rf + 3, rf_len, 3)] = -1
+    #
+    # kernel[67, :, :] = np.copy(kernel[54, :, :])
+    #
+    # kernel[78, (1, 3, 7, 10, 14, 17, 21, 23), (17, 16, 14, 13, 11, 10, 8, 7)] = 1
+    # # TODO: Add suppression values
 
     return kernel
 
@@ -286,11 +335,14 @@ class GaussianMultiplicativeContourIntegrationLayer(Layer):
                             "Must match dimensions of Conv1 Layer output [7-55] & must be odd.")
         self.n = n
 
-        if weights_type.lower() not in ['enhance', 'suppress', 'enhance_and_suppress']:
-            raise Exception("Invalid weight types. Must be [enhance, suppress or enhance_and_suppress]")
+        if weights_type.lower() not in ['enhance', 'suppress', 'enhance_and_suppress', 'overlap']:
+            raise Exception("Invalid weight types. Must be [enhance, suppress or enhance_and_suppress, overlap]")
         self.weights_type = weights_type.lower()
 
-        self.kernel = get_non_overlapping_coaligned_kernels(self.weights_type, self.n)
+        if self.weights_type == 'overlap':
+            self.kernel = get_overlapping_coaligned_kernels(self.weights_type, self.n)
+        else:
+            self.kernel = get_non_overlapping_coaligned_kernels(self.weights_type, self.n)
 
         g_kernel = alex_net_utils.get_2d_gaussian_kernel((n, n), sigma)
         self.kernel = np.array([k * g_kernel for k in self.kernel])
@@ -1039,36 +1091,36 @@ if __name__ == "__main__":
     print("Building Contour Integration Model...")
 
     # # Additive Model
-    # cont_int_model = build_contour_integration_model(
+    # no_overlap_model = build_contour_integration_model(
     #     "Additive",
     #     "trained_models/AlexNet/alexnet_weights.h5",
     #     weights_type='enhance',
     #     n=7
     # )
 
-    # # Gaussian Multiplicative Model
-    # cont_int_model = build_contour_integration_model(
-    #     "gaussian_multiplicative",
-    #     "trained_models/AlexNet/alexnet_weights.h5",
-    #     weights_type='enhance',
-    #     n=25,
-    #     sigma=6.0
-    # )
+    # Gaussian Multiplicative Model
+    cont_int_model = build_contour_integration_model(
+        "gaussian_multiplicative",
+        "trained_models/AlexNet/alexnet_weights.h5",
+        weights_type='enhance',
+        n=25,
+        sigma=6.0
+    )
 
     # # Masked Multiplicative Model
-    # cont_int_model = build_contour_integration_model(
+    # no_overlap_model = build_contour_integration_model(
     #     "masked_multiplicative",
     #     "trained_models/AlexNet/alexnet_weights.h5",
     #     weights_type='enhance',
     #     n=25,
     # )
 
-    # # Multiplicative Model
-    cont_int_model = build_contour_integration_model(
-            "multiplicative",
-            "trained_models/AlexNet/alexnet_weights.h5",
-            n=25,
-    )
+    # # # Multiplicative Model
+    # no_overlap_model = build_contour_integration_model(
+    #         "multiplicative",
+    #         "trained_models/AlexNet/alexnet_weights.h5",
+    #         n=25,
+    # )
 
     # callbacks to get activations of L1 & L2. Defined once only to optimize memory usage and
     # prevent the underlying tensorflow graph from growing unnecessarily
