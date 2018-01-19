@@ -138,8 +138,8 @@ def get_non_overlapping_kernels(rf_len):
     Return a mask that identifies alex_net l1_neighbors that are looking at non-overlapping visual fields.
 
     Only visually non-overlapping neighbours are connected with lateral connections. In alexnet,
-    filter size of 11x11 is used with a stride of 4. Therefore every 3rd neighbor are the visually
-    non-overlapping neurons.
+    filter size of 11x11 is used with a stride of 4. Therefore every 3rd neighbor neurons is visually
+    non-overlapping.
 
     :param rf_len:
     :return: [96 x re_len x rf_len] array of kernels
@@ -630,26 +630,22 @@ class MultiplicativeContourIntegrationLayer(Layer):
     def __init__(self, n=25, activation=None, **kwargs):
         """
 
-        Multiplicative integration model where the weighted sum of neighbor feed forward
-        responses is multiplied with the the feed forward response of the neuron. Here feed forward refers
+        Multiplicative contour integration model where the weighted sum of neighbor responses
+        is multiplied with the the feed forward response of the neuron. Here feed forward refers
         to the output of the first convolutional layer of Alexnet.
 
         The objective of this multiplication is to model the observed property that contour enhancement
-        happens only when there is a signal in the classical RF(when it has a non-zero L1 feed forward output).
-        This is not modeled by the AdditiveContourIntegrationLayer.
+        occurs only when there is a signal in the classical RF. This is not modeled by the
+        AdditiveContourIntegrationLayer.
 
-        Compared to the Gaussian Multiplicative Contour Integration model, no constraint on the weightings
-        of neighbors is assumed. Instead, the weights of neighbors are learnt though gradient descent to match
-        neurological data (gains). Note a mask is still used to define which of the neighbors are coaligned and
-        (orthogonal to coaligned).
+        Compared to the Gaussian multiplicative contour integration layer, no constraint on neighbor
+        weights are used. Instead, they are learnt though gradient descent to match neurological data (gains).
 
-        Compared to the masked multiplicative model, the mask used in this model does not identify coaligned
-        neighbors. It only identifies neurons with non-overlapping neighbors. And gradient descent is used to
-        identify which of the neighbors are coaligned and how to weight contributions from them. Additionally
-        through optimization, it has to also learn that non-coaligned neighbors do not contribute and set their
-        values to zero. Initial values of allowed weights are ones, but learnt weights through optimization
-        are available (TO BE ADDED). Since there is no assumed coalignment,the starting mask for all kernels
-        is the same.
+        Compared to the masked multiplicative model, the mask used does not identify coaligned
+        neighbors. Instead, a generic mask identifying a set of non-overlapping neigbors that see the entire
+        visual field is used. The same mask is used for each feature extracting kernel and is modified
+        independently by each layer. The learning task is to identify which of the neighbors are coaligned
+        and how to combine them to match expected gains.
 
         For each L1 feature map:
             A_L(x,y) = sigma(A_FF(x,y) +
@@ -657,12 +653,12 @@ class MultiplicativeContourIntegrationLayer(Layer):
 
         where
             A_L(x,y) = output of the contour enhancement layer @ (x, y)
-            A_FF(x,y) = feed-forward output of conv Layer 1 @ (x, y)
+            A_FF(x,y) = feed-forward output of conv layer 1 @ (x, y)
             sigma = non-linearity (currently none)
             m & n are the row and column indices of the contour enhancement layer neurons.
-            W(m,n) = weight of contribution from neuron @ (m,n) from (x,y)
-            M(m,n) = Manually defined mask that identifies coaligned and orthogonal neurons with
-            non-overlapping visual fields.
+            W(m,n) = weight of contribution from neuron @ offsets (m,n) from (x,y)
+            M(m,n) = Generic mask that identifies a set of neighbor neurons with non-overlapping
+            visual fields.
 
             bias = learnable shifting factor. Default = 0.
 
@@ -685,10 +681,13 @@ class MultiplicativeContourIntegrationLayer(Layer):
 
     def build(self, input_shape):
         """
-        2 learnable parameters, but first one is a matrix over all L2 neighbors. However, we only care about
-        certain neighbors. Those for which the output of raw_kernel * mask is nonzero
+        2 learnable parameters: weights and bias
 
-        :param input_shape:
+        The weight matrix is a full rf_len x rf_len matrix. However not all are active. The active weights
+        are found by multiplying the raw_kernel with the mask. Nonzero weights are active.
+
+        :param input_shape: [batch_size, row,column, n_channels]
+
         :return:
         """
         if K.image_data_format() == 'channels_last':
