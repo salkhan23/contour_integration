@@ -412,7 +412,7 @@ if __name__ == "__main__":
     # fragment = (fragment - fragment.min())*(255 / (fragment.max() - fragment.min()))
     # use_smoothing = True
     #
-    # # max_active = alex_net_utils.find_most_active_l1_kernel_index(fragment, l1_activations_cb, (27, 27))
+    # # max_active = alex_net_utils.find_most_active_l1_kernel_index(fragment, no_overlap_l1_act_cb, (27, 27))
     # # alex_net_utils.plot_l1_and_l2_kernel_and_contour_fragment(contour_integration_model, max_active, fragment)
     # # alex_net_utils.plot_l1_and_l2_kernel_and_contour_fragment(contour_integration_model, 54, fragment)
     #
