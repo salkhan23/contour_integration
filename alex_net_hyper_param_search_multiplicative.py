@@ -281,8 +281,11 @@ def optimize_contour_enhancement_layer_weights(
     if axis is None:
         f, axis = plt.subplots()
     axis.plot(range(n_runs), losses, label='learning rate = %0.8f' % learning_rate)
-    axis.set_xlabel("Iteration")
-    axis.set_ylabel("Loss")
+    font_size = 20
+    axis.set_xlabel("Iteration", fontsize=font_size)
+    axis.set_ylabel("Loss", fontsize=font_size)
+    axis.tick_params(axis='x', labelsize=font_size)
+    axis.tick_params(axis='y', labelsize=font_size)
 
 
 def plot_optimized_weights(model, tgt_filt_idx, start_w, start_b):
@@ -297,20 +300,22 @@ def plot_optimized_weights(model, tgt_filt_idx, start_w, start_b):
     mask = K.eval(model.layers[2].mask)  # mask does not change
     opt_w, opt_b = model.layers[2].get_weights()
 
-    # # Use the same scale for plotting the kernel
-    # max_v = max(opt_w.max(), start_w.max())
-    # min_v = min(opt_w.min(), start_w.min())
+    # Use the same scale for plotting the kernel
+    max_v_opt = max(opt_w.max(), abs(opt_w.min()))
+    max_v_start = max(start_w.max(), abs(start_w.min()))
 
     f = plt.figure()
     f.add_subplot(1, 2, 1)
-    plt.imshow(start_w[tgt_filt_idx, :, :] * mask[tgt_filt_idx, :, :])
-    plt.colorbar(orientation='horizontal')
-    plt.title("Start weights & bias=%0.4f" % start_b[tgt_filt_idx])
+    plt.imshow(start_w[tgt_filt_idx, :, :] * mask[tgt_filt_idx, :, :], vmin=-max_v_start, vmax=max_v_start)
+    cb = plt.colorbar(orientation='horizontal')
+    cb.ax.tick_params(labelsize=20)
+    # plt.title("Start weights & bias=%0.4f" % start_b[tgt_filt_idx])
 
     f.add_subplot(1, 2, 2)
-    plt.imshow(mask[tgt_filt_idx, :, :] * opt_w[tgt_filt_idx, :, :])
-    plt.colorbar(orientation='horizontal')
-    plt.title("Best weights & bias=%0.4f" % opt_b[tgt_filt_idx])
+    plt.imshow(mask[tgt_filt_idx, :, :] * opt_w[tgt_filt_idx, :, :], vmin=-max_v_opt, vmax=max_v_opt)
+    cb = plt.colorbar(orientation='horizontal')
+    cb.ax.tick_params(labelsize=20)
+    # plt.title("Best weights & bias=%0.4f" % opt_b[tgt_filt_idx])
 
 
 if __name__ == "__main__":
