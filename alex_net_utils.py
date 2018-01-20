@@ -423,3 +423,52 @@ def find_most_active_l1_kernel_index(frag, l1_act_cb, plot=True):
         plt.title(title)
 
     return max_active_filt
+
+
+def plot_l2_visual_field(location, l2_kernel_mask, img, margin=4):
+    """
+    Plot the part of the visual scene seen by contour integration neuron @ specified location and all of its
+    unmasked neighbors.
+
+    :param margin: In the constructed tile plot, the distance the RFs of nearing neurons
+    :param location: location of the target neurons. Should be a tuple of (x, y) l2 locations
+    :param l2_kernel_mask: the mask that identifies the neighbor RFs to plot. 2D matrix.
+    :param img: input image
+
+    :return: None
+    """
+    l1_kernel_length = 11
+    l1_conv_stride = 4
+
+    n_rows = l2_kernel_mask.shape[0]
+    n_cols = l2_kernel_mask.shape[1]
+    # print("n_rows  n_col %d %d" % (n_rows, n_cols))
+
+    # Initialize the tiled image
+    width = (l1_kernel_length * n_rows) + ((n_rows - 1) * margin)
+    height = (l1_kernel_length * n_cols) + ((n_cols - 1) * margin)
+    tiled_image = np.zeros((width, height, img.shape[-1]))
+    # print("Shape of tiled image", tiled_image.shape)
+
+    for r_idx in range(n_rows):
+        for c_idx in range(n_cols):
+
+            cur_l2_neuron_x_loc = r_idx + location[0] - n_rows // 2
+            cur_l2_neuron_y_loc = c_idx + location[1] - n_cols // 2
+
+            cur_l2_neuron_vrf_start_x = cur_l2_neuron_x_loc * l1_conv_stride
+            cur_l2_neuron_vrf_start_y = cur_l2_neuron_y_loc * l1_conv_stride
+
+            tiled_image[
+                (l1_kernel_length + margin) * r_idx: (l1_kernel_length + margin) * r_idx + l1_kernel_length,
+                (l1_kernel_length + margin) * c_idx: (l1_kernel_length + margin) * c_idx + l1_kernel_length,
+                :
+            ] = img[
+                cur_l2_neuron_vrf_start_x: cur_l2_neuron_vrf_start_x + l1_kernel_length,
+                cur_l2_neuron_vrf_start_y: cur_l2_neuron_vrf_start_y + l1_kernel_length,
+                :
+            ] * l2_kernel_mask[r_idx, c_idx]
+
+    plt.figure()
+    plt.imshow(tiled_image)
+    plt.title("Visual Field of neuron @ (%d,%d)" % (location[0], location[1]))

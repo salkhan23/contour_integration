@@ -142,69 +142,6 @@ def plot_visual_rf(location, img, axis=None):
     return neuron_visual_rf
 
 
-def plot_l2_visual_field(location, l2_kernel_mask, img, margin=4):
-    """
-    Plot the part of the visual receptive field that an l2 neuron sees.
-
-    :param margin:
-    :param location:
-    :param l2_kernel_mask:
-    :param img:
-    :return:
-    """
-    l1_kernel_length = 11
-    l1_conv_stride = 4
-
-    n_rows = l2_kernel_mask.shape[0]
-    n_cols = l2_kernel_mask.shape[1]
-    # print("n_rows  n_col %d %d" % (n_rows, n_cols))
-
-    # Initialize the tiled image
-    width = (l1_kernel_length * n_rows) + ((n_rows - 1) * margin)
-    height = (l1_kernel_length * n_cols) + ((n_cols - 1) * margin)
-    tiled_image = np.zeros((width, height, img.shape[-1]))
-    # print("Shape of tiled image", tiled_image.shape)
-
-    for r_idx in range(n_rows):
-        for c_idx in range(n_cols):
-
-            cur_l2_neuron_x_loc = r_idx + location[0] - n_rows // 2
-            cur_l2_neuron_y_loc = c_idx + location[1] - n_cols // 2
-
-            cur_l2_neuron_vrf_start_x = cur_l2_neuron_x_loc * l1_conv_stride
-            cur_l2_neuron_vrf_start_y = cur_l2_neuron_y_loc * l1_conv_stride
-
-            # print("Processing Neuron @ (%d,%d). Visual Field start (%d,%d)"
-            #       % (cur_l2_neuron_x_loc, cur_l2_neuron_y_loc,
-            #          cur_l2_neuron_vrf_start_x, cur_l2_neuron_vrf_start_y))
-            #
-            # print ("Indices of out image x=(%d, %d), y=(%d,%d)"
-            #        % ((l1_kernel_length + margin) * r_idx,
-            #           (l1_kernel_length + margin) * r_idx + l1_kernel_length,
-            #           (l1_kernel_length + margin) * c_idx,
-            #           (l1_kernel_length + margin) * c_idx + l1_kernel_length))
-            #
-            # print("Indices of input image x=(%d, %d), y=(%d,%d)"
-            #       % (cur_l2_neuron_vrf_start_x,
-            #          cur_l2_neuron_vrf_start_x + l1_kernel_length,
-            #          cur_l2_neuron_vrf_start_y,
-            #          cur_l2_neuron_vrf_start_y + l1_kernel_length))
-
-            tiled_image[
-                (l1_kernel_length + margin) * r_idx: (l1_kernel_length + margin) * r_idx + l1_kernel_length,
-                (l1_kernel_length + margin) * c_idx: (l1_kernel_length + margin) * c_idx + l1_kernel_length,
-                :
-            ] = img[
-                cur_l2_neuron_vrf_start_x: cur_l2_neuron_vrf_start_x + l1_kernel_length,
-                cur_l2_neuron_vrf_start_y: cur_l2_neuron_vrf_start_y + l1_kernel_length,
-                :
-            ] * l2_kernel_mask[r_idx, c_idx]
-
-    plt.figure()
-    plt.imshow(tiled_image)
-    plt.title("Visual Field of neuron @ (%d,%d)" % (location[0], location[1]))
-
-
 if __name__ == "__main__":
     plt.ion()
     K.clear_session()
@@ -281,22 +218,6 @@ if __name__ == "__main__":
     # Create a test image with a contour in it
     contour_len = 9
 
-    # # Background Tiles
-    # start_x_arr_bg, start_y_arr_bg = alex_net_utils.get_background_tiles_locations(
-    #     tgt_filter_len,
-    #     test_image_len,
-    #     row_offset=offset,
-    #     space_bw_tiles=fragment_spacing,
-    #     tgt_n_visual_rf_start=target_neuron_rf_start)
-    #
-    # test_image = alex_net_utils.tile_image(
-    #     test_image,
-    #     fragment,
-    #     (start_x_arr_bg, start_y_arr_bg),
-    #     rotate=False,
-    #     gaussian_smoothing=False
-    # )
-
     start_x_arr, start_y_arr = diagonal_contour_generator(
         tgt_filter_len,
         offset,
@@ -319,57 +240,7 @@ if __name__ == "__main__":
     test_image = test_image / 255.0
     plt.figure()
     plt.imshow(test_image)
-    plot_l2_visual_field(tgt_neuron_loc, tgt_l2_masks, test_image)
-    #
-    # # 5. Plot the activations of l1 and l2
-    # # ---------------------------------------------------------------------------
-    # test_image = np.zeros((227, 227, 3))
-    #
-    # # Create a test image with a contour in it
-    # contour_len = 9
-    #
-    # start_x_arr, start_y_arr = diagonal_contour_generator(
-    #     tgt_filter_len,
-    #     offset,
-    #     fragment_spacing,
-    #     contour_len,
-    #     target_neuron_rf_start,
-    # )
-    #
-    # test_image = alex_net_utils.tile_image(
-    #     test_image,
-    #     fragment,
-    #     (start_x_arr, start_y_arr),
-    #     rotate=False,
-    #     gaussian_smoothing=False
-    # )
-    #
-    # test_image = test_image / 255.0
-    # no_overlap_l1_act, no_overlap_l2_act = alex_net_utils.get_l1_and_l2_activations(test_image, no_overlap_l1_act_cb, no_overlap_l2_act_cb)
-    # no_overlap_l1_act = no_overlap_l1_act[0, tgt_filter_idx, :, :]
-    # no_overlap_l2_act = no_overlap_l2_act[0, tgt_filter_idx, :, :]
-    #
-    # # Plot the activations of the target neuron
-    # fig = plt.figure()
-    # fig.add_subplot(1, 2, 1)
-    # plt.imshow(no_overlap_l1_act, cmap='seismic')
-    # plt.title("l1_activation")
-    # fig.add_subplot(1, 2, 2)
-    # plt.imshow(no_overlap_l2_act, cmap='seismic')
-    # plt.title("l2_activation")
-    #
-    # # # Get the nonzero l2 kernel indices for the target filter
-    # # l2_masks = K.eval(contour_integration_model.layers[2].mask)
-    # # tgt_l2_masks = l2_masks[tgt_filter_idx, :, :]
-    # # non_zero_x, non_zero_y = tgt_l2_masks.nonzero()
-    # #
-    # # non_zero_x = non_zero_x - tgt_neuron_loc[0] // 2 + tgt_neuron_loc[0] + 1
-    # # non_zero_y = non_zero_y - tgt_neuron_loc[1] // 2 + tgt_neuron_loc[1] + 1
-    # #
-    # # manual_center_neuron_out = no_overlap_l1_act[non_zero_x, non_zero_y].sum() * no_overlap_l1_act[tgt_neuron_loc] \
-    # #     + no_overlap_l1_act[tgt_neuron_loc]
-    # # print("Model calculated activation %0.4f, manually calculated activation %0.4f"
-    # #       % (no_overlap_l2_act[tgt_neuron_loc], manual_center_neuron_out))
+    alex_net_utils.plot_l2_visual_field(tgt_neuron_loc, tgt_l2_masks, test_image)
 
     # # 6. Find Best Fit L2 weights
     # # ---------------------------------------------------------------------------------
