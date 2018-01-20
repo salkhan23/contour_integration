@@ -9,7 +9,6 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize as optimize
-import diagonal_contour_fits as diag_cont_fits
 
 import keras.backend as K
 
@@ -18,7 +17,6 @@ import alex_net_utils
 
 reload(cont_int_models)
 reload(alex_net_utils)
-reload(diag_cont_fits)
 
 np.random.seed(7)  # Set the random seed for reproducibility
 
@@ -179,7 +177,6 @@ def plot_kernel_and_best_fit_gabors(kernel, kernel_idx, fitted_gabors_params):
             fitted_gabor = fitted_gabor.reshape((x_arr.shape[0], y_arr.shape[0]))
             display_gabor = (fitted_gabor - fitted_gabor.min()) / (fitted_gabor.max() - fitted_gabor.min())
             plt.imshow(display_gabor, cmap='seismic')
-            plt.title(r"$\theta_{opt}=%0.2f$" % theta)
 
             # # Fitted gabor - higher resolution
             f.add_subplot(n_channels, 3, (chan_idx * 3) + 3)
@@ -189,6 +186,65 @@ def plot_kernel_and_best_fit_gabors(kernel, kernel_idx, fitted_gabors_params):
             plt.imshow(display_gabor, cmap='seismic')
 
     f.suptitle("2D Gabor Fits for L1 Filter @ Index %d" % kernel_idx)
+
+
+def get_l1_filter_orientation_and_offset(tgt_filt, tgt_filt_idx, show_plots=True):
+    """
+    Given a Target AlexNet L1 Convolutional Filter, fit to a 2D spatial Gabor. Use this to as
+    the orientation of the filter and calculate the row shift offset to use when tiling fragments.
+    This offset represents the shift in pixels to use for each row  as you move away from the
+    center row. Thereby allowing contours for the target filter to be generated.
+
+    Raises an exception if no best fit parameters are found for any of the channels of the target
+    filter.
+
+    :param show_plots:
+    :param tgt_filt_idx:
+    :param tgt_filt:
+
+    :return: optimal orientation, row offset.
+    """
+    tgt_filt_len = tgt_filt.shape[0]
+
+    best_fit_params_list = find_best_fit_2d_gabor(tgt_filt)
+
+    # Plot the best fit params
+    if show_plots:
+        plot_kernel_and_best_fit_gabors(tgt_filt, tgt_filt_idx, best_fit_params_list)
+
+    # Remove all empty entries
+    best_fit_params_list = [params for params in best_fit_params_list if params is not None]
+    if not best_fit_params_list:
+        # raise Exception("Optimal Params could not be found")
+        return np.NaN, np.NaN
+
+    # Find channel with highest energy (Amplitude) and use its preferred orientation
+    # Best fit parameters: x0, y0, theta, amp, sigma, lambda1, psi, gamma
+    best_fit_params_list = np.array(best_fit_params_list)
+    amp_arr = best_fit_params_list[:, 3]
+    amp_arr = np.abs(amp_arr)
+    max_amp_idx = np.argmax(amp_arr)
+
+    theta_opt = best_fit_params_list[max_amp_idx, 2]
+
+    # TODO: Fix me - Explain why this is working
+    # TODO: How to handle horizontal (90) angles
+    # # Convert the orientation angle into a y-offset to be used when tiling fragments
+    contour_angle = theta_opt + 90.0  # orientation is of the Gaussian envelope with is orthogonal to
+    # # sinusoid carrier we are interested in.
+    # contour_angle = np.mod(contour_angle, 180.0)
+
+    # if contour_angle >= 89:
+    #     contour_angle -= 180  # within the defined range of tan
+
+    # contour_angle = contour_angle * np.pi / 180.0
+    # offset = np.int(np.ceil(tgt_filter_len / np.tan(contour_angle)))
+    row_offset = np.int(np.ceil(tgt_filt_len / np.tan(np.pi - contour_angle * np.pi / 180.0)))
+
+    # print("L1 kernel %d, optimal orientation %0.2f(degrees), vertical offset of tiles %d"
+    #       % (tgt_filt_idx, theta_opt, row_offset))
+
+    return theta_opt, row_offset
 
 
 if __name__ == "__main__":
@@ -228,7 +284,7 @@ if __name__ == "__main__":
         optimal_params = find_best_fit_2d_gabor(tgt_filter)
         # plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
 
-        theta, offset = diag_cont_fits.get_l1_filter_orientation_and_offset(
+        theta, offset = get_l1_filter_orientation_and_offset(
             tgt_filter, tgt_filter_idx, show_plots=False)
 
         optimum_orientation_list.append(theta)

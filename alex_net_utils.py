@@ -228,6 +228,46 @@ def horizontal_contour_generator(frag_len, bw_tile_spacing, cont_len, cont_start
     return start_x, start_y
 
 
+def diagonal_contour_generator(frag_len, row_offset, bw_tile_spacing, cont_len, cont_start_loc):
+    """
+    Generate the start co-ordinates of fragment squares that form a diagonal contour of
+    the specified length & row_offset at the specified location
+
+    :param frag_len:
+    :param row_offset: row_offset to complete contours, found from the orientation of the fragment.
+        See get_l1_filter_orientation_and_offset.
+    :param bw_tile_spacing:
+    :param cont_len:
+    :param cont_start_loc: Start visual RF location of center neuron.
+
+    :return: start_x_arr, start_y_arr locations of fragments that form the contour
+    """
+    frag_spacing = frag_len + bw_tile_spacing
+
+    # 1st dimension stays the same
+    start_x = range(
+        cont_start_loc - (cont_len / 2) * frag_spacing,
+        cont_start_loc + ((cont_len / 2) + 1) * frag_spacing,
+        frag_spacing
+    )
+
+    # If there is nonzero spacing between tiles, the offset needs to be updated
+    if bw_tile_spacing:
+        row_offset = np.int(frag_spacing / np.float(frag_len) * row_offset)
+
+    # 2nd dimension shifts with distance from the center row
+    if row_offset is not 0:
+        start_y = range(
+            cont_start_loc - (cont_len / 2) * row_offset,
+            cont_start_loc + ((cont_len / 2) + 1) * row_offset,
+            row_offset
+        )
+    else:
+        start_y = np.copy(start_x)
+
+    return start_x, start_y
+
+
 def get_background_tiles_locations(frag_len, img_len, row_offset, space_bw_tiles, tgt_n_visual_rf_start):
     """
     Starting locations for non-overlapping fragment tiles to cover the whole image.
