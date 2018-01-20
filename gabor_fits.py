@@ -270,11 +270,11 @@ if __name__ == "__main__":
     # 2. Select the target L1 filter to find the
     # ---------------------------------------------------------------------
     # # A. For a particular target filter
-    # tgt_filter_idx = 2
+    # tgt_feat_extract_kernel_idx = 2
     #
-    # tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
-    # optimal_params = find_best_fit_2d_gabor(tgt_filter)
-    # plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
+    # tgt_filter_idx = feat_extract_kernels[:, :, :, tgt_feat_extract_kernel_idx]
+    # optimal_params = find_best_fit_2d_gabor(tgt_filter_idx)
+    # plot_kernel_and_best_fit_gabors(tgt_filter_idx, tgt_feat_extract_kernel_idx, optimal_params)
 
     # B. For a range of target filters
     optimum_orientation_list = []
@@ -282,7 +282,7 @@ if __name__ == "__main__":
         tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
 
         optimal_params = find_best_fit_2d_gabor(tgt_filter)
-        # plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, optimal_params)
+        # plot_kernel_and_best_fit_gabors(tgt_filter_idx, tgt_feat_extract_kernel_idx, optimal_params)
 
         theta, offset = get_l1_filter_orientation_and_offset(
             tgt_filter, tgt_filter_idx, show_plots=False)
