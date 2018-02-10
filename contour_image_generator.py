@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------------------------------------
-#  Contour Integration model that can use generated contour images
+#  Create a contour image generator
 #
 # Author: Salman Khan
 # Date  : 01/02/18
@@ -10,135 +10,92 @@ import matplotlib.pyplot as plt
 import pickle
 
 import keras.backend as K
-from keras.layers import Input, Conv2D
-from keras.engine.topology import Layer
-from keras.models import Model
 
-import alex_net_cont_int_models as cont_int_models
 import alex_net_utils
-import gabor_fits
+import alex_net_cont_int_models as cont_int_models
+import alex_net_hyper_param_search_multiplicative as mult_param_opt
+import alex_net_cont_int_complex_bg as complex_bg
 
-reload(cont_int_models)
-reload(gabor_fits)
 reload(alex_net_utils)
-
-
-class ContourEnhancementGainCalculator(Layer):
-    def __init__(self, tgt_kernel_idx, tgt_neuron_loc=(27, 27), **kwargs):
-        """
-        Calculates the Enhancement gain of the specified neuron at the specified location
-
-        :param tgt_kernel_idx:
-        :param tgt_neuron_loc:
-        :param kwargs:
-        """
-        self.tgt_loc = tgt_neuron_loc
-        self.tgt_kernel_idx = tgt_kernel_idx
-
-        super(ContourEnhancementGainCalculator, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        super(ContourEnhancementGainCalculator, self).build(input_shape)
-
-    def call(self, inputs, **kwargs):
-        feature_activation = inputs[0]
-        contour_activation = inputs[1]
-
-        tgt_neuron_gain = \
-            feature_activation[:, self.tgt_kernel_idx, self.tgt_loc[0], self.tgt_loc[1]] / \
-            (contour_activation[:, self.tgt_kernel_idx, self.tgt_loc[0], self.tgt_loc[1]] + 1e-8)
-
-        return tgt_neuron_gain
-
-    def compute_output_shape(self, input_shape):
-        return tuple((input_shape[0][0], 1))
+reload(cont_int_models)
+reload(mult_param_opt)
+reload(complex_bg)
 
 
 class ContourImageGenerator(object):
 
-    def __init__(self, tgt_filter, tgt_filter_idx):
+    def __init__(self, tgt_filt, tgt_filt_idx, contour_tile_loc_cb, row_offset, frag=None):
         """
-        Generator contour images for the specified target filter
-        :param tgt_filter:
-        """
-        self.tgt_filter_idx = tgt_filter_idx
-        self.tgt_filter = tgt_filter
+        Creates a python generator that continuously generates train/test images
+        for the specified tgt filter. The generator is as expected by Keras
+        fit generator function.
 
-        self.frag = self.__get_fragment_from_kernel()
+        :param tgt_filt:
+        :param tgt_filt_idx:
+        :param contour_tile_loc_cb:
+        :param frag:
+        """
+        self.tgt_filt_idx = tgt_filt_idx
+        self.tgt_filt = tgt_filt
+
+        if frag is None:
+            self.frag = tgt_filt
+        else:
+            self.frag = frag
         self.frag_len = self.frag.shape[0]
 
-        self.image_len = 227  # size of inputs expected by Alexnet
+        self.image_len = 227  # Alexnet expects input of size (227, 227, 3)
+        self.tgt_neuron_rf_start = 27 * 4  # Start with the neuron at the center of the activation
 
-        self.orientation, self.row_offset = gabor_fits.get_l1_filter_orientation_and_offset(
-            self.tgt_filter,
-            self.tgt_filter_idx,
-            show_plots=False
-        )
-
-        # Plot Neurophysiological data Data from [Li-2006]
         with open('.//neuro_data//Li2006.pickle', 'rb') as handle:
             data = pickle.load(handle)
 
         # Rather than calculate the contour fragment and background tiles locations everytime
         # Calculate them once and store them to be index later
 
-        # Contour Fragment locations for variable contour length
-        self.c_lengths = data["contour_len_avg_len"]
-        self.cont_tile_loc_no_spacing = []
+        # Contour Length experiment variables
+        self.c_len_expected_gains = data['contour_len_avg_gain']
+        self.c_len_arr = data['contour_len_avg_len']
 
-        for c_len in self.c_lengths:
-            tile_locations = alex_net_utils.diagonal_contour_generator(
+        self.c_len_cont_tile_loc = []
+        for c_len in self.c_len_arr:
+            tile_locations = contour_tile_loc_cb(
                 frag_len=self.frag_len,
-                row_offset=self.row_offset,
                 bw_tile_spacing=0,
                 cont_len=c_len,
-                cont_start_loc=27*4  # (27,27) central location in the output of the feature
-                                     # extracting layer. 4 = stride length
+                cont_start_loc=self.tgt_neuron_rf_start,
+                row_offset=row_offset
             )
 
-            self.cont_tile_loc_no_spacing.append(tile_locations)
+            self.c_len_cont_tile_loc.append(tile_locations)
 
-        # Contour fragment anf background spacing for variable spacing
-        self.frag_spacing = data['contour_separation_avg_rcd']
-        self.frag_spacing = np.floor(self.frag_spacing * self.frag_len) - self.frag_len
+        # Contour spacing experiment variables
+        self.c_spacing_expected_gains = data['contour_separation_avg_gain']
+        self.c_spacing_arr = np.floor(data['contour_separation_avg_rcd'] * self.frag_len) - self.frag_len
 
+        self.c_spacing_cont_tile_loc = []
         self.bg_tile_loc = []
-        self.cont_tile_loc_var_spacing = []
+        for c_spacing in self.c_spacing_arr:
 
-        for c_spacing in self.frag_spacing:
             c_spacing = int(c_spacing)
 
-            bg_tile_locations = alex_net_utils.get_background_tiles_locations(
+            tile_locations = contour_tile_loc_cb(
                 frag_len=self.frag_len,
-                img_len=self.image_len,
-                row_offset=self.row_offset,
-                space_bw_tiles=c_spacing,
-                tgt_n_visual_rf_start=108
-            )
-
-            cont_tile_spacing = alex_net_utils.diagonal_contour_generator(
-                frag_len=self.frag_len,
-                row_offset=self.row_offset,
                 bw_tile_spacing=c_spacing,
                 cont_len=7,
-                cont_start_loc=27*4
+                cont_start_loc=self.tgt_neuron_rf_start,
+                row_offset=row_offset
             )
+            self.c_spacing_cont_tile_loc.append(tile_locations)
 
+            bg_tile_locations = alex_net_utils.get_background_tiles_locations(
+                self.frag_len,
+                self.image_len,
+                row_offset,
+                c_spacing,
+                self.tgt_neuron_rf_start
+            )
             self.bg_tile_loc.append(bg_tile_locations)
-            self.cont_tile_loc_var_spacing.append(cont_tile_spacing)
-
-        # Expected gains
-        self.expected_gains_lengths = data["contour_len_avg_gain"]
-        self.expected_gains_spacing = data["contour_separation_avg_gain"]
-
-    def __get_fragment_from_kernel(self):
-        frag = np.copy(self.tgt_filter)
-        frag = frag.sum(axis=2)  # collapse all channels
-        frag[frag > 0] = 1
-        frag[frag <= 0] = 0
-        frag *= 255
-        frag = np.repeat(frag[:, :, np.newaxis], 3, axis=2)
-        return frag
 
     @staticmethod
     def show_image(img, axis=None):
@@ -157,106 +114,224 @@ class ContourImageGenerator(object):
 
         axis.imshow(display_img)
 
-    def generate(self, batch_size=10, images_type='both'):
+    def show_image_batch(self, img_stack, img_labels):
         """
-        This is the main function of the class, it is a generator that returns the specified
-        number of images.
+        Similar to function show_image but for the whole batch of generated images.
+        Additionally expects img_labels
 
-        :param batch_size:
+        :param img_stack:
+        :param img_labels:
+        :return:
+        """
+        for i_idx in range(img_stack.shape[0]):
+            display_img = img_stack[i_idx, :, :, :]
+            self.show_image(display_img)
+            plt.title("Expected Gain %0.4f" % img_labels[i_idx])
+
+    def generate(self, images_type='both'):
+        """
+        This is the main function of this class.
+
         :param images_type:
         :return:
         """
+
         images_type = images_type.lower()
+        allowed_types = ['both', 'spacing', 'spacing']
 
-        allowed_types = ['both', 'spacing', 'length']
+        if images_type not in allowed_types:
+            raise Exception("Invalid Image Type")
 
-        while 1:
+        while True:
 
-            images = []
-            labels = []
+            image_arr = []
+            label_arr = []
 
-            if images_type.lower() not in allowed_types:
-                raise Exception("Specified image type is not allowed")
+            if images_type is not 'spacing':
+                for i in range(len(self.c_len_arr)):
 
-            if images_type == 'both':
-                n_c_len_images = batch_size >> 1
-                n_c_spacing_images = batch_size - n_c_len_images
-            elif images_type == 'length':
-                n_c_len_images = batch_size
-                n_c_spacing_images = 0
-            else:
-                n_c_len_images = 0
-                n_c_spacing_images = batch_size
+                    select_idx = i
 
-            # print("Number of variable length contour images %d, number of variable spacing images %d"
-            #       % (n_c_len_images, n_c_spacing_images))
+                    test_image = np.zeros((227, 227, 3))
 
-            # Generate the contour length images
-            for img_idx in range(n_c_len_images):
+                    test_image = alex_net_utils.tile_image(
+                        test_image,
+                        self.frag,
+                        self.bg_tile_loc[0],
+                        rotate=True,
+                        gaussian_smoothing=True
+                    )
 
-                select_idx = np.random.randint(0, high=len(self.c_lengths))
+                    test_image = alex_net_utils.tile_image(
+                        test_image,
+                        self.frag,
+                        self.c_len_cont_tile_loc[select_idx],
+                        rotate=False,
+                        gaussian_smoothing=True,
+                    )
 
-                img = np.zeros((self.image_len, self.image_len, 3))
+                    # Image preprocessing
+                    test_image = test_image / 255.0  # Bring test_image back to the [0, 1] range.
+                    test_image = np.transpose(test_image, (2, 0, 1))  # Theano back-end expects channel first format
 
-                # Background Tiles
-                img = alex_net_utils.tile_image(
-                    img=img,
-                    frag=self.frag,
-                    insert_locs=self.bg_tile_loc[0],
-                    rotate=True,
-                    gaussian_smoothing=True
-                )
+                    image_arr.append(test_image)
+                    label_arr.append(self.c_len_expected_gains[select_idx])
 
-                # Contour Tiles
-                img = alex_net_utils.tile_image(
-                    img=img,
-                    frag=self.frag,
-                    insert_locs=self.cont_tile_loc_no_spacing[select_idx],
-                    rotate=False,
-                    gaussian_smoothing=True
-                )
+            if images_type is not 'length':
+                for i in range(len(self.c_spacing_arr)):
 
-                img = img / 255.0
-                img = np.transpose(img, (2, 0, 1))
+                    select_idx = i
 
-                images.append(img)
-                labels.append(self.expected_gains_lengths[select_idx])
+                    test_image = np.zeros((227, 227, 3))
 
-            # Generate the contour spacing images
-            for img_idx in range(n_c_spacing_images):
+                    test_image = alex_net_utils.tile_image(
+                        test_image,
+                        self.frag,
+                        self.bg_tile_loc[select_idx],
+                        rotate=True,
+                        gaussian_smoothing=True
+                    )
 
-                select_idx = np.random.randint(0, high=len(self.frag_spacing))
+                    test_image = alex_net_utils.tile_image(
+                        test_image,
+                        self.frag,
+                        self.c_spacing_cont_tile_loc[select_idx],
+                        rotate=False,
+                        gaussian_smoothing=True,
+                    )
 
-                img = np.zeros((self.image_len, self.image_len, 3))
+                    # Image preprocessing
+                    test_image = test_image / 255.0  # Bring test_image back to the [0, 1] range.
+                    test_image = np.transpose(test_image, (2, 0, 1))  # Theano back-end expects channel first format
 
-                # Background Tiles
-                img = alex_net_utils.tile_image(
-                    img=img,
-                    frag=self.frag,
-                    insert_locs=self.bg_tile_loc[select_idx],
-                    rotate=True,
-                    gaussian_smoothing=True
-                )
+                    image_arr.append(test_image)
+                    label_arr.append(self.c_spacing_expected_gains[select_idx])
 
-                # Contour Tiles
-                img = alex_net_utils.tile_image(
-                    img=img,
-                    frag=self.frag,
-                    insert_locs=self.cont_tile_loc_var_spacing[select_idx],
-                    rotate=False,
-                    gaussian_smoothing=True
-                )
+            image_arr = np.stack(image_arr, axis=0)
+            label_arr = np.stack(label_arr, axis=0)
 
-                img = img / 255.0
-                img = np.transpose(img, (2, 0, 1))
+            yield image_arr, label_arr
 
-                images.append(img)
-                labels.append(self.expected_gains_spacing[select_idx])
 
-            images = np.stack(images, axis=0)
-            labels = np.stack(labels, axis=0)
+def optimize_contour_enhancement_weights(
+        model, tgt_filt_idx, frag, contour_generator_cb,
+        n_runs=1000, learning_rate=0.00025, offset=0, optimize_type='both', axis=None):
+    """
 
-            yield images, labels
+    This function is similar to the function with the same name in
+    alex_net_hyper_param_search_multiplicative.py but uses the new contour image generator
+
+    :param model:
+    :param tgt_filt_idx:
+    :param frag:
+    :param contour_generator_cb:
+    :param n_runs:
+    :param learning_rate:
+    :param offset:
+    :param optimize_type:
+    :param axis:
+    :return:
+    """
+
+    # Validate input parameters
+    valid_optimize_type = ['length', 'spacing', 'both']
+    if optimize_type.lower() not in valid_optimize_type:
+        raise Exception("Invalid optimization type specified. Valid = [length, spacing, or both(Default)")
+    optimize_type = optimize_type.lower()
+
+    # Some Initialization
+    tgt_n_loc = 27  # neuron looking @ center of RF
+
+    # 1. Setup the Training image generator
+    # -------------------------------------
+    image_generator = ContourImageGenerator(
+        tgt_filt=feature_extract_kernel,
+        tgt_filt_idx=tgt_filt_idx,
+        contour_tile_loc_cb=contour_generator_cb,
+        row_offset=offset,
+        frag=frag
+    )
+
+    generator = image_generator.generate(images_type='both')
+
+    images, expected_gains = generator.next()
+
+    # 2. Setup the optimization problem
+    # ---------------------------------
+    l1_output_cb = model.layers[1].output
+    l2_output_cb = model.layers[2].output
+    input_cb = model.input
+
+    # Callbacks for the weights (learnable parameters)
+    w_cb = model.layers[2].raw_kernel
+    b_cb = model.layers[2].bias
+
+    current_gains = l2_output_cb[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] / \
+        (l1_output_cb[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] + 1e-8)
+
+    loss = (expected_gains - current_gains) ** 2 / expected_gains.shape[0]
+
+    # Gradients of weights and bias wrt to the loss function
+    grads = K.gradients(loss, [w_cb, b_cb])
+    grads = [gradient / (K.sqrt(K.mean(K.square(gradient))) + 1e-8) for gradient in grads]
+
+    iterate = K.function([input_cb], [loss, grads[0], grads[1], l1_output_cb, l2_output_cb])
+
+    # 3. Training Loop
+    # ----------------
+    old_loss = 10000000
+    losses = []
+    # ADAM Optimization starting parameters
+    m_w = 0
+    v_w = 0
+
+    m_b = 0
+    v_b = 0
+
+    for run_idx in range(n_runs):
+
+        images, expected_gains = generator.next()
+
+        loss_value, grad_w, grad_b, l1_out, l2_out = iterate([images])
+        print("%d: loss %s" % (run_idx, loss_value.mean()))
+
+        w, b = model.layers[2].get_weights()
+
+        # ADAM weights update
+        if loss_value.mean() > old_loss:
+            # step /= 2.0
+            # print("Lowering step value to %f" % step)
+            pass
+        else:
+            m_w = 0.9 * m_w + (1 - 0.9) * grad_w
+            v_w = 0.999 * v_w + (1 - 0.999) * grad_w ** 2
+
+            new_w = w - learning_rate * m_w / (np.sqrt(v_w) + 1e-8)
+
+            m_b = 0.9 * m_b + (1 - 0.9) * grad_b
+            v_b = 0.999 * v_b + (1 - 0.999) * grad_b ** 2
+
+            new_b = b - learning_rate * m_b / (np.sqrt(v_b) + 1e-8)
+
+            # Print Contour Enhancement Gains
+            print("Contour Enhancement Gain %s" %
+                  (l2_out[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] /
+                   l1_out[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc]))
+
+            model.layers[2].set_weights([new_w, new_b])
+
+        old_loss = loss_value.mean()
+        losses.append(loss_value.mean())
+
+    # At the end of simulation plot loss vs iteration
+    if axis is None:
+        f, axis = plt.subplots()
+    axis.plot(range(n_runs), losses, label='learning rate = %0.8f' % learning_rate)
+    font_size = 20
+    axis.set_xlabel("Iteration", fontsize=font_size)
+    axis.set_ylabel("Loss", fontsize=font_size)
+    axis.tick_params(axis='x', labelsize=font_size)
+    axis.tick_params(axis='y', labelsize=font_size)
 
 
 if __name__ == "__main__":
@@ -264,52 +339,92 @@ if __name__ == "__main__":
     K.clear_session()
     K.set_image_dim_ordering('th')
 
-    # ---------------------------------------
-    tgt_feature_extract_kernel_idx = 54
+    # --------------------------
+    tgt_filter_idx = 10
 
-    # 1. Build the contour Integration Model
-    # ---------------------------------------
-    input_layer = Input(shape=(3, 227, 227))
-    conv_1 = Conv2D(96, (11, 11), strides=(4, 4), activation='relu', name='conv_1')(input_layer)
-    cont_int_layer = cont_int_models.MultiplicativeContourIntegrationLayer(name='cont_int', n=25,)(conv_1)
-    cont_gain_calc_layer = \
-        ContourEnhancementGainCalculator(tgt_kernel_idx=tgt_feature_extract_kernel_idx)([conv_1, cont_int_layer])
+    # Build Contour Integration Model
+    # -------------------------------
+    print("Building Contour Integration Model...")
 
-    model = Model(input_layer, outputs=cont_gain_calc_layer)
+    # Multiplicative Model
+    contour_integration_model = cont_int_models.build_contour_integration_model(
+        "multiplicative",
+        "trained_models/AlexNet/alexnet_weights.h5",
+        n=25,
+        activation='relu'
+    )
+    # contour_integration_model.summary()
 
-    model.load_weights("trained_models/AlexNet/alexnet_weights.h5", by_name=True)
-    model.layers[1].trainable = False
+    # Define callback functions to get activations of L1 convolutional layer &
+    # L2 contour integration layer
+    l1_activations_cb = alex_net_utils.get_activation_cb(contour_integration_model, 1)
+    l2_activations_cb = alex_net_utils.get_activation_cb(contour_integration_model, 2)
 
-    # 2. Build the contour Image Generator
-    # -------------------------------------
-    feature_extract_kernels = K.eval(model.layers[1].weights[0])
-    tgt_feature_extract_kernel = feature_extract_kernels[:, :, :, tgt_feature_extract_kernel_idx]
+    # Store the start weights & bias for comparison later
+    start_weights, start_bias = contour_integration_model.layers[2].get_weights()
 
-    test_image_generator = ContourImageGenerator(tgt_feature_extract_kernel, tgt_feature_extract_kernel_idx)
+    # Build the Contour Image Generator
+    # ---------------------------------
+    print("Building Train Image Generator ...")
+    feature_extract_kernels = K.eval(contour_integration_model.layers[1].weights[0])
+    feature_extract_kernel = feature_extract_kernels[:, :, :, tgt_filter_idx]
 
-    # # Test the generator
-    # s = test_image_generator.generate(batch_size=1, images_type='length')
-    #
-    # generated_images, generated_labels = s.next()
-    # for i_idx in range(generated_images.shape[0]):
-    #     ContourImageGenerator.show_image(generated_images[i_idx, :, :, :])
-    #     plt.title("Gain = %4f" % generated_labels[i_idx])
+    fragment = np.zeros((11, 11, 3))
+    fragment[:, (0, 3, 4, 5, 9, 10), :] = 255.0
 
-    # 3. Train the Model
-    # -------------------
-    model.compile(optimizer='adam', loss='mse')
+    # train_image_generator = ContourImageGenerator(
+    #     tgt_filt=feature_extract_kernel,
+    #     tgt_filt_idx=tgt_filter_idx,
+    #     contour_tile_loc_cb=alex_net_utils.vertical_contour_generator,
+    #     row_offset=0,
+    #     frag=fragment
+    # )
 
-    history = model.fit_generator(
-        generator=test_image_generator.generate(batch_size=10, images_type='both'),
-        steps_per_epoch=1,
-        epochs=2000,
-        # validation_data=train_image_generator,
-        # validation_steps=100,
+    # # Test the feature extract Kernel
+    # s = train_image_generator.generate(images_type='both')
+    # X, y = s.next()
+    # train_image_generator.show_image_batch(X, y)
+
+    # Train the model
+    # ---------------
+    optimize_contour_enhancement_weights(
+        contour_integration_model,
+        tgt_filter_idx,
+        fragment,
+        alex_net_utils.vertical_contour_generator,
+        n_runs=500,
+        offset=0,
+        optimize_type='both',
+        learning_rate=0.00025
     )
 
-    plt.figure()
-    plt.plot(history.history['loss'])
-    plt.title('model loss')
-    plt.ylabel('loss')
-    plt.xlabel('epoch')
+    # Plot the Learnt weights
+    # -----------------------
+    mult_param_opt.plot_optimized_weights(
+        contour_integration_model,
+        tgt_filter_idx,
+        start_weights,
+        start_bias)
 
+    # Plot Gain vs Contour Length after Optimization
+    complex_bg.main_contour_length_routine(
+        fragment,
+        l1_activations_cb,
+        l2_activations_cb,
+        alex_net_utils.vertical_contour_generator,
+        tgt_filter_idx,
+        smoothing=True,
+        row_offset=0,
+        n_runs=100,
+    )
+
+    # Plot Gain vs Contour Spacing after Optimization
+    complex_bg.main_contour_spacing_routine(
+        fragment,
+        l1_activations_cb,
+        l2_activations_cb,
+        alex_net_utils.vertical_contour_generator,
+        tgt_filter_idx,
+        smoothing=True,
+        row_offset=0,
+        n_runs=100)
