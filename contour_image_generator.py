@@ -150,7 +150,8 @@ class ContourImageGenerator(object):
             if images_type is not 'spacing':
                 for i in range(len(self.c_len_arr)):
 
-                    select_idx = i
+                    # select_idx = i
+                    select_idx = np.random.randint(0, len(self.c_len_arr))
 
                     test_image = np.zeros((227, 227, 3))
 
@@ -180,7 +181,8 @@ class ContourImageGenerator(object):
             if images_type is not 'length':
                 for i in range(len(self.c_spacing_arr)):
 
-                    select_idx = i
+                    # select_idx = i
+                    select_idx = np.random.randint(0, len(self.c_spacing_arr))
 
                     test_image = np.zeros((227, 227, 3))
 
@@ -269,13 +271,15 @@ def optimize_contour_enhancement_weights(
     current_gains = l2_output_cb[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] / \
         (l1_output_cb[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] + 1e-8)
 
-    loss = (expected_gains - current_gains) ** 2 / expected_gains.shape[0]
+    y_true = K.placeholder(shape=(None,))
+
+    loss = (y_true - current_gains) ** 2 / expected_gains.shape[0]
 
     # Gradients of weights and bias wrt to the loss function
     grads = K.gradients(loss, [w_cb, b_cb])
     grads = [gradient / (K.sqrt(K.mean(K.square(gradient))) + 1e-8) for gradient in grads]
 
-    iterate = K.function([input_cb], [loss, grads[0], grads[1], l1_output_cb, l2_output_cb])
+    iterate = K.function([input_cb, y_true], [loss, grads[0], grads[1], l1_output_cb, l2_output_cb])
 
     # 3. Training Loop
     # ----------------
@@ -292,7 +296,7 @@ def optimize_contour_enhancement_weights(
 
         images, expected_gains = generator.next()
 
-        loss_value, grad_w, grad_b, l1_out, l2_out = iterate([images])
+        loss_value, grad_w, grad_b, l1_out, l2_out = iterate([images, expected_gains])
         print("%d: loss %s" % (run_idx, loss_value.mean()))
 
         w, b = model.layers[2].get_weights()
@@ -314,9 +318,11 @@ def optimize_contour_enhancement_weights(
             new_b = b - learning_rate * m_b / (np.sqrt(v_b) + 1e-8)
 
             # Print Contour Enhancement Gains
-            print("Contour Enhancement Gain %s" %
-                  (l2_out[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] /
-                   l1_out[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc]))
+            model_gains = (l2_out[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] /
+                           (l1_out[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] + 1e-8))
+
+            print("Model Gain: ", np.around(model_gains, 3))
+            print("Expected  : ", np.around(expected_gains, 3))
 
             model.layers[2].set_weights([new_w, new_b])
 
@@ -392,7 +398,7 @@ if __name__ == "__main__":
         tgt_filter_idx,
         fragment,
         alex_net_utils.vertical_contour_generator,
-        n_runs=500,
+        n_runs=1000,
         offset=0,
         optimize_type='both',
         learning_rate=0.00025
