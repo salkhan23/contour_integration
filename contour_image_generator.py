@@ -137,7 +137,7 @@ class ContourImageGenerator(object):
         """
 
         images_type = images_type.lower()
-        allowed_types = ['both', 'spacing', 'spacing']
+        allowed_types = ['both', 'length', 'spacing']
 
         if images_type not in allowed_types:
             raise Exception("Invalid Image Type")
@@ -210,7 +210,7 @@ class ContourImageGenerator(object):
                     label_arr.append(self.c_spacing_expected_gains[select_idx])
 
             image_arr = np.stack(image_arr, axis=0)
-            label_arr = np.stack(label_arr, axis=0)
+            label_arr = np.reshape(np.stack(label_arr, axis=0), (10, 1))
 
             yield image_arr, label_arr
 
