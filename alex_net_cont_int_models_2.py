@@ -16,11 +16,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import keras.backend as K
-from keras.layers import Input, Conv2D
+from keras.layers import Input, Conv2D, Dense
 from keras.models import Model
 from keras.engine.topology import Layer
 import keras
 import keras.activations as activations
+from keras.regularizers import l1
 
 import alex_net_cont_int_models as old_cont_int_models
 import contour_image_generator
@@ -143,14 +144,16 @@ class MultiplicativeContourIntegrationLayer(Layer):
             shape=(ch, self.n, self.n,),
             initializer='glorot_normal',
             name='raw_kernel',
-            trainable=True
+            trainable=True,
+            regularizer=l1(0.05),
         )
 
         self.bias = self.add_weight(
             shape=(ch, 1, 1),
             initializer='zeros',
             name='bias',
-            trainable=True
+            trainable=True,
+            #regularizer=l1(0.01)
         )
 
         super(MultiplicativeContourIntegrationLayer, self).build(input_shape)
@@ -253,8 +256,107 @@ if __name__ == '__main__':
     K.clear_session()
     K.set_image_dim_ordering('th')
 
-    # --------------------------------
-    tgt_filter_idx = 10
+    # # --------------------------------
+    # tgt_filter_idx = 10
+    #
+    # # Build the contour integration model
+    # # -----------------------------------
+    # print("Building Model ...")
+    # contour_integration_model = build_contour_integration_training_model(
+    #     rf_size=25,
+    #     tgt_filt_idx=tgt_filter_idx
+    # )
+    # print contour_integration_model.summary()
+    #
+    # # Define callback functions to get activations of L1 convolutional layer &
+    # # L2 contour integration layer
+    # l1_activations_cb = alex_net_utils.get_activation_cb(contour_integration_model, 1)
+    # l2_activations_cb = alex_net_utils.get_activation_cb(contour_integration_model, 2)
+    #
+    # # Store the start weights & bias for comparison later
+    # start_weights, start_bias = contour_integration_model.layers[2].get_weights()
+    #
+    # # Build the contour image generator
+    # # ----------------------------------
+    # print("Building Train Image Generator ...")
+    # feature_extract_kernels = K.eval(contour_integration_model.layers[1].weights[0])
+    # feature_extract_kernel = feature_extract_kernels[:, :, :, tgt_filter_idx]
+    #
+    # fragment = np.zeros((11, 11, 3))
+    # fragment[:, (0, 3, 4, 5, 9, 10), :] = 255.0
+    #
+    # train_image_generator = contour_image_generator.ContourImageGenerator(
+    #     tgt_filt=feature_extract_kernel,
+    #     tgt_filt_idx=tgt_filter_idx,
+    #     contour_tile_loc_cb=alex_net_utils.vertical_contour_generator,
+    #     row_offset=0,
+    #     frag=fragment
+    # )
+    #
+    # # # Test the feature extract Kernel
+    # s = train_image_generator.generate(images_type='both')
+    # # X, y = s.next()
+    # # train_image_generator.show_image_batch(X, y)
+    #
+    # # Train the model
+    # # ---------------
+    # print("Starting Training ...")
+    #
+    # contour_integration_model.compile(optimizer='Adam', loss='mse')
+    #
+    # history = contour_integration_model.fit_generator(
+    #     generator=s,
+    #     steps_per_epoch=1,
+    #     epochs=1000,
+    #     verbose=2,
+    #     # max_q_size=1,
+    #     # workers=1,
+    # )
+    #
+    # plt.figure()
+    # plt.plot(history.history['loss'])
+    # plt.title('model loss')
+    # plt.ylabel('loss')
+    # plt.xlabel('epoch')
+    #
+    # # Plot the Learnt weights
+    # # -----------------------
+    # plot_optimized_weights(
+    #     contour_integration_model,
+    #     tgt_filter_idx,
+    #     start_weights,
+    #     start_bias)
+    #
+    # # Plot Gain vs Contour Length after Optimization
+    # complex_bg.main_contour_length_routine(
+    #     fragment,
+    #     l1_activations_cb,
+    #     l2_activations_cb,
+    #     alex_net_utils.vertical_contour_generator,
+    #     tgt_filter_idx,
+    #     smoothing=True,
+    #     row_offset=0,
+    #     n_runs=100,
+    # )
+    #
+    # # Plot Gain vs Contour Spacing after Optimization
+    # complex_bg.main_contour_spacing_routine(
+    #     fragment,
+    #     l1_activations_cb,
+    #     l2_activations_cb,
+    #     alex_net_utils.vertical_contour_generator,
+    #     tgt_filter_idx,
+    #     smoothing=True,
+    #     row_offset=0,
+    #     n_runs=100)
+
+    # -------------------------------------------------------------------
+    # Horizontal Contour Optimization
+    # -------------------------------------------------------------------
+    print('#' * 25, ' Horizontal Contours ', '#' * 25)
+    tgt_filter_idx = 5
+    fragment = np.zeros((11, 11, 3))
+    fragment[0:6, :, :] = 255.0
 
     # Build the contour integration model
     # -----------------------------------
@@ -279,13 +381,10 @@ if __name__ == '__main__':
     feature_extract_kernels = K.eval(contour_integration_model.layers[1].weights[0])
     feature_extract_kernel = feature_extract_kernels[:, :, :, tgt_filter_idx]
 
-    fragment = np.zeros((11, 11, 3))
-    fragment[:, (0, 3, 4, 5, 9, 10), :] = 255.0
-
     train_image_generator = contour_image_generator.ContourImageGenerator(
         tgt_filt=feature_extract_kernel,
         tgt_filt_idx=tgt_filter_idx,
-        contour_tile_loc_cb=alex_net_utils.vertical_contour_generator,
+        contour_tile_loc_cb=alex_net_utils.horizontal_contour_generator,
         row_offset=0,
         frag=fragment
     )
@@ -329,7 +428,7 @@ if __name__ == '__main__':
         fragment,
         l1_activations_cb,
         l2_activations_cb,
-        alex_net_utils.vertical_contour_generator,
+        alex_net_utils.horizontal_contour_generator,
         tgt_filter_idx,
         smoothing=True,
         row_offset=0,
@@ -341,8 +440,10 @@ if __name__ == '__main__':
         fragment,
         l1_activations_cb,
         l2_activations_cb,
-        alex_net_utils.vertical_contour_generator,
+        alex_net_utils.horizontal_contour_generator,
         tgt_filter_idx,
         smoothing=True,
         row_offset=0,
         n_runs=100)
+
+    alex_net_utils.plot_l1_and_l2_kernel_and_contour_fragment(contour_integration_model,tgt_filter_idx, fragment)
