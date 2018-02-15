@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import pickle
 
 import keras.backend as K
+from keras.optimizers import Adam
 
 import alex_net_utils
 import alex_net_cont_int_models as cont_int_models
@@ -210,7 +211,7 @@ class ContourImageGenerator(object):
                     label_arr.append(self.c_spacing_expected_gains[select_idx])
 
             image_arr = np.stack(image_arr, axis=0)
-            label_arr = np.reshape(np.stack(label_arr, axis=0), (10, 1))
+            label_arr = np.reshape(np.array(label_arr), (len(label_arr), 1))
 
             yield image_arr, label_arr
 
@@ -270,16 +271,34 @@ def optimize_contour_enhancement_weights(
 
     current_gains = l2_output_cb[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] / \
         (l1_output_cb[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] + 1e-8)
+    current_gains = K.expand_dims(current_gains, axis=-1)
 
-    y_true = K.placeholder(shape=(None,))
+    y_true = K.placeholder(shape=(None, 1))
 
-    loss = (y_true - current_gains) ** 2 / expected_gains.shape[0]
+    loss = K.mean((y_true - current_gains) ** 2)
 
     # Gradients of weights and bias wrt to the loss function
     grads = K.gradients(loss, [w_cb, b_cb])
     grads = [gradient / (K.sqrt(K.mean(K.square(gradient))) + 1e-8) for gradient in grads]
 
     iterate = K.function([input_cb, y_true], [loss, grads[0], grads[1], l1_output_cb, l2_output_cb])
+
+    # # Train the model using Adam
+    # # -------------------------------
+    # print("Starting Training")
+    # opt = Adam()
+    #
+    # params = [w_cb, b_cb]
+    #
+    # updates = opt.get_updates(params, [], loss)
+    #
+    # train = K.function([input_cb, y_true], [loss], updates=updates)
+    #
+    # for epoch in range(n_runs):
+    #     images, expected_gains = generator.next()
+    #     loss = train([images, expected_gains])
+    #     print("Epoch: {}, Loss: {}".format(epoch, np.mean(loss)))
+
 
     # 3. Training Loop
     # ----------------
@@ -322,7 +341,7 @@ def optimize_contour_enhancement_weights(
                            (l1_out[:, tgt_filt_idx, tgt_n_loc, tgt_n_loc] + 1e-8))
 
             print("Model Gain: ", np.around(model_gains, 3))
-            print("Expected  : ", np.around(expected_gains, 3))
+            print("Expected  : ", np.around(expected_gains.T, 3))
 
             model.layers[2].set_weights([new_w, new_b])
 
@@ -398,7 +417,7 @@ if __name__ == "__main__":
         tgt_filter_idx,
         fragment,
         alex_net_utils.vertical_contour_generator,
-        n_runs=1000,
+        n_runs=500,
         offset=0,
         optimize_type='both',
         learning_rate=0.00025
