@@ -20,6 +20,7 @@ from keras.layers import Input, Conv2D
 from keras.models import Model
 from keras.engine.topology import Layer
 import keras
+import keras.activations as activations
 
 import alex_net_cont_int_models as old_cont_int_models
 import contour_image_generator
@@ -94,8 +95,11 @@ def build_contour_integration_training_model(tgt_filt_idx, rf_size=25, stride_le
 
     conv_1 = Conv2D(96, (11, 11), strides=stride_length, activation='relu', name='conv_1')(input_layer)
 
-    cont_int_layer = \
-        old_cont_int_models.MultiplicativeContourIntegrationLayer(n=rf_size, activation='relu')(conv_1)
+    cont_int_layer = MultiplicativeContourIntegrationLayer(
+        name='cont_int', rf_size=rf_size)(conv_1)
+
+    # cont_int_layer = \
+    #     old_cont_int_models.MultiplicativeContourIntegrationLayer(n=rf_size, activation='relu')(conv_1)
 
     cont_gain_calc_layer = EnhancementGainCalculatingLayer(tgt_filt_idx)([conv_1, cont_int_layer])
 
@@ -105,6 +109,143 @@ def build_contour_integration_training_model(tgt_filt_idx, rf_size=25, stride_le
     model.layers[1].trainable = False
 
     return model
+
+
+class MultiplicativeContourIntegrationLayer(Layer):
+
+    def __init__(self, rf_size=25, activation=None, **kwargs):
+        """
+        Contour Integration layer - Different from the old multiplicative contour integration layer
+        no mask is assumed.
+
+        :param tgt_filt_idx:
+        :param tgt_neuron_loc:
+        :param kwargs:
+        """
+
+        if 0 == (rf_size & 1):
+            raise Exception("Specified RF size should be odd")
+
+        self.n = rf_size
+        self.activation = activations.get(activation)
+        super(MultiplicativeContourIntegrationLayer, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        """
+
+        :param input_shape:
+        :return:
+        """
+        _, ch, r, c = input_shape
+        # print("Build Fcn: Channel First Input shape ", input_shape)
+
+        self.kernel = self.add_weight(
+            shape=(ch, self.n, self.n,),
+            initializer='glorot_normal',
+            name='raw_kernel',
+            trainable=True
+        )
+
+        self.bias = self.add_weight(
+            shape=(ch, 1, 1),
+            initializer='zeros',
+            name='bias',
+            trainable=True
+        )
+
+        super(MultiplicativeContourIntegrationLayer, self).build(input_shape)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape  # Layer does not change the shape of the input
+
+    def call(self, inputs, **kwargs):
+        """
+
+        :param inputs:
+        :param kwargs:
+        :return:
+        """
+        _, ch, r, c = K.int_shape(inputs)
+        # print("Call Fcn: Channel First Input shape ", K.int_shape(inputs))
+
+        # 1. Inputs Formatting
+        # --------------------
+        # Pad the rows and columns to allow full matrix multiplication
+        # Note that this function is aware of which dimension the columns and rows are
+        padded_inputs = K.spatial_2d_padding(
+            inputs,
+            ((self.n / 2, self.n / 2), (self.n / 2, self.n / 2))
+        )
+        # print("Call Fcn: padded_inputs shape ", K.int_shape(padded_inputs))
+
+        # Channel first, batch second. This is done to take the unknown batch size into the matrix
+        # multiply where it can be handled more easily
+        inputs_chan_first = K.permute_dimensions(padded_inputs, [1, 0, 2, 3])
+        # print("Call Fcn: inputs_chan_first shape: ", inputs_chan_first.shape)
+
+        # 2. Kernel Formatting
+        # --------------------
+        # Flatten rows and columns into a single dimension
+        k_ch, k_r, k_c = K.int_shape(self.kernel)
+        apply_kernel = K.reshape(self.kernel, (k_ch, k_r * k_c, 1))
+        # print("Call Fcn: kernel for matrix multiply: ", apply_kernel.shape)
+
+        # 3. Get outputs at each spatial location
+        # ---------------------------------------
+        xs = []
+        for i in range(r):
+            for j in range(c):
+                input_slice = inputs_chan_first[:, :, i:i + self.n, j:j + self.n]
+                input_slice_apply = K.reshape(input_slice, (ch, -1, self.n ** 2))
+
+                output_slice = K.batch_dot(input_slice_apply, apply_kernel)
+
+                # Reshape the output slice to put batch first
+                output_slice = K.permute_dimensions(output_slice, [1, 0, 2])
+                xs.append(output_slice)
+
+        # print("Call Fcn: len of xs", len(xs))
+        # print("Call Fcn: shape of each element of xs", xs[0].shape)
+
+        # Reshape the output to correct format
+        outputs = K.concatenate(xs, axis=2)
+        outputs = K.reshape(outputs, (-1, ch, r, c))  # Break into row and column
+
+        # 4. Add the lateral and the feed-forward activations
+        # ------------------------------------------------------
+        outputs = outputs * inputs + self.bias
+        outputs = self.activation(outputs)
+
+        return outputs + inputs
+
+
+def plot_optimized_weights(tgt_model, tgt_filt_idx, start_w, start_b):
+    """
+    Plot starting and trained weights at the specified index
+
+    :param tgt_model:
+    :param tgt_filt_idx:
+    :param start_w:
+    :param start_b:
+    :return:
+    """
+    opt_w, opt_b = tgt_model.layers[2].get_weights()
+    max_v_opt = max(opt_w.max(), abs(opt_w.min()))
+    max_v_start = max(start_w.max(), abs(start_w.min()))
+
+    f = plt.figure()
+    f.add_subplot(1, 2, 1)
+
+    plt.imshow(start_w[tgt_filt_idx, :, :], vmin=-max_v_start, vmax=max_v_start)
+    cb = plt.colorbar(orientation='horizontal')
+    cb.ax.tick_params(labelsize=20)
+    plt.title("Start weights & bias=%0.4f" % start_b[tgt_filt_idx])
+
+    f.add_subplot(1, 2, 2)
+    plt.imshow(opt_w[tgt_filt_idx, :, :], vmin=-max_v_opt, vmax=max_v_opt)
+    cb = plt.colorbar(orientation='horizontal')
+    cb.ax.tick_params(labelsize=20)
+    plt.title("Best weights & bias=%0.4f" % opt_b[tgt_filt_idx])
 
 
 if __name__ == '__main__':
@@ -158,8 +299,6 @@ if __name__ == '__main__':
     # ---------------
     print("Starting Training ...")
 
-    custom_optimizer = keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
-
     contour_integration_model.compile(optimizer='Adam', loss='mse')
 
     history = contour_integration_model.fit_generator(
@@ -179,7 +318,7 @@ if __name__ == '__main__':
 
     # Plot the Learnt weights
     # -----------------------
-    mult_param_opt.plot_optimized_weights(
+    plot_optimized_weights(
         contour_integration_model,
         tgt_filter_idx,
         start_weights,
