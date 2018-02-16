@@ -129,10 +129,11 @@ class ContourImageGenerator(object):
             self.show_image(display_img)
             plt.title("Expected Gain %0.4f" % img_labels[i_idx])
 
-    def generate(self, images_type='both'):
+    def generate(self, images_type='both', batch_size=10):
         """
         This is the main function of this class.
 
+        :param batch_size:
         :param images_type:
         :return:
         """
@@ -143,13 +144,26 @@ class ContourImageGenerator(object):
         if images_type not in allowed_types:
             raise Exception("Invalid Image Type")
 
+        if images_type == 'both':
+            n_c_len_images = batch_size >> 1
+            n_c_spacing_images = batch_size - n_c_len_images
+        elif images_type == 'length':
+            n_c_len_images = batch_size
+            n_c_spacing_images = 0
+        else:
+            n_c_len_images = 0
+            n_c_spacing_images = batch_size
+
+        print("Generated batches will have %d contour length and %d contour spacing images"
+              % (n_c_len_images, n_c_spacing_images))
+
         while True:
 
             image_arr = []
             label_arr = []
 
             if images_type is not 'spacing':
-                for i in range(len(self.c_len_arr)):
+                for i in range(n_c_len_images):
 
                     # select_idx = i
                     select_idx = np.random.randint(0, len(self.c_len_arr))
@@ -180,7 +194,7 @@ class ContourImageGenerator(object):
                     label_arr.append(self.c_len_expected_gains[select_idx])
 
             if images_type is not 'length':
-                for i in range(len(self.c_spacing_arr)):
+                for i in range(n_c_spacing_images):
 
                     # select_idx = i
                     select_idx = np.random.randint(0, len(self.c_spacing_arr))
