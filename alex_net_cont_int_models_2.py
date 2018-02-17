@@ -147,7 +147,7 @@ class MultiplicativeContourIntegrationLayer(Layer):
             initializer='glorot_normal',
             name='raw_kernel',
             trainable=True,
-            #regularizer=l1(0.05),
+            regularizer=l1(0.05),
         )
 
         self.bias = self.add_weight(
@@ -464,7 +464,7 @@ if __name__ == '__main__':
     contour_integration_model = build_contour_integration_training_model(
         rf_size=25,
         tgt_filt_idx=tgt_filter_idx,
-        stride_length=(2, 2)
+        stride_length=(4, 4)
     )
     print contour_integration_model.summary()
 
@@ -537,6 +537,12 @@ if __name__ == '__main__':
         start_weights,
         start_bias)
 
+    # Compare Results with Neurophysiological Data
+    # --------------------------------------------
+    tgt_neuron_location = contour_integration_model.layers[2].output_shape[2:]
+    tgt_neuron_location = [loc >> 1 for loc in tgt_neuron_location]
+    print("Comparing Model & Neurophysiological results for neuron at location: ", tgt_neuron_location)
+
     # Plot Gain vs Contour Length after Optimization
     complex_bg.main_contour_length_routine(
         fragment,
@@ -547,6 +553,7 @@ if __name__ == '__main__':
         smoothing=True,
         row_offset=tile_row_offset,
         n_runs=100,
+        tgt_neuron_loc=tgt_neuron_location
     )
 
     # Plot Gain vs Contour Spacing after Optimization
@@ -558,6 +565,8 @@ if __name__ == '__main__':
         tgt_filter_idx,
         smoothing=True,
         row_offset=tile_row_offset,
-        n_runs=100)
+        n_runs=100,
+        tgt_neuron_loc=tgt_neuron_location
+    )
 
     alex_net_utils.plot_l1_and_l2_kernel_and_contour_fragment(contour_integration_model, tgt_filter_idx, fragment)
