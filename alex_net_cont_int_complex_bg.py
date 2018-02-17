@@ -56,7 +56,7 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
     frag_len = frag.shape[0]
 
     # Output dimensions of the first convolutional layer of Alexnet [55x55x96] and a stride=4 was used
-    center_neuron_loc = 27 * 4  # Starting Visual Field Location of neuron @ location (27,27)
+    center_neuron_loc = 108  # RF size of 11 at center of l1 activation
 
     # Sea of similar but randomly oriented fragments
     # -----------------------------------------------
@@ -117,11 +117,12 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
     return tgt_l1_act, tgt_l2_act, test_image
 
 
-def main_contour_length_routine(
-        frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, row_offset=0, n_runs=1):
+def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx,
+                                smoothing, row_offset=0, n_runs=1, tgt_neuron_loc=(27, 27)):
     """
     Contours of various lengths - Figure 2, B3
 
+    :param tgt_neuron_loc:
     :param frag:
     :param l1_act_cb:
     :param l2_act_cb:
@@ -135,7 +136,6 @@ def main_contour_length_routine(
     """
     contour_lengths_arr = range(1, 11, 2)
 
-    tgt_neuron_loc = (27, 27)  # Neuron focused in the center of the image.
     tgt_neuron_l2_act = np.zeros((n_runs, len(contour_lengths_arr)))
     tgt_neuron_l1_act = np.zeros((n_runs, len(contour_lengths_arr)))
 
@@ -164,7 +164,7 @@ def main_contour_length_routine(
                 fig2.suptitle(title)
 
     # Plot the Contour Integration Gain of the target neuron as contour length increases
-    tgt_neuron_gain = tgt_neuron_l2_act / (tgt_neuron_l1_act + 1e-5)
+    tgt_neuron_gain = tgt_neuron_l2_act / (tgt_neuron_l1_act + 1e-8)
     tgt_neuron_gain_mean = tgt_neuron_gain.mean(axis=0)
     tgt_neuron_gain_std = tgt_neuron_gain.std(axis=0)
 
@@ -190,11 +190,12 @@ def main_contour_length_routine(
     return f
 
 
-def main_contour_spacing_routine(
-        frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx, smoothing, row_offset=0, n_runs=1):
+def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_filt_idx,
+                                 smoothing, row_offset=0, n_runs=1, tgt_neuron_loc=(27, 27)):
     """
     Various Contour Spacing - Figure 2, B4
 
+    :param tgt_neuron_loc:
     :param frag:
     :param l1_act_cb:
     :param l2_act_cb:
@@ -216,7 +217,6 @@ def main_contour_spacing_routine(
     relative_colinear_dist_arr = np.array([1, 1.2, 1.4, 1.6, 1.8, 1.9])
     spacing_bw_tiles = np.floor(relative_colinear_dist_arr * frag_len) - frag_len
 
-    tgt_neuron_loc = (27, 27)  # Neuron focused in the center of the image.
     tgt_neuron_l1_act = np.zeros((n_runs, len(spacing_bw_tiles)))
     tgt_neuron_l2_act = np.zeros((n_runs, len(spacing_bw_tiles)))
 
