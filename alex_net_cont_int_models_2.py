@@ -487,6 +487,8 @@ if __name__ == '__main__':
         tgt_filter_idx,
         show_plots=False
     )
+    # tile_row_offset = -tile_row_offset
+    print("Orientation of Filter = %0.4f and Row offset %d" % (orientation, tile_row_offset))
 
     fragment = np.copy(feature_extract_kernel)
     fragment = fragment.sum(axis=2)  # collapse all channels
