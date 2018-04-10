@@ -19,11 +19,15 @@ def get_2d_gaussian_kernel(shape, sigma=1.0):
     :param sigma: standard deviation of generated Gaussian
     :return:
     """
-    ax = np.arange(-shape[0] // 2 + 1, shape[0] // 2 + 1)
-    ay = np.arange(-shape[1] // 2 + 1, shape[1] // 2 + 1)
+    # ax = np.arange(-shape[0] // 2 + 1, shape[0] // 2 + 1)
+    # ay = np.arange(-shape[1] // 2 + 1, shape[1] // 2 + 1)
+    ax = np.linspace(-1, 1, shape[0])
+    ay = np.linspace(-1, 1, shape[1])
 
     xx, yy = np.meshgrid(ax, ay)
     kernel = np.exp(-(xx ** 2 + yy ** 2) / (2 * sigma ** 2))
+
+    kernel = kernel.reshape(shape)
 
     return kernel
 
@@ -368,8 +372,8 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True, sig
             start_y_loc = max(y_arr[idx], 0)
             stop_y_loc = min(y_arr[idx] + tile_len, img_len)
 
-            # print("Placing Fragment at location  x=(%d, %d), y = (%d, %d),"
-            #       % (start_x_loc, stop_x_loc, start_y_loc, stop_y_loc))
+            print("Placing Fragment at location  l1=(%d, %d), y = (%d, %d),"
+                  % (start_x_loc, stop_x_loc, start_y_loc, stop_y_loc))
 
             # Adjust incomplete beginning tiles
             if x_arr[idx] < 0:
