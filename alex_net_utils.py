@@ -332,12 +332,12 @@ def get_background_tiles_locations(frag_len, img_len, row_offset, space_bw_tiles
     return loc_arr
 
 
-def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True, sigma=4.0):
+def tile_image(img, frag, insert_loc_arr, rotate=True, gaussian_smoothing=True, sigma=4.0):
     """
     Place tile 'fragments' at the specified starting positions (x, y) in the image.
 
     :param frag: contour fragment to be inserted
-    :param insert_locs: array of (x,y) starting positions of where tiles will be inserted
+    :param insert_loc_arr: array of (x,y) starting positions of where tiles will be inserted
     :param img: image where tiles will be placed
     :param rotate: If true each tile is randomly rotated before insertion.
             Currently 8 possible orientations
@@ -355,13 +355,12 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True, sig
     g_kernel = np.reshape(g_kernel, (g_kernel.shape[0], g_kernel.shape[1], 1))
     g_kernel = np.repeat(g_kernel, 3, axis=2)
 
-    x_arr = insert_locs[0]
-    y_arr = insert_locs[1]
-
-    if isinstance(x_arr, int):
-        x_arr = np.array([x_arr])
-    if isinstance(y_arr, int):
-        y_arr = np.array([y_arr])
+    if insert_loc_arr.ndim == 1:
+        x_arr = [insert_loc_arr[0]]
+        y_arr = [insert_loc_arr[1]]
+    else:
+        x_arr = insert_loc_arr[:, 0]
+        y_arr = insert_loc_arr[:, 1]
 
     for idx in range(len(x_arr)):
 
@@ -375,8 +374,8 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True, sig
             start_y_loc = max(y_arr[idx], 0)
             stop_y_loc = min(y_arr[idx] + tile_len, img_len - 1)
 
-            print("Placing Fragment at location  l1=(%d, %d), y = (%d, %d),"
-                  % (start_x_loc, stop_x_loc, start_y_loc, stop_y_loc))
+            # print("Placing Fragment at location  l1=(%d, %d), y = (%d, %d),"
+            #       % (start_x_loc, stop_x_loc, start_y_loc, stop_y_loc))
 
             # Adjust incomplete beginning tiles
             if x_arr[idx] < 0:
@@ -429,13 +428,12 @@ def highlight_tiles(in_img, tile_shape, insert_loc_arr, edge_color=(255, 0, 0)):
     img_len = in_img.shape[0]
     tile_len = tile_shape[0]
 
-    x_arr = insert_loc_arr[:, 0]
-    y_arr = insert_loc_arr[:, 1]
-
-    if isinstance(x_arr, int):
-        x_arr = np.array([x_arr])
-    if isinstance(y_arr, int):
-        y_arr = np.array([y_arr])
+    if insert_loc_arr.ndim == 1:
+        x_arr = [insert_loc_arr[0]]
+        y_arr = [insert_loc_arr[1]]
+    else:
+        x_arr = insert_loc_arr[:, 0]
+        y_arr = insert_loc_arr[:, 1]
 
     for idx in range(len(x_arr)):
 
