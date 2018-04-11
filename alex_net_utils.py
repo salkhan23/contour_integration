@@ -326,7 +326,10 @@ def get_background_tiles_locations(frag_len, img_len, row_offset, space_bw_tiles
     start_y = np.array(start_y)
     start_y = np.reshape(start_y, (start_y.shape[0] * start_y.shape[1]))
 
-    return start_x, start_y
+    loc_arr = np.array([start_x, start_y])
+    loc_arr = loc_arr.T
+
+    return loc_arr
 
 
 def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True, sigma=4.0):
