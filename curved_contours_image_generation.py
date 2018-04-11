@@ -197,7 +197,7 @@ if __name__ == '__main__':
     # top left corner of central tile
     center_tile_center = (IMAGE_SIZE[0:2] // 2)
     center_stim_tile_start = center_tile_center - (stim_tile_size[0:2] // 2)
-    center_full_tile_start = center_tile_center - (stim_tile_size[0:2] // 2)
+    center_full_tile_start = center_tile_center - (full_tile_size[0:2] // 2)
 
     full_tile_start_loc_arr = alex_net_utils.get_background_tiles_locations(
         frag_len=full_tile_size[0],
@@ -225,7 +225,7 @@ if __name__ == '__main__':
         gaussian_smoothing=False
     )
 
-    path_tile_centers = [center_stim_tile_start]
+    path_tile_centers = [center_tile_center]
 
     # # 4.b Right hand size of contour
     acc_angle = 0
@@ -245,11 +245,11 @@ if __name__ == '__main__':
         tile_offset[1] = path_fragment_dist * np.cos(acc_angle / 180.0 * np.pi)
 
         curr_tile_center = prev_tile_center + tile_offset
-        print("Current tile center {0}. (offsets {1}, previous {2})".format(
-            curr_tile_center,
-            tile_offset,
-            prev_tile_center
-        ))
+        # print("Current tile center {0}. (offsets {1}, previous {2})".format(
+        #     curr_tile_center,
+        #     tile_offset,
+        #     prev_tile_center
+        # ))
 
         # check if the current tile overlaps with the previous tile
         # TODO: Check if current tile overlaps with ANY previous one.
@@ -273,11 +273,11 @@ if __name__ == '__main__':
             tile_offset[1] += dist_delta * np.cos(acc_angle / 180.0 * np.pi)
 
             curr_tile_center = prev_tile_center + tile_offset
-            print("Updated Current tile center {0}. (offsets {1}, previous {2})".format(
-                curr_tile_center,
-                tile_offset,
-                prev_tile_center
-            ))
+            # print("Updated Current tile center {0}. (offsets {1}, previous {2})".format(
+            #     curr_tile_center,
+            #     tile_offset,
+            #     prev_tile_center
+            # ))
 
         test_image = alex_net_utils.tile_image(
             test_image,
@@ -308,11 +308,11 @@ if __name__ == '__main__':
         tile_offset[1] = -path_fragment_dist * np.cos(acc_angle / 180.0 * np.pi)
 
         curr_tile_center = prev_tile_center + tile_offset
-        print("Current tile center {0}. (offsets {1}, previous {2})".format(
-            curr_tile_center,
-            tile_offset,
-            prev_tile_center
-        ))
+        # print("Current tile center {0}. (offsets {1}, previous {2})".format(
+        #     curr_tile_center,
+        #     tile_offset,
+        #     prev_tile_center
+        # ))
 
         # check if the current tile overlaps with the previous tile
         # TODO: Check if current tile overlaps with ANY previous one.
@@ -336,11 +336,11 @@ if __name__ == '__main__':
             tile_offset[1] -= dist_delta * np.cos(acc_angle / 180.0 * np.pi)
 
             curr_tile_center = prev_tile_center + tile_offset
-            print("Updated Current tile center {0}. (offsets {1}, previous {2})".format(
-                curr_tile_center,
-                tile_offset,
-                prev_tile_center
-            ))
+            # print("Updated Current tile center {0}. (offsets {1}, previous {2})".format(
+            #     curr_tile_center,
+            #     tile_offset,
+            #     prev_tile_center
+            # ))
 
         test_image = alex_net_utils.tile_image(
             test_image,
@@ -353,41 +353,90 @@ if __name__ == '__main__':
         prev_tile_center = curr_tile_center
         path_tile_centers.append(curr_tile_center)
 
+    path_tile_centers = np.array(path_tile_centers)
+
+    # Display the contour
     # plt.figure()
     # plt.imshow(test_image)
+    # plt.title("Contour Image without any background")
 
     # -----------------------------------------------------------------------------------
     # 5. Place randomly distorted fragments in the background in unoccupied locations
     # -----------------------------------------------------------------------------------
-    path_tile_centers = np.array(path_tile_centers)
+    max_offset_full_and_stim_tiles = full_tile_size[0] - stim_tile_size[0]
+
+    bg_stim_tile_start_loc_arr = full_tile_start_loc_arr + \
+        np.random.randint(0, max_offset_full_and_stim_tiles, full_tile_start_loc_arr.shape)
+
+    # Remove BG tile closest to each stim tile
+    replaced_til_loc_arr = []
 
     for path_tile_center in path_tile_centers:
+
         path_tile_center = np.expand_dims(path_tile_center, axis=0)
         path_tile_start_loc = path_tile_center - (stim_tile_size[0: 2] // 2)
 
-        dist_to_bg_tiles = np.linalg.norm(path_tile_start_loc - full_tile_start_loc_arr, axis=1)
+        dist_to_bg_tiles = np.linalg.norm(path_tile_start_loc - bg_stim_tile_start_loc_arr, axis=1)
+
         overlapping_bg_tile_idx = np.argmin(dist_to_bg_tiles)
 
         print("Contour Tile @ start {0}, overlaps with background tile @ start {1}, index={2}".format(
             path_tile_start_loc,
-            full_tile_start_loc_arr[overlapping_bg_tile_idx,:],
+            bg_stim_tile_start_loc_arr[overlapping_bg_tile_idx, :],
             overlapping_bg_tile_idx
         ))
 
-        full_tile_start_loc_arr = np.delete(full_tile_start_loc_arr, overlapping_bg_tile_idx, axis=0)
+        replaced_til_loc_arr.append(bg_stim_tile_start_loc_arr[overlapping_bg_tile_idx, :],)
 
-    # Add an random offset to the tile star location
-    bg_stim_tile_start_loc_arr = full_tile_start_loc_arr + \
-        np.random.randint(0, full_tile_size[0] - stim_tile_size[0], full_tile_start_loc_arr.shape)
+        bg_stim_tile_start_loc_arr = np.delete(bg_stim_tile_start_loc_arr, overlapping_bg_tile_idx, axis=0)
 
     test_image = alex_net_utils.tile_image(
         test_image,
         stim_tile,
-        (bg_stim_tile_start_loc_arr[:,0], bg_stim_tile_start_loc_arr[:,1]),
+        bg_stim_tile_start_loc_arr,
         rotate=True,
-        #delta_rotation=beta,
+        delta_rotation=beta,
         gaussian_smoothing=False
     )
 
+    # display the Final Image
     plt.figure()
     plt.imshow(test_image)
+    plt.title("Final Image")
+
+    # Highlight Contour Tiles
+    contour_highlighted_image = alex_net_utils.highlight_tiles(
+        test_image,
+        stim_tile_size[0:2],
+        path_tile_centers - (stim_tile_size[0:2] // 2)
+    )
+
+    plt.figure()
+    plt.imshow(contour_highlighted_image)
+    plt.title("Contour fragments Highlighted")
+
+    # Removed Background Tiles
+    removed_bg_tiles_image = alex_net_utils.highlight_tiles(
+        test_image,
+        stim_tile_size[0:2],
+        np.array(replaced_til_loc_arr),
+        edge_color=[0, 255, 0]
+    )
+
+    removed_bg_tiles_image = alex_net_utils.highlight_tiles(
+        removed_bg_tiles_image,
+        full_tile_size[0:2],
+        full_tile_start_loc_arr,
+        edge_color=[255, 0, 0]
+    )
+
+
+
+    plt.figure()
+    plt.imshow(removed_bg_tiles_image)
+    plt.title("Removed Background Tiles highlighted")
+
+
+
+
+
