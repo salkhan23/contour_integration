@@ -332,7 +332,7 @@ def get_background_tiles_locations(frag_len, img_len, row_offset, space_bw_tiles
     return loc_arr
 
 
-def tile_image(img, frag, insert_loc_arr, rotate=True, gaussian_smoothing=True, sigma=4.0):
+def tile_image(img, frag, insert_loc_arr, rotate=True, delta_rotation=45, gaussian_smoothing=True, sigma=4.0):
     """
     Place tile 'fragments' at the specified starting positions (x, y) in the image.
 
@@ -340,7 +340,7 @@ def tile_image(img, frag, insert_loc_arr, rotate=True, gaussian_smoothing=True, 
     :param insert_loc_arr: array of (x,y) starting positions of where tiles will be inserted
     :param img: image where tiles will be placed
     :param rotate: If true each tile is randomly rotated before insertion.
-            Currently 8 possible orientations
+    :param delta_rotation: min rotation value
     :param gaussian_smoothing: If True, each fragment is multiplied with a Gaussian smoothing
             mask to prevent tile edges becoming part of stimuli [they will lie in the center of the RF of
             many neurons. [Default=True]
@@ -393,7 +393,7 @@ def tile_image(img, frag, insert_loc_arr, rotate=True, gaussian_smoothing=True, 
             #       tile_y_start, tile_y_start + stop_y_loc - start_y_loc))
 
             if rotate:
-                tile = randomly_rotate_tile(frag, 45)
+                tile = randomly_rotate_tile(frag, delta_rotation)
             else:
                 tile = frag
 
