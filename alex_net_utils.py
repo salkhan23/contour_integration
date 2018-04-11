@@ -370,10 +370,10 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True, sig
         if (-tile_len < x_arr[idx] < img_len) and (-tile_len < y_arr[idx] < img_len):
 
             start_x_loc = max(x_arr[idx], 0)
-            stop_x_loc = min(x_arr[idx] + tile_len, img_len)
+            stop_x_loc = min(x_arr[idx] + tile_len, img_len - 1)
 
             start_y_loc = max(y_arr[idx], 0)
-            stop_y_loc = min(y_arr[idx] + tile_len, img_len)
+            stop_y_loc = min(y_arr[idx] + tile_len, img_len - 1)
 
             print("Placing Fragment at location  l1=(%d, %d), y = (%d, %d),"
                   % (start_x_loc, stop_x_loc, start_y_loc, stop_y_loc))
@@ -410,6 +410,53 @@ def tile_image(img, frag, insert_locs, rotate=True, gaussian_smoothing=True, sig
                      tile_y_start: tile_y_start + stop_y_loc - start_y_loc, :]
 
     return img
+
+
+def highlight_tiles(in_img, tile_shape, insert_loc_arr, edge_color=(255, 0, 0)):
+    """
+    Highlight specified tiles in the image
+
+
+    :param in_img:
+    :param tile_shape:
+    :param insert_loc_arr:
+    :param edge_color:
+
+    :return: output image with the tiles highlighted
+    """
+    out_img = np.copy(in_img)
+
+    img_len = in_img.shape[0]
+    tile_len = tile_shape[0]
+
+    x_arr = insert_loc_arr[:, 0]
+    y_arr = insert_loc_arr[:, 1]
+
+    if isinstance(x_arr, int):
+        x_arr = np.array([x_arr])
+    if isinstance(y_arr, int):
+        y_arr = np.array([y_arr])
+
+    for idx in range(len(x_arr)):
+
+        if (-tile_len < x_arr[idx] < img_len) and (-tile_len < y_arr[idx] < img_len):
+
+            start_x_loc = max(x_arr[idx], 0)
+            stop_x_loc = min(x_arr[idx] + tile_len, img_len-1)
+
+            start_y_loc = max(y_arr[idx], 0)
+            stop_y_loc = min(y_arr[idx] + tile_len, img_len-1)
+
+            print("Highlight tile @ tl=({0}, {1}), br=({2},{3})".format(
+                start_x_loc, start_y_loc, stop_x_loc, stop_y_loc))
+
+            out_img[start_x_loc: stop_x_loc, start_y_loc, :] = edge_color
+            out_img[start_x_loc: stop_x_loc, stop_y_loc, :] = edge_color
+
+            out_img[start_x_loc, start_y_loc: stop_y_loc, :] = edge_color
+            out_img[stop_x_loc, start_y_loc: stop_y_loc, :] = edge_color
+
+    return out_img
 
 
 def find_most_active_l1_kernel_index(frag, l1_act_cb, plot=True):
