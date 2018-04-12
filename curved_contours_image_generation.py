@@ -192,7 +192,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # 3. Initializations
     # -----------------------------------------------------------------------------------
-    test_image = np.zeros(IMAGE_SIZE, dtype='uint8')
+    test_image = np.ones(IMAGE_SIZE, dtype='uint8') * 0
 
     # top left corner of central tile
     center_tile_center = (IMAGE_SIZE[0:2] // 2)
@@ -365,31 +365,40 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     max_offset_full_and_stim_tiles = full_tile_size[0] - stim_tile_size[0]
 
+    # Uniformly distribute the position of the stim tile within the full tile
     bg_stim_tile_start_loc_arr = full_tile_start_loc_arr + \
         np.random.randint(0, max_offset_full_and_stim_tiles, full_tile_start_loc_arr.shape)
 
-    # Remove BG tile closest to each stim tile
-    replaced_til_loc_arr = []
+    # Remove BG tile that overlap with the contour
+    replaced_tile_loc_arr = []
 
     for path_tile_center in path_tile_centers:
 
         path_tile_center = np.expand_dims(path_tile_center, axis=0)
-        path_tile_start_loc = path_tile_center - (stim_tile_size[0: 2] // 2)
+        path_tile_start = path_tile_center - (stim_tile_size[0: 2] // 2)
 
-        dist_to_bg_tiles = np.linalg.norm(path_tile_start_loc - bg_stim_tile_start_loc_arr, axis=1)
+        dist_to_bg_tiles = np.linalg.norm(path_tile_start - bg_stim_tile_start_loc_arr, axis=1)
 
-        overlapping_bg_tile_idx = np.argmin(dist_to_bg_tiles)
+        overlapping_tile_idx_arr = np.argwhere(dist_to_bg_tiles < stim_tile_size[0])
 
-        print("Contour Tile @ start {0}, overlaps with background tile @ start {1}, index={2}".format(
-            path_tile_start_loc,
-            bg_stim_tile_start_loc_arr[overlapping_bg_tile_idx, :],
-            overlapping_bg_tile_idx
-        ))
+        # for idx, dist in enumerate(dist_to_bg_tiles):
+        #     print("{0}: {1}".format(idx, dist))
+        #
+        # print("path tile {0} overlaps with bg tiles at index {1}".format(
+        #     path_tile_center, overlapping_tile_idx_arr
+        # ))
+        # raw_input()
 
-        replaced_til_loc_arr.append(bg_stim_tile_start_loc_arr[overlapping_bg_tile_idx, :],)
+        for idx in overlapping_tile_idx_arr:
+            replaced_tile_loc_arr.append(bg_stim_tile_start_loc_arr[idx, :], )
 
-        bg_stim_tile_start_loc_arr = np.delete(bg_stim_tile_start_loc_arr, overlapping_bg_tile_idx, axis=0)
+        bg_stim_tile_start_loc_arr = \
+            np.delete(bg_stim_tile_start_loc_arr, overlapping_tile_idx_arr, axis=0)
 
+    replaced_tile_loc_arr = np.array(replaced_tile_loc_arr)
+    replaced_tile_loc_arr = np.squeeze(replaced_tile_loc_arr, axis=1)
+
+    # Add BG tiles
     test_image = alex_net_utils.tile_image(
         test_image,
         stim_tile,
@@ -399,11 +408,14 @@ if __name__ == '__main__':
         gaussian_smoothing=False
     )
 
-    # display the Final Image
+    # Display the Final Image
     plt.figure()
     plt.imshow(test_image)
     plt.title("Final Image")
 
+    # -----------------------------------------------------------------------------------
+    # Debugging Plots
+    # -----------------------------------------------------------------------------------
     # Highlight Contour Tiles
     contour_highlighted_image = alex_net_utils.highlight_tiles(
         test_image,
@@ -415,21 +427,26 @@ if __name__ == '__main__':
     plt.imshow(contour_highlighted_image)
     plt.title("Contour fragments Highlighted")
 
-    # Removed Background Tiles
-    removed_bg_tiles_image = alex_net_utils.highlight_tiles(
-        test_image,
-        stim_tile_size[0:2],
-        np.array(replaced_til_loc_arr),
+    # Highlight Background Full Tiles
+    bg_tiles_image = alex_net_utils.highlight_tiles(
+        contour_highlighted_image,
+        full_tile_size[0:2],
+        full_tile_start_loc_arr,
         edge_color=[0, 255, 0]
     )
 
+    plt.figure()
+    plt.imshow(bg_tiles_image)
+    plt.title("Background Tiles highlighted")
+
+    # Highlight Removed background Tiles
     removed_bg_tiles_image = alex_net_utils.highlight_tiles(
-        removed_bg_tiles_image,
-        full_tile_size[0:2],
-        full_tile_start_loc_arr,
-        edge_color=[255, 0, 0]
+        bg_tiles_image,
+        stim_tile_size[0:2],
+        np.array(replaced_tile_loc_arr),
+        edge_color=[0, 0, 255]
     )
 
     plt.figure()
     plt.imshow(removed_bg_tiles_image)
-    plt.title("Removed Background Tiles highlighted")
+    plt.title("Removed Bg Tiles highlighted")
