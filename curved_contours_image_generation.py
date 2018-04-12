@@ -438,24 +438,11 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     test_image = np.ones(IMAGE_SIZE, dtype='uint8') * 0
 
-    # # top left corner of central tile
-    # center_tile_center = (IMAGE_SIZE[0:2] // 2)
-    # center_stim_tile_start = center_tile_center - (stim_tile_size[0:2] // 2)
-    # center_full_tile_start = center_tile_center - (full_tile_size[0:2] // 2)
-    #
-    # full_tile_start_loc_arr = alex_net_utils.get_background_tiles_locations(
-    #     frag_len=full_tile_size[0],
-    #     img_len=IMAGE_SIZE[0],
-    #     row_offset=0,
-    #     space_bw_tiles=0,
-    #     tgt_n_visual_rf_start=center_full_tile_start[0]
-    # )
-
     beta_rotation = 15
     contour_len = 7
 
-    path_fragment_dist = full_tile_size[0]
-    dist_delta = path_fragment_dist // 4  # If tile overlaps with existing path tile
+    inter_frag_dist = full_tile_size[0]
+    dist_delta = inter_frag_dist // 4  # If tile overlaps with existing path tile
 
     # -----------------------------------------------------------------------------------
     # 4. Add the contour path
@@ -465,7 +452,7 @@ if __name__ == '__main__':
         stim_tile,
         contour_len,
         beta_rotation,
-        path_fragment_dist,
+        inter_frag_dist,
         dist_delta
     )
 
