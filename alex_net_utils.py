@@ -445,8 +445,8 @@ def highlight_tiles(in_img, tile_shape, insert_loc_arr, edge_color=(255, 0, 0)):
             start_y_loc = max(y_arr[idx], 0)
             stop_y_loc = min(y_arr[idx] + tile_len, img_len-1)
 
-            print("Highlight tile @ tl=({0}, {1}), br=({2},{3})".format(
-                start_x_loc, start_y_loc, stop_x_loc, stop_y_loc))
+            # print("Highlight tile @ tl=({0}, {1}), br=({2},{3})".format(
+            #     start_x_loc, start_y_loc, stop_x_loc, stop_y_loc))
 
             out_img[start_x_loc: stop_x_loc, start_y_loc, :] = edge_color
             out_img[start_x_loc: stop_x_loc, stop_y_loc, :] = edge_color
