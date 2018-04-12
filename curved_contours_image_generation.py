@@ -166,7 +166,7 @@ if __name__ == '__main__':
     # # # Manually specified simpler contour fragment
     stim_tile_raw = np.zeros((stim_tile_size[0], stim_tile_size[1], 3))
     stim_tile_raw[0:6, :, :] = 255.0
-    stim_tile = normalize_tile(stim_tile_raw)
+    stim_tile_raw = normalize_tile(stim_tile_raw)
 
     # Smooth the tile so it goes to zero @ edges
     g_kernel = alex_net_utils.get_2d_gaussian_kernel(stim_tile_size[0:2], sigma=0.75)
@@ -430,13 +430,6 @@ if __name__ == '__main__':
         edge_color=[255, 0, 0]
     )
 
-
-
     plt.figure()
     plt.imshow(removed_bg_tiles_image)
     plt.title("Removed Background Tiles highlighted")
-
-
-
-
-
