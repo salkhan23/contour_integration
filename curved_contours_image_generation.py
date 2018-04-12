@@ -234,7 +234,7 @@ if __name__ == '__main__':
 
     for i in range(contour_len // 2):
 
-        acc_angle += beta
+        acc_angle += (np.random.choice((-1, 1), size=1) * beta)
 
         rotated_fragment = imrotate(stim_tile, angle=acc_angle)
 
@@ -297,7 +297,7 @@ if __name__ == '__main__':
 
     for i in range(contour_len // 2):
 
-        acc_angle += beta
+        acc_angle += (np.random.choice((-1, 1), size=1) * beta)
 
         rotated_fragment = imrotate(stim_tile, angle=acc_angle)
 
@@ -379,7 +379,7 @@ if __name__ == '__main__':
 
         dist_to_bg_tiles = np.linalg.norm(path_tile_start - bg_stim_tile_start_loc_arr, axis=1)
 
-        overlapping_tile_idx_arr = np.argwhere(dist_to_bg_tiles < stim_tile_size[0])
+        overlapping_tile_idx_arr = np.argwhere(dist_to_bg_tiles <= stim_tile_size[0])
 
         # for idx, dist in enumerate(dist_to_bg_tiles):
         #     print("{0}: {1}".format(idx, dist))
