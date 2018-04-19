@@ -65,7 +65,7 @@ def gabor_2d((x, y), x0, y0, theta_deg, amp, sigma, lambda1, psi, gamma):
 
 def find_best_fit_2d_gabor(kernel):
     """
-    Find the bit fit parameters of a 2D gabor for each input channel of kernel.
+    Find the best fit parameters of a 2D gabor for each input channel of kernel.
 
     :param kernel: Alexnet l1 kernel
 
