@@ -71,6 +71,175 @@ def plot_fragment_rotations(frag, delta_rot=15):
         ax_arr[row_idx][col_idx].set_title("Angle = {}".format(rot_ang))
 
 
+def add_curved_contour_path_constant_separation(img, frag, frag_orientation, c_len, beta, d):
+    """
+    Add curved contours to the test image, fragments are added based on the constant
+    separation, if the tile does not overlap. If overlap  fragment separation is increased by
+    a factor of d // 4.
+
+    Method is similar to the one used by Feilds et.al - 1993
+    :param img:
+    :param frag:
+    :param frag_orientation:
+    :param c_len:
+    :param beta:
+    :param d:
+    :return:
+    """
+    img_size = np.array(img.shape[0:2])
+    img_center = img_size // 2
+
+    frag_size = np.array(frag.shape[0:2])
+    center_frag_start = img_center - (frag_size // 2)
+
+    d_delta = d // 4
+
+    # A. Central tile
+    # -----------------------
+    img = alex_net_utils.tile_image(
+        img,
+        frag,
+        center_frag_start,
+        rotate=False,
+        gaussian_smoothing=False,
+    )
+    c_tile_starts = [center_frag_start]
+
+    # B. Right hand side of contour
+    # --------------------------------------
+    acc_angle = frag_orientation
+    tile_offset = np.zeros((2,), dtype=np.int)
+    prev_tile_start = center_frag_start
+
+    for i in range(c_len // 2):
+
+        acc_angle += beta  # * np.random.choice((-1, 1), size=1)
+        acc_angle = np.mod(acc_angle, 360)
+
+        rotated_frag = imrotate(frag, angle=acc_angle - frag_orientation)
+
+        # Different from conventional (x, y) co-ordinates, the origin of the displayed
+        # array starts in the top left corner. x increases in the vertically down
+        # direction while y increases in the horizontally right direction.
+        tile_offset[0] = d * np.sin(acc_angle / 180.0 * np.pi)
+        tile_offset[1] = -d * np.cos(acc_angle / 180.0 * np.pi)
+
+        curr_tile_start = prev_tile_start + tile_offset
+        # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
+        #     curr_tile_start,
+        #     tile_offset,
+        #     prev_tile_start,
+        #     acc_angle
+        # ))
+
+        # check if the current tile overlaps with the previous tile
+        # TODO: Check if current tile overlaps with ANY previous one.
+        l1 = np.expand_dims(curr_tile_start, axis=0)
+        r1 = l1 + frag_size
+
+        l2 = np.expand_dims(prev_tile_start, axis=0)
+        r2 = l2 + frag_size
+
+        is_overlapping = do_tiles_overlap(l1, r1, l2, r2)
+
+        if is_overlapping:
+            print("Next Tile @ {0} overlaps with tile at location {1}".format(
+                curr_tile_start,
+                prev_tile_start,
+            ))
+
+            tile_offset[0] += d_delta * np.sin(acc_angle / 180.0 * np.pi)
+            tile_offset[1] -= d_delta * np.cos(acc_angle / 180.0 * np.pi)
+
+            curr_tile_start = prev_tile_start + tile_offset
+            # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
+            #     curr_tile_start,
+            #     tile_offset,
+            #     prev_tile_start,
+            #     acc_angle
+            # ))
+
+        img = alex_net_utils.tile_image(
+            img,
+            rotated_frag,
+            curr_tile_start,
+            rotate=False,
+            gaussian_smoothing=False
+        )
+
+        prev_tile_start = curr_tile_start
+        c_tile_starts.append(curr_tile_start)
+
+    # C. Right hand side of contour
+    # --------------------------------------
+    acc_angle = frag_orientation
+    tile_offset = np.zeros((2,), dtype=np.int)
+    prev_tile_start = center_frag_start
+
+    for i in range(c_len // 2):
+
+        acc_angle += beta  # * np.random.choice((-1, 1), size=1)
+        acc_angle = np.mod(acc_angle, 360)
+
+        rotated_frag = imrotate(frag, angle=acc_angle - frag_orientation)
+
+        # Different from conventional (x, y) co-ordinates, the origin of the displayed
+        # array starts in the top left corner. x increases in the vertically down
+        # direction while y increases in the horizontally right direction.
+        tile_offset[0] = -d * np.sin(acc_angle / 180.0 * np.pi)
+        tile_offset[1] = +d * np.cos(acc_angle / 180.0 * np.pi)
+
+        curr_tile_start = prev_tile_start + tile_offset
+        # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
+        #     curr_tile_start,
+        #     tile_offset,
+        #     prev_tile_start,
+        #     acc_angle
+        # ))
+
+        # check if the current tile overlaps with the previous tile
+        # TODO: Check if current tile overlaps with ANY previous one.
+        l1 = np.expand_dims(curr_tile_start, axis=0)
+        r1 = l1 + frag_size
+
+        l2 = np.expand_dims(prev_tile_start, axis=0)
+        r2 = l2 + frag_size
+
+        is_overlapping = do_tiles_overlap(l1, r1, l2, r2)
+
+        if is_overlapping:
+            print("Next Tile @ {0} overlaps with tile at location {1}".format(
+                curr_tile_start,
+                prev_tile_start,
+            ))
+
+            tile_offset[0] -= d_delta * np.sin(acc_angle / 180.0 * np.pi)
+            tile_offset[1] += d_delta * np.cos(acc_angle / 180.0 * np.pi)
+
+            curr_tile_start = prev_tile_start + tile_offset
+            # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
+            #     curr_tile_start,
+            #     tile_offset,
+            #     prev_tile_start,
+            #     acc_angle
+            # ))
+
+        img = alex_net_utils.tile_image(
+            img,
+            rotated_frag,
+            curr_tile_start,
+            rotate=False,
+            gaussian_smoothing=False
+        )
+
+        prev_tile_start = curr_tile_start
+        c_tile_starts.append(curr_tile_start)
+
+    c_tile_starts = np.array(c_tile_starts)
+
+    return img, c_tile_starts
+
+
 def add_curved_contour_path(img, frag, frag_orientation, c_len, beta):
     """
     Add curved contours to the test image, fragments are added based on the closest non
@@ -377,7 +546,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Target Feature and its orientation
     # -----------------------------------------------------------------------------------
-    tgt_filter_idx = 10
+    tgt_filter_idx = 5
     tgt_filter = get_target_feature_extracting_kernel(tgt_filter_idx)
 
     # Get the orientation of the feature extracting kernel
@@ -421,21 +590,33 @@ if __name__ == '__main__':
     beta_rotation = 15
     contour_len = 9
 
+    fragment_size = np.array(fragment.shape[0:2])
+    full_tile_size = np.array([15, 15])
+
     # -----------------------------------------------------------------------------------
     #  Add the contour fragments
     # -----------------------------------------------------------------------------------
-    test_image, path_fragments_starts = add_curved_contour_path(
+    # test_image, path_fragments_starts = add_curved_contour_path(
+    #     test_image,
+    #     fragment,
+    #     tgt_filter_orientation,
+    #     contour_len,
+    #     beta_rotation
+    # )
+
+    test_image, path_fragments_starts = add_curved_contour_path_constant_separation(
         test_image,
         fragment,
         tgt_filter_orientation,
         contour_len,
-        beta_rotation
+        beta_rotation,
+        full_tile_size[0],
     )
 
-    # # Display the curved contour
-    # plt.figure()
-    # plt.imshow(test_image)
-    # plt.title("Curved Contour")
+    # Display the curved contour
+    plt.figure()
+    plt.imshow(test_image)
+    plt.title("Curved Contour")
 
     # -----------------------------------------------------------------------------------
     #  Add background fragments
@@ -443,22 +624,19 @@ if __name__ == '__main__':
 
     # The contour paths constructed as above can be at most
     # sqrt(fragment_size[0]**2 +fragment_size[1]**2) from each other
-    max_inter_fragment_dist = np.int(np.floor(np.sqrt(2) * fragment.shape[0]))
-    full_bg_tile_size = \
-        np.array([max_inter_fragment_dist, max_inter_fragment_dist])
 
     test_image, bg_tiles, removed_bg_tiles, = add_background_fragments(
         test_image,
         fragment,
         path_fragments_starts,
-        full_bg_tile_size,
+        full_tile_size,
         beta_rotation
     )
 
     plt.figure()
     plt.imshow(test_image)
     plt.title("Contour of length {0}, embedded in a sea of distractors".format(contour_len))
-
+    #
     # -----------------------------------------------------------------------------------
     # Debugging Plots
     # -----------------------------------------------------------------------------------
