@@ -491,6 +491,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
             c_frag_start, ovlp_bg_frag_idx_arr))
 
         # First see if the overlapping bg fragment can be replaced with a non-overlapping one
+        ovlp_bg_frag_idx_to_be_removed = []
         for ii, idx in enumerate(ovlp_bg_frag_idx_arr):
 
             f_tile_start = bg_full_tile_starts[idx, :]
@@ -504,23 +505,20 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
             # print("Non_overlapping Tile {0}".format(novlp_bg_frag))
 
             if novlp_bg_frag is not None:
-
                 print("Replacing tile @ {0} with tile @".format(
-                    bg_frag_tile_starts[idx, :]))
+                    bg_frag_tile_starts[idx, :], novlp_bg_frag))
 
                 bg_frag_tile_starts[idx, :] = novlp_bg_frag
-                ovlp_bg_frag_idx_arr = np.delete(ovlp_bg_frag_idx_arr, ii)
+
             else:
                 removed_frag_starts.append(bg_frag_tile_starts[idx, :])
-
-        # for idx in ovlp_bg_frag_idx_arr:
-        #     removed_frag_starts.append(bg_frag_tile_starts[idx, :])
+                ovlp_bg_frag_idx_to_be_removed.append(idx)
 
         bg_frag_tile_starts = \
-            np.delete(bg_frag_tile_starts, ovlp_bg_frag_idx_arr, axis=0)
+            np.delete(bg_frag_tile_starts, ovlp_bg_frag_idx_to_be_removed, axis=0)
 
         bg_full_tile_starts = \
-            np.delete(bg_full_tile_starts, ovlp_bg_frag_idx_arr, axis=0)
+            np.delete(bg_full_tile_starts, ovlp_bg_frag_idx_to_be_removed, axis=0)
 
     removed_frag_starts = np.array(removed_frag_starts)
     removed_frag_starts = np.squeeze(removed_frag_starts, axis=1)
