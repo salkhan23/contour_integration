@@ -647,3 +647,23 @@ if __name__ == '__main__':
     plt.figure()
     plt.imshow(contour_highlighted_image)
     plt.title("Contour fragments Highlighted")
+
+    # Display Full tiles
+    bg_tile_starts = alex_net_utils.get_background_tiles_locations(
+        frag_len=full_tile_size[0],
+        img_len=image_size[0],
+        row_offset=0,
+        space_bw_tiles=0,
+        tgt_n_visual_rf_start=image_size[0] // 2 - (full_tile_size[0] // 2)
+    )
+
+    bg_frags_highlighted_image = alex_net_utils.highlight_tiles(
+        contour_highlighted_image,
+        full_tile_size,
+        bg_tile_starts,
+        edge_color=(0, 255, 0)
+    )
+
+    plt.figure()
+    plt.imshow(bg_frags_highlighted_image)
+    plt.title("Full Tiles Highlighted")
