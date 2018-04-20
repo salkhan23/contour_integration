@@ -440,13 +440,13 @@ def get_nonoverlapping_bg_fragment(f_tile_start, c_tile_start, c_tile_size, max_
     return None
 
 
-def add_background_fragments(img, frag, c_frag_starts, full_tile_size, beta):
+def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
     """
 
     :param img:
     :param frag:
     :param c_frag_starts:
-    :param full_tile_size:
+    :param f_tile_size:
     :param beta:
 
     :return: (1) image with background tiles added
@@ -457,11 +457,11 @@ def add_background_fragments(img, frag, c_frag_starts, full_tile_size, beta):
     img_size = np.array(img.shape[0:2])
     img_center = img_size // 2
 
-    center_bg_full_tile_start = img_center - full_tile_size // 2
+    center_bg_full_tile_start = img_center - f_tile_size // 2
 
     # Get start locations of all full tiles
     bg_full_tile_starts = alex_net_utils.get_background_tiles_locations(
-        frag_len=full_tile_size[0],
+        frag_len=f_tile_size[0],
         img_len=img_size[0],
         row_offset=0,
         space_bw_tiles=0,
@@ -469,7 +469,7 @@ def add_background_fragments(img, frag, c_frag_starts, full_tile_size, beta):
     )
 
     # displace the background fragment in each full tile
-    max_displace = full_tile_size[0] - frag.shape[0]
+    max_displace = f_tile_size[0] - frag.shape[0]
 
     bg_frag_tile_starts = bg_full_tile_starts + \
         np.random.randint(0, max_displace, bg_full_tile_starts.shape)
