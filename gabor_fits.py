@@ -247,6 +247,41 @@ def get_l1_filter_orientation_and_offset(tgt_filt, tgt_filt_idx, show_plots=True
     return theta_opt, row_offset
 
 
+def get_filter_orientation(tgt_filt, o_type='average'):
+    """
+    Fit the target filter to a gabor filter and find the orientation of each channel.
+    If type=average, the average orientation across the filter is returned, else if
+    type=max, the orientation of channel with the maximum orientation is returned
+
+    :param tgt_filt:
+    :param o_type: ['average', 'max']
+
+    :return: orientation of the type specifed
+    """
+
+    gabor_fit_params = find_best_fit_2d_gabor(tgt_filt)
+    gabor_fit_params = np.array(gabor_fit_params)
+
+    # print("Gabor Filt Parameters:")
+    # for chan_idx, p in enumerate(gabor_fit_params):
+    #     print("Chan {0}: (x0,y0)=({1:0.2f},{2:0.2f}), theta_deg={3:0.1f}, A={4:0.2f}, sigma={5:0.2f}, "
+    #           "lambda={6:0.2f}, psi={7:0.2f}, gamma={8:0.2f}".format(
+    #         chan_idx, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]))
+
+    o_type = o_type.lower()
+    if o_type == 'average':
+        orientation_arr = gabor_fit_params[:, 2]
+        orientation = np.mean(orientation_arr)
+    elif o_type == 'max':
+        amp_arr = gabor_fit_params[:, 3]
+        orientation_idx = np.argmax(abs(amp_arr))
+        orientation = gabor_fit_params[orientation_idx, 2]
+    else:
+        raise Exception("Unknown o_type!")
+
+    return orientation
+
+
 if __name__ == "__main__":
     plt.ion()
     K.clear_session()
