@@ -29,6 +29,20 @@ import utils
 reload(utils)
 
 
+def get_target_feature_extracting_kernel(tgt_filt_idx):
+    """
+    Return the target kernel @ the specified index from the first feature extracting
+    covolutional layer of alex_net
+
+    :param tgt_filt_idx:
+    :return:  target Feature extracting kernel
+    """
+    model = alex_net("trained_models/AlexNet/alexnet_weights.h5")
+    feat_extract_kernels = K.eval(model.layers[1].weights[0])
+
+    return feat_extract_kernels[:, :, :, tgt_filt_idx]
+
+
 def crosschannelnormalization(alpha=1e-4, k=2, beta=0.75, n=5, **kwargs):
     """
     This is the function used for cross channel normalization in the original Alexnet
