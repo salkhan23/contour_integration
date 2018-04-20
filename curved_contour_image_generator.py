@@ -443,10 +443,11 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Contour Fragment
     # -----------------------------------------------------------------------------------
-    # A. Derived from the target filter
-    # ---------------------------------
-    # # Blend in the edges of the fragment @ the edges
-    # g_kernel = alex_net_utils.get_2d_gaussian_kernel(tgt_filter.shape[0:2], sigma=0.75)
+
+    # # A. Derived from the target filter
+    # # ---------------------------------
+    # Blend in the edges of the fragment @ the edges
+    # g_kernel = alex_net_utils.get_2d_gaussian_kernel(tgt_filter.shape[0:2], sigma=0.6)
     # g_kernel = np.expand_dims(g_kernel, axis=2)
     # fragment = tgt_filter * g_kernel
 
@@ -462,7 +463,7 @@ if __name__ == '__main__':
         y0=0,
         theta_deg=tgt_filter_orientation - 90,
         amp=1,
-        sigma=0.5,
+        sigma=0.6,
         lambda1=3,
         psi=0,
         gamma=1
