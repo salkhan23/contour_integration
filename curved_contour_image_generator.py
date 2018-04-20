@@ -401,11 +401,11 @@ def do_tiles_overlap(l1, r1, l2, r2):
     :return:  True of the input tiles overlap, false otherwise
     """
     # Does one square lie to the Left of the other
-    if l1[0, 1] > r2[0, 1] or l2[0, 1] > r1[0, 1]:
+    if l1[0, 1] >= r2[0, 1] or l2[0, 1] >= r1[0, 1]:
         return False
 
         # Does one square lie above the other
-    if l1[0, 0] > r2[0, 0] or l2[0, 0] > r1[0, 0]:
+    if l1[0, 0] >= r2[0, 0] or l2[0, 0] >= r1[0, 0]:
         return False
 
     return True
@@ -609,7 +609,7 @@ if __name__ == '__main__':
     contour_len = 9
 
     fragment_size = np.array(fragment.shape[0:2])
-    full_tile_size = np.array([15, 15])
+    full_tile_size = np.array([17, 17])
 
     # -----------------------------------------------------------------------------------
     #  Add the contour fragments
@@ -631,10 +631,10 @@ if __name__ == '__main__':
         full_tile_size[0],
     )
 
-    # Display the curved contour
-    plt.figure()
-    plt.imshow(test_image)
-    plt.title("Curved Contour")
+    # # Display the curved contour
+    # plt.figure()
+    # plt.imshow(test_image)
+    # plt.title("Curved Contour")
 
     # -----------------------------------------------------------------------------------
     #  Add background fragments
