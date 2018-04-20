@@ -564,11 +564,31 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Contour fragment to use
     # -----------------------------------------------------------------------------------
-    fragment = normalize_frag(tgt_filter)
+    # fragment = normalize_frag(tgt_filter)
+    #
+    # # blend in the edges of the fragment @ the edges
+    # g_kernel = alex_net_utils.get_2d_gaussian_kernel(fragment.shape[0:2], sigma=0.75)
+    # fragment = fragment * np.expand_dims(g_kernel, axis=2)
+    # fragment = imrotate(fragment, 0)
 
-    # blend in the edges of the fragment @ the edges
-    g_kernel = alex_net_utils.get_2d_gaussian_kernel(fragment.shape[0:2], sigma=0.75)
-    fragment = fragment * np.expand_dims(g_kernel, axis=2)
+    x_arr = np.linspace(-1, 1, tgt_filter.shape[0])
+    y_arr = np.copy(x_arr)
+    xx, yy = np.meshgrid(x_arr, y_arr)
+
+    fragment = gabor_fits.gabor_2d(
+        (xx, yy),
+        x0=0,
+        y0=0,
+        theta_deg=tgt_filter_orientation - 90,
+        amp=1,
+        sigma=0.5,
+        lambda1=3,
+        psi=0,
+        gamma=1
+    )
+
+    fragment = fragment.reshape((x_arr.shape[0], y_arr.shape[0]))
+    fragment = np.stack((fragment, fragment, fragment), axis=2)
     fragment = imrotate(fragment, 0)
 
     # # Display the contour fragment
