@@ -8,6 +8,7 @@
 # -------------------------------------------------------------------------------------------------
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 from scipy.misc import imrotate
 
 import keras.backend as K
@@ -415,6 +416,71 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
     )
 
     return img, bg_frag_starts, removed_bg_frag_starts
+
+
+def generate_contour_images(n_images, tgt_filt_idx, c_len, beta, destination, image_format='JPEG'):
+    """
+
+    :param n_images:
+    :param tgt_filt_idx:
+    :param c_len:
+    :param beta:
+    :param destination:
+    :param image_format:
+
+    :return:
+    """
+    tgt_filt = base_alex_net.get_target_feature_extracting_kernel(tgt_filt_idx)
+
+    # Best fits angle is wrt the y axis (theta = 0), change it to be  wrt to the x axis
+    tgt_filt_orientation = np.int(gabor_fits.get_filter_orientation(tgt_filt, o_type='average'))
+    tgt_filt_orientation = np.int(np.floor(90 + tgt_filt_orientation))
+
+    print("Target Filter Index {0}, orientation {1}".format(tgt_filt_idx, tgt_filt_orientation))
+
+    # Fragment
+    x = np.linspace(-1, 1, tgt_filt.shape[0])
+    y = np.copy(x)
+    x_mesh, y_mesh = np.meshgrid(x, y)
+
+    frag = gabor_fits.gabor_2d(
+        (x_mesh, y_mesh),
+        x0=0,
+        y0=0,
+        theta_deg=tgt_filt_orientation - 90,
+        amp=1,
+        sigma=0.6,
+        lambda1=3,
+        psi=0,
+        gamma=1
+    )
+    frag = frag.reshape((x.shape[0], y.shape[0]))
+    frag = np.stack((frag, frag, frag), axis=2)
+
+    frag = normalize_fragment(frag)
+    frag = imrotate(frag, 0)
+
+    img_size = np.array([227, 227, 3])
+
+    # In the Ref, the visible portion of the fragment moves around inside large tiles.
+    # Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
+    f_tile_size = np.array([17, 17])
+
+    for img_idx in range(n_images):
+        img = np.zeros(img_size, dtype=np.uint8)
+
+        img, c_frag_starts = add_contour_path_constant_separation(
+            img, frag, tgt_filt_orientation, c_len, beta, f_tile_size[0])
+
+        img, bg_frag_starts, _ = add_background_fragments(
+            img, frag, c_frag_starts, f_tile_size, beta)
+
+        filename = "img_{0}_filt_orient_{1}_clen_{2}_beta_{3}".format(
+            img_idx, tgt_filt_orientation, c_len, beta)
+
+        print os.path.join(destination, filename + '.jpg')
+
+        plt.imsave(os.path.join(destination, filename + '.jpg'), img, format=image_format)
 
 
 if __name__ == '__main__':
