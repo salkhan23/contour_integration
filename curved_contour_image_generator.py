@@ -332,6 +332,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
     :return: (1) image with background tiles added
              (2) array of bg frag tiles
              (3) array of bg frag tiles removed
+             (4) array of bg frag tiles that were relocated
     """
     img_size = np.array(img.shape[0:2])
     img_center = img_size // 2
@@ -356,6 +357,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
     # Remove or replace all tiles that overlap with contour path fragments
     # --------------------------------------------------------------------
     removed_bg_frag_starts = []
+    relocate_bg_frag_starts = []
 
     for c_frag_start in c_frag_starts:
 
@@ -389,6 +391,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
                 #     bg_frag_starts[bg_frag_idx, :], novlp_bg_frag))
 
                 bg_frag_starts[bg_frag_idx, :] = np.expand_dims(novlp_bg_frag, axis=0)
+                relocate_bg_frag_starts.append(novlp_bg_frag)
 
             else:
                 removed_bg_frag_starts.append(bg_frag_starts[bg_frag_idx, :])
@@ -404,6 +407,8 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
     removed_bg_frag_starts = np.array(removed_bg_frag_starts)
     removed_bg_frag_starts = np.squeeze(removed_bg_frag_starts, axis=1)
 
+    relocate_bg_frag_starts = np.array(relocate_bg_frag_starts)
+
     # Now add the background fragment tiles
     # -------------------------------------
     img = alex_net_utils.tile_image(
@@ -415,7 +420,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
         gaussian_smoothing=False
     )
 
-    return img, bg_frag_starts, removed_bg_frag_starts
+    return img, bg_frag_starts, removed_bg_frag_starts, relocate_bg_frag_starts
 
 
 def generate_contour_images(n_images, tgt_filt_idx, c_len, beta, destination, image_format='JPEG'):
@@ -472,7 +477,7 @@ def generate_contour_images(n_images, tgt_filt_idx, c_len, beta, destination, im
         img, c_frag_starts = add_contour_path_constant_separation(
             img, frag, tgt_filt_orientation, c_len, beta, f_tile_size[0])
 
-        img, bg_frag_starts, _ = add_background_fragments(
+        img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
             img, frag, c_frag_starts, f_tile_size, beta)
 
         filename = "img_{0}_filt_orient_{1}_clen_{2}_beta_{3}".format(
@@ -588,7 +593,7 @@ if __name__ == '__main__':
     # ----------------------------------------------------------------------------------
     #  Add background Fragments
     # ----------------------------------------------------------------------------------
-    test_image, bg_tiles, removed_bg_tiles, = add_background_fragments(
+    test_image, bg_tiles, bg_removed_tiles, bg_relocated_tiles = add_background_fragments(
         test_image,
         fragment,
         path_fragment_starts,
