@@ -291,31 +291,36 @@ def add_contour_path_closest_nonoverlap(img, frag, frag_orientation, c_len, beta
     return img, c_tile_starts
 
 
-def get_nonoverlapping_bg_fragment(f_tile_start, c_tile_start, c_tile_size, max_offset):
+def get_nonoverlapping_bg_fragment(f_tile_start, c_tile_starts, c_tile_size, max_offset):
     """
 
     :param f_tile_start:
-    :param c_tile_start:
+    :param c_tile_starts:
     :param c_tile_size:
     :param max_offset:
     :return:
     """
-
-    l1 = c_tile_start
-    r1 = c_tile_start + c_tile_size
-
     for r_idx in range(max_offset):
         for c_idx in range(max_offset):
 
-            l2 = f_tile_start + np.array([r_idx, c_idx])
-            r2 = l2 + c_tile_size
+            l1 = f_tile_start + np.array([r_idx, c_idx])
+            r1 = l1 + c_tile_size
 
-            # print("checking tile @ start {0}. contour tile @ start {1}".format(l2, l1))
+            is_overlapping = False
 
-            if not do_tiles_overlap(l1, r1, l2, r2):
-                return l2
+            for c_tile in c_tile_starts:
 
-            # print("Overlaps!")
+                l2 = c_tile
+                r2 = c_tile + c_tile_size
+
+                # print("checking bg tile @ start {0} with contour tile @ start {1}".format(l1, l2))
+
+                if do_tiles_overlap(l1, r1, l2, r2):
+                    # print('overlaps!')
+                    is_overlapping = True
+
+            if not is_overlapping:
+                return l1
 
     return None
 
@@ -363,37 +368,40 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
 
         c_frag_start = np.expand_dims(c_frag_start, axis=0)
 
+        # Find overlapping background fragments
         dist_to_c_frag = np.linalg.norm(c_frag_start - bg_frag_starts, axis=1)
-        ovlp_bg_frag_idx_arr = np.argwhere(dist_to_c_frag <= frag.shape[0])
-
         # for ii, dist in enumerate(dist_to_c_frag):
         #     print("{0}: {1}".format(ii, dist))
-        # print("path tile {0} overlaps with bg tiles at index {1}".format(
-        #     c_frag_start, ovlp_bg_frag_idx_arr))
 
-        # First see if the overlapping bg fragment can be replaced with a non-overlapping one
+        ovlp_bg_frag_idx_arr = np.argwhere(dist_to_c_frag <= frag.shape[0])
+        # for idx in ovlp_bg_frag_idx_arr:
+        #     print("contour fragment @ {0}, overlaps with bg fragment @ index {1} and location {2}".format(
+        #         c_frag_start, idx, bg_frag_starts[idx, :]))
+
         ovlp_bg_frag_idx_to_remove = []
 
         for ii, bg_frag_idx in enumerate(ovlp_bg_frag_idx_arr):
 
             f_tile_start = f_tile_starts[bg_frag_idx, :]
 
+            # Is relocation possible?
             novlp_bg_frag = get_nonoverlapping_bg_fragment(
                 np.squeeze(f_tile_start, axis=0),
-                np.squeeze(c_frag_start, axis=0),
+                c_frag_starts,
                 frag.shape[0:2],
                 max_displace
             )
-            # print("Non_overlapping Tile {0}".format(novlp_bg_frag))
 
             if novlp_bg_frag is not None:
-                # print("Replacing tile @ {0} with tile @".format(
-                #     bg_frag_starts[bg_frag_idx, :], novlp_bg_frag))
+                # print("Relocating tile @ {0} to {1}".format(bg_frag_starts[bg_frag_idx, :], novlp_bg_frag))
 
                 bg_frag_starts[bg_frag_idx, :] = np.expand_dims(novlp_bg_frag, axis=0)
                 relocate_bg_frag_starts.append(novlp_bg_frag)
 
             else:
+                # print("Remove bg fragment at index {0}, location {1}".format(
+                #     bg_frag_idx, bg_frag_starts[bg_frag_idx, :]))
+
                 removed_bg_frag_starts.append(bg_frag_starts[bg_frag_idx, :])
                 ovlp_bg_frag_idx_to_remove.append(bg_frag_idx)
 
@@ -480,10 +488,33 @@ def generate_contour_images(n_images, tgt_filt_idx, c_len, beta, destination, im
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
             img, frag, c_frag_starts, f_tile_size, beta)
 
+        # Contour tiles
+        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], c_frag_starts)
+
+        # Background Fragment tiles
+        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], bg_frag_starts, edge_color=(0, 255, 0))
+
+        # Removed tiles
+        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], removed_tiles, edge_color=(0, 0, 255))
+
+        # Relocated tiles
+        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], relocated_tiles, edge_color=(0, 255, 255))
+
+        # # highlight full tiles
+        # f_tile_starts = alex_net_utils.get_background_tiles_locations(
+        #     frag_len=f_tile_size[0],
+        #     img_len=img_size[0],
+        #     row_offset=0,
+        #     space_bw_tiles=0,
+        #     tgt_n_visual_rf_start=img_size[0] // 2 - (f_tile_size[0] // 2)
+        # )
+        #
+        # img = alex_net_utils.highlight_tiles(
+        #     img, f_tile_size, f_tile_starts, edge_color=(255, 255, 0))
+
+        # ------------------------------------------------------------
         filename = "img_{0}_filt_orient_{1}_clen_{2}_beta_{3}".format(
             img_idx, tgt_filt_orientation, c_len, beta)
-
-        print os.path.join(destination, filename + '.jpg')
 
         plt.imsave(os.path.join(destination, filename + '.jpg'), img, format=image_format)
 
@@ -557,7 +588,7 @@ if __name__ == '__main__':
     image_size = np.array([227, 227, 3])
     test_image = np.zeros(image_size, dtype=np.uint8)
 
-    beta_rotation = 15
+    beta_rotation = 30
     contour_len = 9
 
     # In the Ref, the visible portion of the fragment moves around inside large tiles.
@@ -608,17 +639,23 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Debugging Plots
     # -----------------------------------------------------------------------------------
-    contour_highlighted_image = alex_net_utils.highlight_tiles(
-        test_image,
-        fragment.shape[0:2],
-        path_fragment_starts
-    )
+    # Highlight Contour Fragments
+    test_image = alex_net_utils.highlight_tiles(
+        test_image, fragment.shape[0:2], path_fragment_starts)
 
-    plt.figure()
-    plt.imshow(contour_highlighted_image)
-    plt.title("Contour fragments Highlighted")
+    # Highlight background fragment Tiles
+    test_image = alex_net_utils.highlight_tiles(
+        test_image, fragment.shape[0:2], bg_tiles, edge_color=[0, 255, 0])
 
-    # Display Full tiles
+    # Highlight Removed tiles
+    test_image = alex_net_utils.highlight_tiles(
+        test_image, fragment.shape[0:2], bg_removed_tiles, edge_color=[0, 0, 255])
+
+    # Highlight Relocated tiles
+    test_image = alex_net_utils.highlight_tiles(
+        test_image, fragment.shape[0:2], bg_relocated_tiles, edge_color=[255, 0, 255])
+
+    # Highlight Full Tiles
     bg_tile_starts = alex_net_utils.get_background_tiles_locations(
         frag_len=full_tile_size[0],
         img_len=image_size[0],
@@ -627,13 +664,9 @@ if __name__ == '__main__':
         tgt_n_visual_rf_start=image_size[0] // 2 - (full_tile_size[0] // 2)
     )
 
-    bg_frags_highlighted_image = alex_net_utils.highlight_tiles(
-        contour_highlighted_image,
-        full_tile_size,
-        bg_tile_starts,
-        edge_color=(0, 255, 0)
-    )
+    test_image = alex_net_utils.highlight_tiles(
+        test_image, full_tile_size, bg_tile_starts, edge_color=(255, 255, 0))
 
     plt.figure()
-    plt.imshow(bg_frags_highlighted_image)
-    plt.title("Full Tiles Highlighted")
+    plt.imshow(test_image)
+    plt.title('Debugging Image')
