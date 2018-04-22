@@ -335,9 +335,9 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
     :param beta:
 
     :return: (1) image with background tiles added
-             (2) array of bg frag tiles
-             (3) array of bg frag tiles removed
-             (4) array of bg frag tiles that were relocated
+             (2) array of bg fragment tiles
+             (3) array of bg fragment tiles removed
+             (4) array of bg fragment tiles that were relocated
     """
     img_size = np.array(img.shape[0:2])
     img_center = img_size // 2
@@ -431,75 +431,53 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
     return img, bg_frag_starts, removed_bg_frag_starts, relocate_bg_frag_starts
 
 
-def generate_contour_images(n_images, tgt_filt_idx, c_len, beta, destination, image_format='JPEG'):
+def generate_contour_images(
+        n_images, frag, frag_orientation, c_len, beta, f_tile_size, destination, image_format='JPEG'):
     """
 
+    # In the Ref, a visible stimulus of a small size is placed inside a large tile
+    # Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
+
     :param n_images:
-    :param tgt_filt_idx:
+    :param frag:
+    :param frag_orientation:
     :param c_len:
     :param beta:
+    :param f_tile_size
     :param destination:
     :param image_format:
 
     :return:
     """
-    tgt_filt = base_alex_net.get_target_feature_extracting_kernel(tgt_filt_idx)
-
-    # Best fits angle is wrt the y axis (theta = 0), change it to be  wrt to the x axis
-    tgt_filt_orientation = np.int(gabor_fits.get_filter_orientation(tgt_filt, o_type='average'))
-    tgt_filt_orientation = np.int(np.floor(90 + tgt_filt_orientation))
-
-    print("Target Filter Index {0}, orientation {1}".format(tgt_filt_idx, tgt_filt_orientation))
-
-    # Fragment
-    x = np.linspace(-1, 1, tgt_filt.shape[0])
-    y = np.copy(x)
-    x_mesh, y_mesh = np.meshgrid(x, y)
-
-    frag = gabor_fits.gabor_2d(
-        (x_mesh, y_mesh),
-        x0=0,
-        y0=0,
-        theta_deg=tgt_filt_orientation - 90,
-        amp=1,
-        sigma=0.6,
-        lambda1=3,
-        psi=0,
-        gamma=1
-    )
-    frag = frag.reshape((x.shape[0], y.shape[0]))
-    frag = np.stack((frag, frag, frag), axis=2)
-
-    frag = normalize_fragment(frag)
-    frag = imrotate(frag, 0)
-
     img_size = np.array([227, 227, 3])
 
-    # In the Ref, the visible portion of the fragment moves around inside large tiles.
-    # Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
-    f_tile_size = np.array([17, 17])
+    print("Generating {0} images for fragment [orientation {1}, contour length {2},"
+          "inter fragment rotation {3}]".format(n_images, frag_orientation, c_len, beta))
 
     for img_idx in range(n_images):
+
+        print("Image {}".format(img_idx))
+
         img = np.zeros(img_size, dtype=np.uint8)
 
         img, c_frag_starts = add_contour_path_constant_separation(
-            img, frag, tgt_filt_orientation, c_len, beta, f_tile_size[0])
+            img, frag, frag_orientation, c_len, beta, f_tile_size[0])
 
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
             img, frag, c_frag_starts, f_tile_size, beta)
 
-        # Contour tiles
-        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], c_frag_starts)
-
-        # Background Fragment tiles
-        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], bg_frag_starts, edge_color=(0, 255, 0))
-
-        # Removed tiles
-        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], removed_tiles, edge_color=(0, 0, 255))
-
-        # Relocated tiles
-        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], relocated_tiles, edge_color=(0, 255, 255))
-
+        # # Highlight Contour tiles
+        # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], c_frag_starts)
+        #
+        # # Highlight Background Fragment tiles
+        # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], bg_frag_starts, edge_color=(0, 255, 0))
+        #
+        # # Highlight Removed tiles
+        # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], removed_tiles, edge_color=(0, 0, 255))
+        #
+        # # Highlight Relocated tiles
+        # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], relocated_tiles, edge_color=(0, 255, 255))
+        #
         # # highlight full tiles
         # f_tile_starts = alex_net_utils.get_background_tiles_locations(
         #     frag_len=f_tile_size[0],
@@ -513,8 +491,8 @@ def generate_contour_images(n_images, tgt_filt_idx, c_len, beta, destination, im
         #     img, f_tile_size, f_tile_starts, edge_color=(255, 255, 0))
 
         # ------------------------------------------------------------
-        filename = "img_{0}_filt_orient_{1}_clen_{2}_beta_{3}".format(
-            img_idx, tgt_filt_orientation, c_len, beta)
+        filename = "orient_{0}_clen_{1}_beta_{2}__{3}".format(
+            frag_orientation, c_len, beta, img_idx)
 
         plt.imsave(os.path.join(destination, filename + '.jpg'), img, format=image_format)
 
