@@ -452,7 +452,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
 
 def generate_contour_images(
-        n_images, frag, frag_orientation, c_len, beta, f_tile_size, destination, image_format='JPEG'):
+        n_images, frag, frag_params, c_len, beta, f_tile_size, destination, image_format='JPEG'):
     """
 
     # In the Ref, a visible stimulus of a small size is placed inside a large tile
@@ -460,7 +460,7 @@ def generate_contour_images(
 
     :param n_images:
     :param frag:
-    :param frag_orientation:
+    :param frag_params:
     :param c_len:
     :param beta:
     :param f_tile_size
@@ -472,19 +472,20 @@ def generate_contour_images(
     img_size = np.array([227, 227, 3])
 
     print("Generating {0} images for fragment [orientation {1}, contour length {2},"
-          "inter fragment rotation {3}]".format(n_images, frag_orientation, c_len, beta))
+          "inter fragment rotation {3}]".format(n_images, frag_params['theta_deg'], c_len, beta))
 
     for img_idx in range(n_images):
 
         print("Image {}".format(img_idx))
 
-        img = np.zeros(img_size, dtype=np.uint8)
+        bg = np.int(np.mean(frag))
+        img = np.ones(img_size, dtype=np.uint8) * bg
 
         img, c_frag_starts = add_contour_path_constant_separation(
-            img, frag, frag_orientation, c_len, beta, f_tile_size[0])
+            img, frag, frag_params, c_len, beta, f_tile_size[0])
 
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
-            img, frag, c_frag_starts, f_tile_size, beta)
+            img, frag, c_frag_starts, f_tile_size, beta, frag_params)
 
         # # Highlight Contour tiles
         # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], c_frag_starts)
@@ -512,7 +513,7 @@ def generate_contour_images(
 
         # ------------------------------------------------------------
         filename = "orient_{0}_clen_{1}_beta_{2}__{3}".format(
-            frag_orientation, c_len, beta, img_idx)
+            frag_params["theta_deg"], c_len, beta, img_idx)
 
         plt.imsave(os.path.join(destination, filename + '.jpg'), img, format=image_format)
 

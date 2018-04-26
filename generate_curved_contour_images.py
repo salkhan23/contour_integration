@@ -45,30 +45,20 @@ if __name__ == '__main__':
     tgt_filter = base_alex_net.get_target_feature_extracting_kernel(tgt_filter_idx)
 
     tgt_filter_orientation = gabor_fits.get_filter_orientation(tgt_filter, o_type='average')
-    # Best fits angle is wrt the y axis (theta = 0), change it to be  wrt to the x axis
-    tgt_filter_orientation = np.int(np.floor(90 + tgt_filter_orientation))
+    tgt_filter_orientation = np.int(np.floor(tgt_filter_orientation))
 
-    # Fragment
-    x = np.linspace(-1, 1, tgt_filter.shape[0])
-    y = np.copy(x)
-    x_mesh, y_mesh = np.meshgrid(x, y)
+    fragment_gabor_params = {
+        'x0': 0,
+        'y0': 0,
+        'theta_deg': tgt_filter_orientation,
+        'amp': 1,
+        'sigma': 4,
+        'lambda1': 8,
+        'psi': 0,
+        'gamma': 1
+    }
 
-    fragment = gabor_fits.gabor_2d(
-        (x_mesh, y_mesh),
-        x0=0,
-        y0=0,
-        theta_deg=tgt_filter_orientation - 90,
-        amp=1,
-        sigma=0.6,
-        lambda1=3,
-        psi=0,
-        gamma=1
-    )
-    fragment = fragment.reshape((x.shape[0], y.shape[0]))
-    fragment = np.stack((fragment, fragment, fragment), axis=2)
-
-    fragment = curved_contour_image_generator.normalize_fragment(fragment)
-    fragment = imrotate(fragment, 0)
+    fragment = gabor_fits.get_gabor_fragment(fragment_gabor_params, tgt_filter.shape[0:2])
 
     # # Display the contour fragment
     # plt.figure()
@@ -90,4 +80,4 @@ if __name__ == '__main__':
                 os.makedirs(abs_destination_dir)
 
             curved_contour_image_generator.generate_contour_images(
-                n_images, fragment, tgt_filter_orientation, c_len, beta, full_tile_size, abs_destination_dir)
+                n_images, fragment, fragment_gabor_params, c_len, beta, full_tile_size, abs_destination_dir)
