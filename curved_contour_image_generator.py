@@ -68,7 +68,10 @@ def _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size, direction,
         random_frag_direction=False):
 
+    # Orientation of the Gabor is wrt to y axis, change it so it is with respect to x-axis
+    # as acc_angle (next location) is wrt to the x-axis.
     acc_angle = frag_params["theta_deg"] - 90
+
     tile_offset = np.zeros((2,), dtype=np.int)
     prev_tile_start = center_frag_start
 
@@ -189,9 +192,12 @@ def add_contour_path_constant_separation(img, frag, frag_params, c_len, beta, d)
 
 
 def _add_single_side_of_contour_closest_nonoverlap(
-        img, center_frag_start, frag, frag_orientation, c_len, beta, d, direction, random_frag_direction=False):
+        img, center_frag_start, frag, frag_params, c_len, beta, d, direction, random_frag_direction=False):
 
-    acc_angle = frag_orientation
+    # Orientation of the Gabor is wrt to y axis, change it so it is with respect to x-axis
+    # as acc_angle (next location) is wrt to the x-axis.
+    acc_angle = frag_params["theta_deg"] - 90
+
     tile_offset = np.zeros((2,), dtype=np.int)
     prev_tile_start = center_frag_start
 
@@ -214,7 +220,10 @@ def _add_single_side_of_contour_closest_nonoverlap(
         acc_angle += (beta * frag_direction)
         acc_angle = np.mod(acc_angle, 360)
 
-        rotated_frag = imrotate(frag, angle=acc_angle - frag_orientation)
+        rotated_frag_params = frag_params.copy()
+        rotated_frag_params['theta_deg'] = acc_angle - frag_params["theta_deg"] + 90
+
+        rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params, frag.shape[0:2])
 
         # Different from conventional (x, y) co-ordinates, the origin of the displayed
         # array starts in the top left corner. x increases in the vertically down
@@ -251,7 +260,7 @@ def _add_single_side_of_contour_closest_nonoverlap(
     return img, tile_starts
 
 
-def add_contour_path_closest_nonoverlap(img, frag, frag_orientation, c_len, beta, d):
+def add_contour_path_closest_nonoverlap(img, frag, frag_params, c_len, beta, d):
     """
     Add curved contours to the test image.Different from add_contour_path_constant_separation,
     either x or y direction is held constant rather than the diagonal. This ensures the tile
@@ -259,7 +268,7 @@ def add_contour_path_closest_nonoverlap(img, frag, frag_orientation, c_len, beta
 
     :param img:
     :param frag:
-    :param frag_orientation:
+    :param frag_params:
     :param c_len:
     :param beta:
     :param d:
@@ -281,11 +290,11 @@ def add_contour_path_closest_nonoverlap(img, frag, frag_orientation, c_len, beta
     c_tile_starts = [center_frag_start]
 
     img, tiles = _add_single_side_of_contour_closest_nonoverlap(
-        img, center_frag_start, frag, frag_orientation, c_len, beta, d, 'rhs', random_frag_direction=True)
+        img, center_frag_start, frag, frag_params, c_len, beta, d, 'rhs', random_frag_direction=True)
     c_tile_starts.extend(tiles)
 
     img, tiles = _add_single_side_of_contour_closest_nonoverlap(
-        img, center_frag_start, frag, frag_orientation, c_len, beta, d, 'lhs', random_frag_direction=True)
+        img, center_frag_start, frag, frag_params, c_len, beta, d, 'lhs', random_frag_direction=True)
     c_tile_starts.extend(tiles)
 
     # ---------------------------
@@ -581,23 +590,23 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Add the Contour Path
     # -----------------------------------------------------------------------------------
-    test_image, path_fragment_starts = add_contour_path_constant_separation(
+    # test_image, path_fragment_starts = add_contour_path_constant_separation(
+    #     test_image,
+    #     fragment,
+    #     fragment_gabor_params,
+    #     contour_len,
+    #     beta_rotation,
+    #     full_tile_size[0],
+    # )
+
+    test_image, path_fragment_starts = add_contour_path_closest_nonoverlap(
         test_image,
         fragment,
         fragment_gabor_params,
         contour_len,
         beta_rotation,
-        full_tile_size[0],
+        full_tile_size[0] - 2
     )
-
-    # test_image, path_fragment_starts = add_contour_path_closest_nonoverlap(
-    #     test_image,
-    #     fragment,
-    #     tgt_filter_orientation,
-    #     contour_len,
-    #     beta_rotation,
-    #     full_tile_size[0] - 2
-    # )
 
     # plt.figure()
     # plt.imshow(test_image)
