@@ -63,6 +63,87 @@ def gabor_2d((x, y), x0, y0, theta_deg, amp, sigma, lambda1, psi, gamma):
     return out.ravel()
 
 
+def get_gabor_fragment(params, spatial_size):
+    """
+    Constructed a 2D Gabor fragment from the specified params of the specified size.
+    A 3 channel fragment is always generated.
+
+    params is  either a dictionary of a list of dictionaries of the type specified below.
+
+    params = {
+        'x0': x0,
+        'y0': y0,
+        'theta_deg': theta_deg,
+        'amp': amp,
+        'sigma': sigma,
+        'lambda1': lambda1,
+        'psi': psi,
+        'gamma': gamma
+    }
+
+    If a single dictionary is specified all three channels have the same parameters, else if
+    a list of size 3 is specified each channel has its own parameters.
+
+    :param params: is either a dictionary of a list of dictionaries
+    :param spatial_size:
+    :return:
+    """
+    half_x = spatial_size[0] // 2
+    half_y = spatial_size[1] // 2
+
+    x = np.linspace(-half_x, half_x, spatial_size[0])
+    y = np.linspace(-half_y, half_y, spatial_size[1])
+
+    xx, yy = np.meshgrid(x, y)
+
+    if type(params) is list and len(params) is not 3:
+        raise Exception("Only length 3 list of parameters can be specified")
+
+    if type(params) is not list:
+
+        frag = gabor_2d(
+            (xx, yy),
+            x0=params['x0'],
+            y0=params['y0'],
+            theta_deg=params['theta_deg'],
+            amp=params['amp'],
+            sigma=params['sigma'],
+            lambda1=params['lambda1'],
+            psi=params['psi'],
+            gamma=params['gamma']
+        )
+
+        frag = frag.reshape((x.shape[0], y.shape[0]))
+        frag = np.stack((frag, frag, frag), axis=2)
+    else:
+
+        frag = np.zeros((spatial_size[0], spatial_size[1], 3))
+
+        for idx, chan_params in enumerate(params):
+
+            frag_chan = gabor_2d(
+                (xx, yy),
+                x0=chan_params['x0'],
+                y0=chan_params['y0'],
+                theta_deg=chan_params['theta_deg'],
+                amp=chan_params['amp'],
+                sigma=chan_params['sigma'],
+                lambda1=chan_params['lambda1'],
+                psi=chan_params['psi'],
+                gamma=chan_params['gamma']
+            )
+
+            frag_chan = frag_chan.reshape((x.shape[0], y.shape[0]))
+            frag[:, :, idx] = frag_chan
+
+    # Normalize to range 0 - 255
+    frag = (frag - frag.min()) / (frag.max() - frag.min()) * 255
+
+    frag = frag.astype(np.uint8)
+
+    return frag
+
+
 def find_best_fit_2d_gabor(kernel):
     """
     Find the best fit parameters of a 2D gabor for each input channel of kernel.
@@ -268,7 +349,7 @@ def get_filter_orientation(tgt_filt, o_type='average', display_params=True):
         for chan_idx, p in enumerate(gabor_fit_params):
             print("Chan {0}: (x0,y0)=({1:0.2f},{2:0.2f}), theta_deg={3:0.1f}, A={4:0.2f}, sigma={5:0.2f}, "
                   "lambda={6:0.2f}, psi={7:0.2f}, gamma={8:0.2f}".format(
-                chan_idx, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]))
+                    chan_idx, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]))
 
     o_type = o_type.lower()
     if o_type == 'average':
