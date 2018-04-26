@@ -65,10 +65,10 @@ def do_tiles_overlap(l1, r1, l2, r2):
 
 
 def _add_single_side_of_contour_constant_separation(
-        img, center_frag_start, frag, frag_orientation, c_len, beta, d, d_delta, frag_size, direction,
+        img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size, direction,
         random_frag_direction=False):
 
-    acc_angle = frag_orientation
+    acc_angle = frag_params["theta_deg"] - 90
     tile_offset = np.zeros((2,), dtype=np.int)
     prev_tile_start = center_frag_start
 
@@ -91,7 +91,10 @@ def _add_single_side_of_contour_constant_separation(
         acc_angle += beta * frag_direction
         acc_angle = np.mod(acc_angle, 360)
 
-        rotated_frag = imrotate(frag, angle=acc_angle - frag_orientation)
+        rotated_frag_params = frag_params.copy()
+        rotated_frag_params['theta_deg'] = acc_angle - frag_params["theta_deg"] + 90
+
+        rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params, frag.shape[0:2])
 
         # Different from conventional (x, y) co-ordinates, the origin of the displayed
         # array starts in the top left corner. x increases in the vertically down
@@ -137,7 +140,7 @@ def _add_single_side_of_contour_constant_separation(
     return img, tile_starts
 
 
-def add_contour_path_constant_separation(img, frag, frag_orientation, c_len, beta, d):
+def add_contour_path_constant_separation(img, frag, frag_params, c_len, beta, d):
     """
     Add curved contours to the test image as added in the ref. a constant separation (d)
     is projected from the previous tile to find the location of the next tile.
@@ -146,7 +149,7 @@ def add_contour_path_constant_separation(img, frag, frag_orientation, c_len, bet
 
     :param img:
     :param frag:
-    :param frag_orientation:
+    :param frag_params:
     :param c_len:
     :param beta:
     :param d:
@@ -170,12 +173,12 @@ def add_contour_path_constant_separation(img, frag, frag_orientation, c_len, bet
     c_tile_starts = [center_frag_start]
 
     img, tiles = _add_single_side_of_contour_constant_separation(
-        img, center_frag_start, frag, frag_orientation, c_len, beta, d, d_delta, frag_size, 'rhs',
+        img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size, 'rhs',
         random_frag_direction=True)
     c_tile_starts.extend(tiles)
 
     img, tiles = _add_single_side_of_contour_constant_separation(
-        img, center_frag_start, frag, frag_orientation, c_len, beta, d, d_delta, frag_size, 'lhs',
+        img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size, 'lhs',
         random_frag_direction=True)
     c_tile_starts.extend(tiles)
 
@@ -325,7 +328,7 @@ def get_nonoverlapping_bg_fragment(f_tile_start, c_tile_starts, c_tile_size, max
     return None
 
 
-def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
+def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_params):
     """
 
     :param img:
@@ -419,14 +422,22 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta):
 
     # Now add the background fragment tiles
     # -------------------------------------
-    img = alex_net_utils.tile_image(
-        img,
-        frag,
-        bg_frag_starts,
-        rotate=True,
-        delta_rotation=beta,
-        gaussian_smoothing=False
-    )
+
+    rotated_frag_params = frag_params.copy()
+    num_possible_rotations = 360 // beta
+
+    for start in bg_frag_starts:
+
+        rotated_frag_params['theta_deg'] = (np.random.randint(0, np.int(num_possible_rotations)) * beta)
+        rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params, frag.shape[0:2])
+
+        img = alex_net_utils.tile_image(
+            img,
+            rotated_frag,
+            start,
+            rotate=False,
+            gaussian_smoothing=False
+        )
 
     return img, bg_frag_starts, removed_bg_frag_starts, relocate_bg_frag_starts
 
@@ -533,38 +544,31 @@ if __name__ == '__main__':
 
     # B. Generated Directly from a Gabor
     # -------------------------------------
-    x_arr = np.linspace(-1, 1, tgt_filter.shape[0])
-    y_arr = np.copy(x_arr)
-    xx, yy = np.meshgrid(x_arr, y_arr)
+    fragment_gabor_params = {
+        'x0': 0,
+        'y0': 0,
+        'theta_deg': 0,
+        'amp': 1,
+        'sigma': 4,
+        'lambda1': 8,
+        'psi': 0,
+        'gamma': 1
+    }
 
-    fragment = gabor_fits.gabor_2d(
-        (xx, yy),
-        x0=0,
-        y0=0,
-        theta_deg=tgt_filter_orientation - 90,
-        amp=1,
-        sigma=0.6,
-        lambda1=3,
-        psi=0,
-        gamma=1
-    )
-    fragment = fragment.reshape((x_arr.shape[0], y_arr.shape[0]))
-    fragment = np.stack((fragment, fragment, fragment), axis=2)
+    fragment = gabor_fits.get_gabor_fragment(fragment_gabor_params, tgt_filter.shape[0:2])
 
-    # -------------------------------------
-    fragment = normalize_fragment(fragment)
-    fragment = imrotate(fragment, 0)
-
-    # # Display the contour fragment
-    # plt.figure()
-    # plt.imshow(fragment)
-    # plt.title("Contour Fragment")
+    # Display the contour fragment
+    plt.figure()
+    plt.imshow(fragment)
+    plt.title("Contour Fragment")
 
     # -----------------------------------------------------------------------------------
     #  Initializations
     # -----------------------------------------------------------------------------------
     image_size = np.array([227, 227, 3])
-    test_image = np.zeros(image_size, dtype=np.uint8)
+
+    bg_value = np.int(np.mean(fragment))
+    test_image = np.ones(image_size, dtype=np.uint8) * bg_value
 
     beta_rotation = 30
     contour_len = 9
@@ -580,10 +584,10 @@ if __name__ == '__main__':
     test_image, path_fragment_starts = add_contour_path_constant_separation(
         test_image,
         fragment,
-        tgt_filter_orientation,
+        fragment_gabor_params,
         contour_len,
         beta_rotation,
-        full_tile_size[0]
+        full_tile_size[0],
     )
 
     # test_image, path_fragment_starts = add_contour_path_closest_nonoverlap(
@@ -607,7 +611,8 @@ if __name__ == '__main__':
         fragment,
         path_fragment_starts,
         full_tile_size,
-        beta_rotation
+        beta_rotation,
+        fragment_gabor_params
     )
 
     plt.figure()
@@ -621,17 +626,17 @@ if __name__ == '__main__':
     test_image = alex_net_utils.highlight_tiles(
         test_image, fragment.shape[0:2], path_fragment_starts)
 
-    # Highlight background fragment Tiles
-    test_image = alex_net_utils.highlight_tiles(
-        test_image, fragment.shape[0:2], bg_tiles, edge_color=[0, 255, 0])
+    # # Highlight background fragment Tiles
+    # test_image = alex_net_utils.highlight_tiles(
+    #     test_image, fragment.shape[0:2], bg_tiles, edge_color=[0, 255, 0])
 
-    # Highlight Removed tiles
-    test_image = alex_net_utils.highlight_tiles(
-        test_image, fragment.shape[0:2], bg_removed_tiles, edge_color=[0, 0, 255])
+    # # Highlight Removed tiles
+    # test_image = alex_net_utils.highlight_tiles(
+    #     test_image, fragment.shape[0:2], bg_removed_tiles, edge_color=[0, 0, 255])
 
-    # Highlight Relocated tiles
-    test_image = alex_net_utils.highlight_tiles(
-        test_image, fragment.shape[0:2], bg_relocated_tiles, edge_color=[255, 0, 255])
+    # # Highlight Relocated tiles
+    # test_image = alex_net_utils.highlight_tiles(
+    #     test_image, fragment.shape[0:2], bg_relocated_tiles, edge_color=[255, 0, 255])
 
     # Highlight Full Tiles
     bg_tile_starts = alex_net_utils.get_background_tiles_locations(
