@@ -625,18 +625,8 @@ def get_mean_pixel_value_at_boundary(frag, width=1):
 
     border_points = np.array([x_top, x_bottom, y_top, y_bottom])
 
-    print x_top.shape
-    print(border_points.shape)
-
-
-
     mean_border_value = np.mean(border_points, axis=(0, 1, 2))
-
-
-
     mean_border_value = [np.uint8(ch) for ch in mean_border_value]
-
-    print("Mean border value {}".format(mean_border_value))
 
     return mean_border_value
 
@@ -685,13 +675,11 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     image_size = np.array([227, 227, 3])
 
-    bg_value = np.mean(fragment, axis=(0, 1))
-    bg_value = [np.uint8(chan) for chan in bg_value]
-
+    # bg_value = np.mean(fragment, axis=(0, 1))
+    # bg_value = [np.uint8(chan) for chan in bg_value]
     bg_value = get_mean_pixel_value_at_boundary(fragment)
 
     test_image = np.ones(image_size, dtype=np.uint8) * bg_value
-
 
     beta_rotation = 15
     contour_len = 9
