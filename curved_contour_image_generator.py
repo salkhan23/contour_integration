@@ -573,7 +573,7 @@ def get_gabor_from_target_filter(tgt_filt, match=None):
         'y0': 0,
         'theta_deg': 0,
         'amp': 1,
-        'sigma': 3,
+        'sigma': 2.5,
         'lambda1': 8,
         'psi': 0,
         'gamma': 1
@@ -609,6 +609,38 @@ def get_gabor_from_target_filter(tgt_filt, match=None):
     return params
 
 
+def get_mean_pixel_value_at_boundary(frag, width=1):
+    """
+
+    :return:
+    """
+    x_top = frag[0:width, :, :]
+    x_bottom = frag[-width:, :, :]
+
+    y_top = frag[:, 0:width, :]
+    y_bottom = frag[:, -width:, :]
+
+    y_top = np.transpose(y_top, axes=(1, 0, 2))
+    y_bottom = np.transpose(y_bottom, axes=(1, 0, 2))
+
+    border_points = np.array([x_top, x_bottom, y_top, y_bottom])
+
+    print x_top.shape
+    print(border_points.shape)
+
+
+
+    mean_border_value = np.mean(border_points, axis=(0, 1, 2))
+
+
+
+    mean_border_value = [np.uint8(ch) for ch in mean_border_value]
+
+    print("Mean border value {}".format(mean_border_value))
+
+    return mean_border_value
+
+
 if __name__ == '__main__':
     plt.ion()
     K.clear_session()
@@ -631,8 +663,8 @@ if __name__ == '__main__':
     fragment_gabor_params = get_gabor_from_target_filter(
         tgt_filter,
         # match=[ 'x0', 'y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma']
-        match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
-        # match=[ 'theta_deg']
+        # match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
+        match=[ 'theta_deg']
     )
 
     fragment_gabor_params['theta_deg'] = np.int(fragment_gabor_params['theta_deg'])
@@ -645,16 +677,21 @@ if __name__ == '__main__':
     plt.imshow(fragment)
     plt.title("Contour Fragment")
 
-    # Plot rotations of the fragment
-    plot_fragment_rotations(fragment, fragment_gabor_params, delta_rot=15)
+    # # Plot rotations of the fragment
+    # plot_fragment_rotations(fragment, fragment_gabor_params, delta_rot=15)
 
     # -----------------------------------------------------------------------------------
     #  Initializations
     # -----------------------------------------------------------------------------------
     image_size = np.array([227, 227, 3])
 
-    bg_value = np.int(np.mean(fragment))
+    bg_value = np.mean(fragment, axis=(0, 1))
+    bg_value = [np.uint8(chan) for chan in bg_value]
+
+    bg_value = get_mean_pixel_value_at_boundary(fragment)
+
     test_image = np.ones(image_size, dtype=np.uint8) * bg_value
+
 
     beta_rotation = 15
     contour_len = 9
