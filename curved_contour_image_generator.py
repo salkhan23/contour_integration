@@ -551,6 +551,64 @@ def plot_fragment_rotations(frag, frag_params, delta_rot=15):
         ax_arr[row_idx][col_idx].set_title("Angle = {}".format(rot_ang))
 
 
+def get_gabor_from_target_filter(tgt_filt, match=None):
+    """
+    Get best Fit gabor from feature extracting kernel
+    Best fit parameters for the channel with the highest absolute amplitude are used
+
+    :param tgt_filt: target filter to match
+    :param match: list of params names to match. Default is to match orientation (theta_deg) only
+
+    Valid entries for the list are
+    ['x0', y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma' ]
+
+    :return: dictionary of best fit parameters
+    """
+
+    if match is None:
+        match = ['theta_deg']
+
+    params = {
+        'x0': 0,
+        'y0': 0,
+        'theta_deg': 0,
+        'amp': 1,
+        'sigma': 3,
+        'lambda1': 8,
+        'psi': 0,
+        'gamma': 1
+    }
+
+    best_fit_params_list = gabor_fits.find_best_fit_2d_gabor(tgt_filt)
+
+    amp_max_value = 0
+    amp_max_idx = 0
+
+    for idx, fitted_params in enumerate(best_fit_params_list):
+
+        if abs(fitted_params[3]) > amp_max_value:
+            amp_max_value = abs(fitted_params[3])
+            amp_max_idx = idx
+
+    fit_params = {
+        'x0': best_fit_params_list[amp_max_idx][0],
+        'y0': best_fit_params_list[amp_max_idx][1],
+        'theta_deg': best_fit_params_list[amp_max_idx][2],
+        'amp': best_fit_params_list[amp_max_idx][3],
+        'sigma': 3,
+        'lambda1': best_fit_params_list[amp_max_idx][5],
+        'psi': best_fit_params_list[amp_max_idx][6],
+        'gamma': best_fit_params_list[amp_max_idx][7]
+    }
+
+    for key in match:
+        if key in params:
+            params[key] = fit_params[key]
+            print("Matching {0}={1}".format(key, params[key]))
+
+    return params
+
+
 if __name__ == '__main__':
     plt.ion()
     K.clear_session()
@@ -577,28 +635,15 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Contour Fragment
     # -----------------------------------------------------------------------------------
+    fragment_gabor_params = get_gabor_from_target_filter(
+        tgt_filter,
+        # match=[ 'x0', 'y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma']
+        match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
+        # match=[ 'theta_deg']
+    )
 
-    # # A. Derived from the target filter
-    # # ---------------------------------
-    # Blend in the edges of the fragment @ the edges
-    # g_kernel = alex_net_utils.get_2d_gaussian_kernel(tgt_filter.shape[0:2], sigma=0.6)
-    # g_kernel = np.expand_dims(g_kernel, axis=2)
-    # fragment = tgt_filter * g_kernel
-
-    # B. Generated Directly from a Gabor
-    # -------------------------------------
-    fragment_gabor_params = {
-        'x0': 0,
-        'y0': 0,
-        'theta_deg': 0,
-        'amp': 1,
-        'sigma': 4,
-        'lambda1': 8,
-        'psi': 0,
-        'gamma': 1
-    }
-
-    fragment = gabor_fits.get_gabor_fragment(fragment_gabor_params, tgt_filter.shape[0:2])
+    fragment = gabor_fits.get_gabor_fragment(
+        fragment_gabor_params, tgt_filter.shape[0:2])
 
     # Display the contour fragment
     plt.figure()
@@ -616,7 +661,7 @@ if __name__ == '__main__':
     bg_value = np.int(np.mean(fragment))
     test_image = np.ones(image_size, dtype=np.uint8) * bg_value
 
-    beta_rotation = 30
+    beta_rotation = 15
     contour_len = 9
 
     # In the Ref, the visible portion of the fragment moves around inside large tiles.
@@ -627,75 +672,75 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Add the Contour Path
     # -----------------------------------------------------------------------------------
-    # test_image, path_fragment_starts = add_contour_path_constant_separation(
-    #     test_image,
-    #     fragment,
-    #     fragment_gabor_params,
-    #     contour_len,
-    #     beta_rotation,
-    #     full_tile_size[0],
-    # )
-
-    test_image, path_fragment_starts = add_contour_path_closest_nonoverlap(
+    test_image, path_fragment_starts = add_contour_path_constant_separation(
         test_image,
         fragment,
         fragment_gabor_params,
         contour_len,
         beta_rotation,
-        full_tile_size[0] - 2
+        full_tile_size[0],
     )
 
-    # plt.figure()
-    # plt.imshow(test_image)
-    # plt.title("Contour Fragments")
+    # test_image, path_fragment_starts = add_contour_path_closest_nonoverlap(
+    #     test_image,
+    #     fragment,
+    #     fragment_gabor_params,
+    #     contour_len,
+    #     beta_rotation,
+    #     full_tile_size[0] - 2
+    # )
+
+    plt.figure()
+    plt.imshow(test_image)
+    plt.title("Contour Fragments")
 
     # ----------------------------------------------------------------------------------
     #  Add background Fragments
     # ----------------------------------------------------------------------------------
-    test_image, bg_tiles, bg_removed_tiles, bg_relocated_tiles = add_background_fragments(
-        test_image,
-        fragment,
-        path_fragment_starts,
-        full_tile_size,
-        beta_rotation,
-        fragment_gabor_params
-    )
-
-    plt.figure()
-    plt.imshow(test_image)
-    plt.title("Contour of length {0} embedded in a sea of distractors".format(contour_len))
-
-    # -----------------------------------------------------------------------------------
-    # Debugging Plots
-    # -----------------------------------------------------------------------------------
-    # Highlight Contour Fragments
-    test_image = alex_net_utils.highlight_tiles(
-        test_image, fragment.shape[0:2], path_fragment_starts)
-
-    # # Highlight background fragment Tiles
+    # test_image, bg_tiles, bg_removed_tiles, bg_relocated_tiles = add_background_fragments(
+    #     test_image,
+    #     fragment,
+    #     path_fragment_starts,
+    #     full_tile_size,
+    #     beta_rotation,
+    #     fragment_gabor_params
+    # )
+    #
+    # plt.figure()
+    # plt.imshow(test_image)
+    # plt.title("Contour of length {0} embedded in a sea of distractors".format(contour_len))
+    #
+    # # -----------------------------------------------------------------------------------
+    # # Debugging Plots
+    # # -----------------------------------------------------------------------------------
+    # # Highlight Contour Fragments
     # test_image = alex_net_utils.highlight_tiles(
-    #     test_image, fragment.shape[0:2], bg_tiles, edge_color=[0, 255, 0])
-
-    # # Highlight Removed tiles
+    #     test_image, fragment.shape[0:2], path_fragment_starts)
+    #
+    # # # Highlight background fragment Tiles
+    # # test_image = alex_net_utils.highlight_tiles(
+    # #     test_image, fragment.shape[0:2], bg_tiles, edge_color=[0, 255, 0])
+    #
+    # # # Highlight Removed tiles
+    # # test_image = alex_net_utils.highlight_tiles(
+    # #     test_image, fragment.shape[0:2], bg_removed_tiles, edge_color=[0, 0, 255])
+    #
+    # # # Highlight Relocated tiles
+    # # test_image = alex_net_utils.highlight_tiles(
+    # #     test_image, fragment.shape[0:2], bg_relocated_tiles, edge_color=[255, 0, 255])
+    #
+    # # Highlight Full Tiles
+    # bg_tile_starts = alex_net_utils.get_background_tiles_locations(
+    #     frag_len=full_tile_size[0],
+    #     img_len=image_size[0],
+    #     row_offset=0,
+    #     space_bw_tiles=0,
+    #     tgt_n_visual_rf_start=image_size[0] // 2 - (full_tile_size[0] // 2)
+    # )
+    #
     # test_image = alex_net_utils.highlight_tiles(
-    #     test_image, fragment.shape[0:2], bg_removed_tiles, edge_color=[0, 0, 255])
-
-    # # Highlight Relocated tiles
-    # test_image = alex_net_utils.highlight_tiles(
-    #     test_image, fragment.shape[0:2], bg_relocated_tiles, edge_color=[255, 0, 255])
-
-    # Highlight Full Tiles
-    bg_tile_starts = alex_net_utils.get_background_tiles_locations(
-        frag_len=full_tile_size[0],
-        img_len=image_size[0],
-        row_offset=0,
-        space_bw_tiles=0,
-        tgt_n_visual_rf_start=image_size[0] // 2 - (full_tile_size[0] // 2)
-    )
-
-    test_image = alex_net_utils.highlight_tiles(
-        test_image, full_tile_size, bg_tile_starts, edge_color=(255, 255, 0))
-
-    plt.figure()
-    plt.imshow(test_image)
-    plt.title('Debugging Image')
+    #     test_image, full_tile_size, bg_tile_starts, edge_color=(255, 255, 0))
+    #
+    # plt.figure()
+    # plt.imshow(test_image)
+    # plt.title('Debugging Image')
