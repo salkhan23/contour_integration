@@ -154,10 +154,13 @@ def find_best_fit_2d_gabor(kernel):
     """
     n_channels = kernel.shape[-1]
 
-    x_arr = np.arange(-0.5, 0.5, 1 / np.float(kernel.shape[0]))
-    y_arr = np.copy(x_arr)
+    half_x = kernel.shape[0] // 2
+    half_y = kernel.shape[1] // 2
 
-    xx, yy = np.meshgrid(x_arr, y_arr)
+    x = np.linspace(-half_x, half_x, kernel.shape[0])
+    y = np.linspace(-half_y, half_y, kernel.shape[1])
+
+    xx, yy = np.meshgrid(x, y)
 
     opt_params_list = []
 
