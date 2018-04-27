@@ -91,10 +91,10 @@ def _add_single_side_of_contour_constant_separation(
             frag_direction = 1
 
         acc_angle += beta * frag_direction
-        acc_angle = np.mod(acc_angle, 360)
+        # acc_angle = np.mod(acc_angle, 360)
 
         rotated_frag_params = frag_params.copy()
-        rotated_frag_params['theta_deg'] = acc_angle - frag_params["theta_deg"] + 90
+        rotated_frag_params['theta_deg'] = (acc_angle + 90)
 
         rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params, frag.shape[0:2])
 
@@ -220,7 +220,7 @@ def _add_single_side_of_contour_closest_nonoverlap(
         acc_angle = np.mod(acc_angle, 360)
 
         rotated_frag_params = frag_params.copy()
-        rotated_frag_params['theta_deg'] = acc_angle - frag_params["theta_deg"] + 90
+        rotated_frag_params['theta_deg'] = (acc_angle + 90)
 
         rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params, frag.shape[0:2])
 
@@ -620,17 +620,10 @@ if __name__ == '__main__':
     tgt_filter_idx = 10
     tgt_filter = base_alex_net.get_target_feature_extracting_kernel(tgt_filter_idx)
 
-    # Best fits angle is wrt the y axis (theta = 0), change it to be  wrt to the x axis
-    tgt_filter_orientation = np.int(gabor_fits.get_filter_orientation(tgt_filter, o_type='average'))
-    tgt_filter_orientation = np.int(np.floor(90 + tgt_filter_orientation))
-
-    title = "Target Filter Index {0}, orientation {1}".format(tgt_filter_idx, tgt_filter_orientation)
-    print(title)
-
     # # Display the target filter
     # plt.figure()
     # plt.imshow(normalize_fragment(tgt_filter))
-    # plt.title(title)
+    # plt.title('Target Filter')
 
     # -----------------------------------------------------------------------------------
     #  Contour Fragment
@@ -641,6 +634,8 @@ if __name__ == '__main__':
         match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
         # match=[ 'theta_deg']
     )
+
+    fragment_gabor_params['theta_deg'] = np.int(fragment_gabor_params['theta_deg'])
 
     fragment = gabor_fits.get_gabor_fragment(
         fragment_gabor_params, tgt_filter.shape[0:2])
@@ -697,50 +692,50 @@ if __name__ == '__main__':
     # ----------------------------------------------------------------------------------
     #  Add background Fragments
     # ----------------------------------------------------------------------------------
-    # test_image, bg_tiles, bg_removed_tiles, bg_relocated_tiles = add_background_fragments(
-    #     test_image,
-    #     fragment,
-    #     path_fragment_starts,
-    #     full_tile_size,
-    #     beta_rotation,
-    #     fragment_gabor_params
-    # )
-    #
-    # plt.figure()
-    # plt.imshow(test_image)
-    # plt.title("Contour of length {0} embedded in a sea of distractors".format(contour_len))
-    #
-    # # -----------------------------------------------------------------------------------
-    # # Debugging Plots
-    # # -----------------------------------------------------------------------------------
-    # # Highlight Contour Fragments
+    test_image, bg_tiles, bg_removed_tiles, bg_relocated_tiles = add_background_fragments(
+        test_image,
+        fragment,
+        path_fragment_starts,
+        full_tile_size,
+        beta_rotation,
+        fragment_gabor_params
+    )
+
+    plt.figure()
+    plt.imshow(test_image)
+    plt.title("Contour of length {0} embedded in a sea of distractors".format(contour_len))
+
+    # -----------------------------------------------------------------------------------
+    # Debugging Plots
+    # -----------------------------------------------------------------------------------
+    # Highlight Contour Fragments
+    test_image = alex_net_utils.highlight_tiles(
+        test_image, fragment.shape[0:2], path_fragment_starts)
+
+    # # Highlight background fragment Tiles
     # test_image = alex_net_utils.highlight_tiles(
-    #     test_image, fragment.shape[0:2], path_fragment_starts)
-    #
-    # # # Highlight background fragment Tiles
-    # # test_image = alex_net_utils.highlight_tiles(
-    # #     test_image, fragment.shape[0:2], bg_tiles, edge_color=[0, 255, 0])
-    #
-    # # # Highlight Removed tiles
-    # # test_image = alex_net_utils.highlight_tiles(
-    # #     test_image, fragment.shape[0:2], bg_removed_tiles, edge_color=[0, 0, 255])
-    #
-    # # # Highlight Relocated tiles
-    # # test_image = alex_net_utils.highlight_tiles(
-    # #     test_image, fragment.shape[0:2], bg_relocated_tiles, edge_color=[255, 0, 255])
-    #
-    # # Highlight Full Tiles
-    # bg_tile_starts = alex_net_utils.get_background_tiles_locations(
-    #     frag_len=full_tile_size[0],
-    #     img_len=image_size[0],
-    #     row_offset=0,
-    #     space_bw_tiles=0,
-    #     tgt_n_visual_rf_start=image_size[0] // 2 - (full_tile_size[0] // 2)
-    # )
-    #
+    #     test_image, fragment.shape[0:2], bg_tiles, edge_color=[0, 255, 0])
+
+    # # Highlight Removed tiles
     # test_image = alex_net_utils.highlight_tiles(
-    #     test_image, full_tile_size, bg_tile_starts, edge_color=(255, 255, 0))
-    #
-    # plt.figure()
-    # plt.imshow(test_image)
-    # plt.title('Debugging Image')
+    #     test_image, fragment.shape[0:2], bg_removed_tiles, edge_color=[0, 0, 255])
+
+    # # Highlight Relocated tiles
+    # test_image = alex_net_utils.highlight_tiles(
+    #     test_image, fragment.shape[0:2], bg_relocated_tiles, edge_color=[255, 0, 255])
+
+    # Highlight Full Tiles
+    bg_tile_starts = alex_net_utils.get_background_tiles_locations(
+        frag_len=full_tile_size[0],
+        img_len=image_size[0],
+        row_offset=0,
+        space_bw_tiles=0,
+        tgt_n_visual_rf_start=image_size[0] // 2 - (full_tile_size[0] // 2)
+    )
+
+    test_image = alex_net_utils.highlight_tiles(
+        test_image, full_tile_size, bg_tile_starts, edge_color=(255, 255, 0))
+
+    plt.figure()
+    plt.imshow(test_image)
+    plt.title('Debugging Image')
