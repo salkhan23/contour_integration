@@ -9,7 +9,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from scipy.misc import imrotate
 
 import keras.backend as K
 
