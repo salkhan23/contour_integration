@@ -31,39 +31,45 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
-    contour_len_arr = np.array([9])
-    beta_rotation_arr = np.array([15, 30, 45, 60])
+    tgt_filter_idx = 5
 
     n_images = 20
 
-    full_tile_size = np.array([17, 17])
+    image_size = np.array((227, 227, 3))
 
-    # ------------------------------------------------------------------------------------
-    # Contour Fragment
-    # ------------------------------------------------------------------------------------
-    tgt_filter_idx = 10
+    full_tile_size = np.array((17, 17))
+    frag_tile_size = np.array((11, 11))
+
+    contour_len_arr = np.array([9])
+    beta_rotation_arr = np.array([15, 30, 45, 60])
+
+    # -----------------------------------------------------------------------------------
+    # Target Kernel
+    # -----------------------------------------------------------------------------------
     tgt_filter = base_alex_net.get_target_feature_extracting_kernel(tgt_filter_idx)
 
-    tgt_filter_orientation = gabor_fits.get_filter_orientation(tgt_filter, o_type='average')
-    tgt_filter_orientation = np.int(np.floor(tgt_filter_orientation))
+    # -----------------------------------------------------------------------------------
+    # Contour Fragment
+    # -----------------------------------------------------------------------------------
+    fragment_gabor_params = curved_contour_image_generator.get_gabor_from_target_filter(
+        tgt_filter,
+        # match=[ 'x0', 'y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma']
+        match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
+        # match=['theta_deg']
+    )
+    fragment_gabor_params['theta_deg'] = np.int(fragment_gabor_params['theta_deg'])
 
-    fragment_gabor_params = {
-        'x0': 0,
-        'y0': 0,
-        'theta_deg': tgt_filter_orientation,
-        'amp': 1,
-        'sigma': 4,
-        'lambda1': 8,
-        'psi': 0,
-        'gamma': 1
-    }
-
-    fragment = gabor_fits.get_gabor_fragment(fragment_gabor_params, tgt_filter.shape[0:2])
+    fragment = gabor_fits.get_gabor_fragment(
+        fragment_gabor_params, frag_tile_size[0:2])
 
     # # Display the contour fragment
     # plt.figure()
     # plt.imshow(fragment)
     # plt.title("Contour Fragment")
+    #
+    # # Plot rotations of the fragment
+    # curved_contour_image_generator.plot_fragment_rotations(
+    #     fragment, fragment_gabor_params, delta_rot=15)
 
     # ------------------------------------------------------------------------------------
     # Generate Images
@@ -71,7 +77,7 @@ if __name__ == '__main__':
     for c_len in contour_len_arr:
 
         destination_dir = 'filter_{0}_orient_{1}/c_len_{2}'.format(
-            tgt_filter_idx, tgt_filter_orientation, c_len)
+            tgt_filter_idx, fragment_gabor_params['theta_deg'], c_len)
 
         for beta in beta_rotation_arr:
 
@@ -80,4 +86,12 @@ if __name__ == '__main__':
                 os.makedirs(abs_destination_dir)
 
             curved_contour_image_generator.generate_contour_images(
-                n_images, fragment, fragment_gabor_params, c_len, beta, full_tile_size, abs_destination_dir)
+                n_images,
+                fragment,
+                fragment_gabor_params,
+                c_len,
+                beta,
+                full_tile_size,
+                abs_destination_dir,
+                img_size=image_size
+            )
