@@ -426,7 +426,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
     removed_bg_frag_starts = np.array(removed_bg_frag_starts)
 
-    if removed_bg_frag_starts:
+    if removed_bg_frag_starts is not None:
         removed_bg_frag_starts = np.squeeze(removed_bg_frag_starts, axis=1)
 
     relocate_bg_frag_starts = np.array(relocate_bg_frag_starts)
