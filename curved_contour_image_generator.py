@@ -425,13 +425,14 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
             np.delete(f_tile_starts, ovlp_bg_frag_idx_to_remove, axis=0)
 
     removed_bg_frag_starts = np.array(removed_bg_frag_starts)
-    removed_bg_frag_starts = np.squeeze(removed_bg_frag_starts, axis=1)
+
+    if removed_bg_frag_starts:
+        removed_bg_frag_starts = np.squeeze(removed_bg_frag_starts, axis=1)
 
     relocate_bg_frag_starts = np.array(relocate_bg_frag_starts)
 
     # Now add the background fragment tiles
     # -------------------------------------
-
     rotated_frag_params = frag_params.copy()
     num_possible_rotations = 360 // beta
 
@@ -452,7 +453,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
 
 def generate_contour_images(
-        n_images, frag, frag_params, c_len, beta, f_tile_size, destination, image_format='JPEG'):
+        n_images, frag, frag_params, c_len, beta, f_tile_size, destination, img_size=None, image_format='JPEG'):
     """
 
     # In the Ref, a visible stimulus of a small size is placed inside a large tile
@@ -465,20 +466,25 @@ def generate_contour_images(
     :param beta:
     :param f_tile_size
     :param destination:
+    :param img_size:
     :param image_format:
 
     :return:
     """
-    img_size = np.array([227, 227, 3])
+    if img_size is None:
+        img_size = np.array([227, 227, 3])
 
     print("Generating {0} images for fragment [orientation {1}, contour length {2},"
           "inter fragment rotation {3}]".format(n_images, frag_params['theta_deg'], c_len, beta))
+
+    # bg = np.mean(fragment, axis=(0, 1))
+    # bg = [np.uint8(chan) for chan in bg_value]
+    bg = get_mean_pixel_value_at_boundary(frag)
 
     for img_idx in range(n_images):
 
         print("Image {}".format(img_idx))
 
-        bg = np.int(np.mean(frag))
         img = np.ones(img_size, dtype=np.uint8) * bg
 
         img, c_frag_starts = add_contour_path_constant_separation(
