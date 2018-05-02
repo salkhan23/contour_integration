@@ -15,6 +15,7 @@ from keras.layers import Input, Conv2D
 from keras.engine.topology import Layer
 import keras.activations as activations
 from keras.regularizers import l1
+import keras
 from keras.models import Model
 
 
@@ -175,7 +176,17 @@ if __name__ == '__main__':
     cont_int_model = build_contour_integration_model(tgt_kernel_idx)
     print cont_int_model.summary()
 
-    # # -----------------------------------------------------------------------------------
-    # # Train the Model
-    # # -----------------------------------------------------------------------------------
-    # print("Building the training image generator")
+    # Validate the model is working properly
+    # --------------------------------------
+    image = keras.preprocessing.image.load_img(
+        "./data/sample_images/cat.7.jpg",
+        target_size=[227, 227, 3]
+    )
+
+    # plt.figure()
+    # plt.imshow(image)
+
+    image = keras.preprocessing.image.img_to_array(image)  # takes care of putting channel first.
+
+    y_hat = cont_int_model.predict(np.expand_dims(image, axis=0), batch_size=1)
+    print("Model Prediction Enhancement Gain of {}".format(y_hat))
