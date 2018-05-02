@@ -111,7 +111,7 @@ class ContourIntegrationLayer3D(Layer):
         Selectively enhance the gain of neurons in the feature extracting activation volume that
         are part of a smooth contour.
 
-        TODO: add the feed forward part to the output, like in the other contour integration models
+        TODO: Add the feed forward part to the output, like in the other contour integration models
         TODO: Currently it is only a convolution
 
         :param inputs:
@@ -130,6 +130,36 @@ class ContourIntegrationLayer3D(Layer):
         return outputs
 
 
+def build_contour_integration_model(tgt_filt_idx):
+    """
+    Build a (short) model of 3D contour integration that can be used to train the model.
+
+    THis is build on after the first feature extracting layer of object classifying network,
+    and only trains the contour integration layer. THe complete model can still be used for
+    object classification
+
+    :param tgt_filt_idx:
+    :return:
+    """
+    input_layer = Input(shape=(3, 227, 227))
+
+    feature_extract_layer_1 = Conv2D(
+        96, (11, 11), strides=(4, 4), activation='relu', name='feature_extract_layer_1')(input_layer)
+
+    contour_integrate_layer = ContourIntegrationLayer3D(rf_size=25)(feature_extract_layer_1)
+
+    contour_gain_layer = ContourGainCalculatorLayer(tgt_filt_idx)([
+        feature_extract_layer_1, contour_integrate_layer])
+
+    model = Model(input_layer, outputs=contour_gain_layer)
+
+    model.layers[1].trainable = False  # Set the feature extracting layer as untrainable.
+
+    model.compile(optimizer='Adam', loss='mse')
+
+    return model
+
+
 if __name__ == '__main__':
 
     plt.ion()
@@ -142,22 +172,8 @@ if __name__ == '__main__':
     # Build the model
     # -----------------------------------------------------------------------------------
     print("Building the contour integration model...")
-    input_layer = Input(shape=(3, 227, 227))
-
-    feature_extract_layer_1 = Conv2D(
-        96, (11, 11), strides=(4, 4), activation='relu', name='feature_extract_layer_1')(input_layer)
-
-    contour_integrate_layer = ContourIntegrationLayer3D(rf_size=25)(feature_extract_layer_1)
-
-    contour_gain_layer = ContourGainCalculatorLayer(tgt_kernel_idx)([
-        feature_extract_layer_1, contour_integrate_layer])
-
-    model = Model(input_layer, outputs=contour_gain_layer)
-
-    model.layers[1].trainable = False  # Set the feature extracting layer as untrainable.
-
-    model.compile(optimizer='Adam', loss='mse')
-    print model.summary()
+    cont_int_model = build_contour_integration_model(tgt_kernel_idx)
+    print cont_int_model.summary()
 
     # # -----------------------------------------------------------------------------------
     # # Train the Model
