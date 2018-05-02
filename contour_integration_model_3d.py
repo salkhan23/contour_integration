@@ -83,7 +83,7 @@ class ContourIntegrationLayer3D(Layer):
 
     def build(self, input_shape):
         _, ch, r, c = input_shape
-        print("Build Fcn: Channel First Input shape ", input_shape)
+        # print("Build Fcn: Channel First Input shape ", input_shape)
 
         # Todo: Check which dimension is input and which one is output
         self.kernel = self.add_weight(
@@ -112,21 +112,19 @@ class ContourIntegrationLayer3D(Layer):
         Selectively enhance the gain of neurons in the feature extracting activation volume that
         are part of a smooth contour.
 
-        TODO: Add the feed forward part to the output, like in the other contour integration models
-        TODO: Currently it is only a convolution
-
         :param inputs:
         :param kwargs:
         :return:
         """
         _, ch, r, c = K.int_shape(inputs)
-        print("Call Fcn: Channel First Input shape ", K.int_shape(inputs))
+        # print("Call Fcn: Channel First Input shape ", K.int_shape(inputs))
 
         outputs = K.conv2d(inputs, self.kernel, strides=(1, 1), padding='same')
 
+        outputs = outputs * inputs
         outputs = K.bias_add(outputs, self.bias)
 
-        outputs = self.activation(outputs)
+        outputs = self.activation(outputs) + inputs
 
         return outputs
 
@@ -174,19 +172,31 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     print("Building the contour integration model...")
     cont_int_model = build_contour_integration_model(tgt_kernel_idx)
-    print cont_int_model.summary()
+    # print cont_int_model.summary()
 
+    # -----------------------------------------------------------------------------------
     # Validate the model is working properly
-    # --------------------------------------
+    # -----------------------------------------------------------------------------------
+    image_name = "./data/sample_images/cat.7.jpg"
+
+    # Option 1: Keras way
+    # --------------------
     image = keras.preprocessing.image.load_img(
-        "./data/sample_images/cat.7.jpg",
+        image_name,
         target_size=[227, 227, 3]
     )
+
+    # Takes care of putting channel first.
+    input_image = keras.preprocessing.image.img_to_array(image)
+
+    # # Option 2: pyplot and numpy only
+    # # -------------------------------
+    # # Note: This method only works for images that do not need to be resized.
+    # image = plt.imread(image_name)
+    # input_image = np.transpose(image, axes=(2, 0, 1))
 
     # plt.figure()
     # plt.imshow(image)
 
-    image = keras.preprocessing.image.img_to_array(image)  # takes care of putting channel first.
-
-    y_hat = cont_int_model.predict(np.expand_dims(image, axis=0), batch_size=1)
+    y_hat = cont_int_model.predict(np.expand_dims(input_image, axis=0), batch_size=1)
     print("Model Prediction Enhancement Gain of {}".format(y_hat))
