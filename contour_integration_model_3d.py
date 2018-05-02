@@ -159,4 +159,4 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Train the Model
     # -----------------------------------------------------------------------------------
-    print("Building the contour image generator")
+    print("Building the training image generator")
