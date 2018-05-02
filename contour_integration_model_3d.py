@@ -37,6 +37,9 @@ class ContourGainCalculatorLayer(Layer):
     def build(self, input_shape):
         super(ContourGainCalculatorLayer, self).build(input_shape)
 
+    def compute_output_shape(self, input_shape):
+        return input_shape[1][0], 1
+
     def call(self, inputs, **kwargs):
         """
         Calculate the enhancement gain of the neuron at the center of the image.
@@ -149,14 +152,14 @@ if __name__ == '__main__':
     contour_gain_layer = ContourGainCalculatorLayer(tgt_kernel_idx)([
         feature_extract_layer_1, contour_integrate_layer])
 
-    model = Model([input_layer, tgt_kernel_idx], outputs=contour_gain_layer)
+    model = Model(input_layer, outputs=contour_gain_layer)
 
     model.layers[1].trainable = False  # Set the feature extracting layer as untrainable.
 
     model.compile(optimizer='Adam', loss='mse')
     print model.summary()
 
-    # -----------------------------------------------------------------------------------
-    # Train the Model
-    # -----------------------------------------------------------------------------------
-    print("Building the training image generator")
+    # # -----------------------------------------------------------------------------------
+    # # Train the Model
+    # # -----------------------------------------------------------------------------------
+    # print("Building the training image generator")
