@@ -1102,8 +1102,8 @@ if __name__ == "__main__":
 
     # 3. Display the activations of a test image
     # ------------------------------------------
-    # img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
-    img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    # img = load_img("trained_models/data/sample_images/cat.7.jpg", target_size=(227, 227))
+    img = load_img("trained_models/data/sample_images/zahra.jpg", target_size=(227, 227))
     plt.figure()
     plt.imshow(img)
     plt.title('Original Image')
@@ -1133,8 +1133,8 @@ if __name__ == "__main__":
 
     # 5. Output of contour enhancement on real images
     # ----------------------------------------------------------------------
-    test_real_img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
-    # test_real_img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
+    test_real_img = load_img("trained_models/data/sample_images/zahra.jpg", target_size=(227, 227))
+    # test_real_img = load_img("trained_models/data/sample_images/cat.7.jpg", target_size=(227, 227))
 
     tgt_filt_idx = 5
     alex_net_utils.plot_l1_and_l2_activations(test_real_img, l1_activations_cb, l2_activations_cb, tgt_filt_idx)

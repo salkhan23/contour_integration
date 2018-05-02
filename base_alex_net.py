@@ -146,6 +146,7 @@ def alex_net(weights_path):
 
     return model
 
+
 if __name__ == "__main__":
 
     plt.ion()
@@ -164,8 +165,8 @@ if __name__ == "__main__":
 
     # 3. Display the activations of a test image
     # ---------------------------------------------------------------------
-    # img = load_img("trained_models/AlexNet/SampleImages/cat.7.jpg", target_size=(227, 227))
-    img = load_img("trained_models/AlexNet/SampleImages/zahra.jpg", target_size=(227, 227))
+    # img = load_img("trained_models/data/sample_images/cat.7.jpg", target_size=(227, 227))
+    img = load_img("trained_models/data/sample_images/zahra.jpg", target_size=(227, 227))
     plt.figure()
     plt.imshow(img)
 
