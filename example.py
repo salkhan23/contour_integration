@@ -48,13 +48,18 @@ class DataGenerator(keras.utils.Sequence):
         :param list_ids_temp:
         :return:
         """
-        x_arr = np.zeros((self.batch_size, self.dim[0], self.dim[1], self.dim[2]))
+        x_arr = np.zeros((self.batch_size, self.dim[2], self.dim[1], self.dim[0]))
         y_arr = np.zeros(self.batch_size)
 
+        print("New interation")
+
         for i, list_id in enumerate(list_ids_temp):
-            print("Loading",'data/' + list_id + '.jpg')
-            x_arr[i, ] = plt.imread( 'data/' + list_id + '.jpg')
+            print("Loading", 'data/' + list_id + '.jpg')
+            temp = plt.imread( 'data/' + list_id + '.jpg')
+            x_arr[i, ] = np.transpose(temp, [2, 0, 1])
             y_arr[i] = self.labels[list_id]
+
+        print(x_arr.shape)
 
         return x_arr, y_arr
 
@@ -189,7 +194,7 @@ if __name__ == '__main__':
     X, y = gen_out.next()
 
     plt.figure()
-    plt.imshow(X[0, ])
+    plt.imshow(np.transpose(X[0, ], (1,2,0)))
 
 
 
