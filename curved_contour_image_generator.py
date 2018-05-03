@@ -469,7 +469,7 @@ def generate_contour_images(
     :param img_size:
     :param image_format:
 
-    :return:
+    :return: list of file names generated
     """
     if img_size is None:
         img_size = np.array([227, 227, 3])
@@ -480,6 +480,8 @@ def generate_contour_images(
     # bg = np.mean(fragment, axis=(0, 1))
     # bg = [np.uint8(chan) for chan in bg_value]
     bg = get_mean_pixel_value_at_boundary(frag)
+
+    files_generated = []
 
     for img_idx in range(n_images):
 
@@ -518,10 +520,14 @@ def generate_contour_images(
         #     img, f_tile_size, f_tile_starts, edge_color=(255, 255, 0))
 
         # ------------------------------------------------------------
-        filename = "orient_{0}_clen_{1}_beta_{2}__{3}".format(
+        filename = "orient_{0}_clen_{1}_beta_{2}__{3}.jpg".format(
             frag_params["theta_deg"], c_len, beta, img_idx)
 
-        plt.imsave(os.path.join(destination, filename + '.jpg'), img, format=image_format)
+        plt.imsave(os.path.join(destination, filename), img, format=image_format)
+
+        files_generated.append(filename)
+
+    return files_generated
 
 
 def plot_fragment_rotations(frag, frag_params, delta_rot=15):
