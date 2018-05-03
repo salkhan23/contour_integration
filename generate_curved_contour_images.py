@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from scipy.misc import imrotate
+import pickle
 
 import keras.backend as K
 
@@ -74,18 +75,25 @@ if __name__ == '__main__':
     # ------------------------------------------------------------------------------------
     # Generate Images
     # ------------------------------------------------------------------------------------
+
+    # Temp for now just choose some arbitrary gain enhancement.
+    # TODO: get actual enhancement gain, absolute for straight contour from Li-2006
+    # TODO: relative for curved contours from Fields 1993
+    enhancement_gain_arr = np.array([2.0, 1.6, 1.0, 1.0])
+
+    train_dict = {}
+
     for c_len in contour_len_arr:
 
-        destination_dir = 'filter_{0}_orient_{1}/c_len_{2}'.format(
-            tgt_filter_idx, fragment_gabor_params['theta_deg'], c_len)
+        destination_dir = 'filter_{0}/c_len_{1}'.format(tgt_filter_idx, c_len)
 
-        for beta in beta_rotation_arr:
+        for b_idx, beta in enumerate(beta_rotation_arr):
 
             abs_destination_dir = os.path.join(BASE_DIRECTORY, destination_dir, 'beta_{0}'.format(beta))
             if not os.path.exists(abs_destination_dir):
                 os.makedirs(abs_destination_dir)
 
-            curved_contour_image_generator.generate_contour_images(
+            file_names = curved_contour_image_generator.generate_contour_images(
                 n_images,
                 fragment,
                 fragment_gabor_params,
@@ -95,3 +103,18 @@ if __name__ == '__main__':
                 abs_destination_dir,
                 img_size=image_size
             )
+
+            for filename in file_names:
+                train_dict[filename] = enhancement_gain_arr[b_idx]
+
+    pickle_file_loc = 'filter_{}'.format(tgt_filter_idx)
+    abs_destination_dir = os.path.join(BASE_DIRECTORY, pickle_file_loc,'trainKey.pickle')
+
+    with open(abs_destination_dir, 'wb') as handle:
+        pickle.dump(train_dict, handle)
+
+
+
+
+
+
