@@ -12,7 +12,7 @@ import os
 
 import keras.backend as K
 
-import base_alex_net
+from base_models import base_alex_net
 import gabor_fits
 import alex_net_utils
 

@@ -12,7 +12,7 @@ import pickle
 import keras.backend as K
 
 import curved_contour_image_generator
-import base_alex_net
+from base_models import base_alex_net
 import gabor_fits
 
 reload(curved_contour_image_generator)
