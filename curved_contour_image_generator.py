@@ -616,7 +616,7 @@ def get_gabor_from_target_filter(tgt_filt, match=None):
     for key in match:
         if key in params:
             params[key] = fit_params[key]
-            print("Matching {0}={1}".format(key, params[key]))
+            print("Matching param {0}={1}".format(key, params[key]))
 
     return params
 
@@ -668,7 +668,6 @@ if __name__ == '__main__':
         # match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
         match=[ 'theta_deg']
     )
-
     fragment_gabor_params['theta_deg'] = np.int(fragment_gabor_params['theta_deg'])
 
     fragment = gabor_fits.get_gabor_fragment(
