@@ -16,12 +16,12 @@ import keras.backend as K
 import alex_net_utils
 from contour_integration_models.alex_net import masked_models as cont_int_models
 import alex_net_hyper_param_search_multiplicative as mult_param_opt
-import alex_net_cont_int_complex_bg as complex_bg
+import li_2006_routines
 
 reload(alex_net_utils)
 reload(cont_int_models)
 reload(mult_param_opt)
-reload(complex_bg)
+reload(li_2006_routines)
 
 
 class ContourImageGenerator(object):
@@ -447,7 +447,7 @@ if __name__ == "__main__":
         start_bias)
 
     # Plot Gain vs Contour Length after Optimization
-    complex_bg.main_contour_length_routine(
+    li_2006_routines.main_contour_length_routine(
         fragment,
         l1_activations_cb,
         l2_activations_cb,
@@ -459,7 +459,7 @@ if __name__ == "__main__":
     )
 
     # Plot Gain vs Contour Spacing after Optimization
-    complex_bg.main_contour_spacing_routine(
+    li_2006_routines.main_contour_spacing_routine(
         fragment,
         l1_activations_cb,
         l2_activations_cb,

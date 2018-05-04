@@ -26,14 +26,14 @@ from contour_integration_models.alex_net import masked_models as old_cont_int_mo
 import image_generator_linear
 import alex_net_utils
 import alex_net_hyper_param_search_multiplicative as mult_param_opt
-import alex_net_cont_int_complex_bg as complex_bg
+import li_2006_routines
 import gabor_fits
 
 reload(old_cont_int_models)
 reload(image_generator_linear)
 reload(alex_net_utils)
 reload(mult_param_opt)
-reload(complex_bg)
+reload(li_2006_routines)
 reload(gabor_fits)
 
 
@@ -154,7 +154,7 @@ class MultiplicativeContourIntegrationLayer(Layer):
             initializer='zeros',
             name='bias',
             trainable=True,
-            #regularizer=l1(0.01)
+            # regularizer=l1(0.01)
         )
 
         super(MultiplicativeContourIntegrationLayer, self).build(input_shape)
@@ -329,7 +329,7 @@ if __name__ == '__main__':
     #     start_bias)
     #
     # # Plot Gain vs Contour Length after Optimization
-    # complex_bg.main_contour_length_routine(
+    # li_2006_routines.main_contour_length_routine(
     #     fragment,
     #     l1_activations_cb,
     #     l2_activations_cb,
@@ -341,7 +341,7 @@ if __name__ == '__main__':
     # )
     #
     # # Plot Gain vs Contour Spacing after Optimization
-    # complex_bg.main_contour_spacing_routine(
+    # li_2006_routines.main_contour_spacing_routine(
     #     fragment,
     #     l1_activations_cb,
     #     l2_activations_cb,
@@ -425,7 +425,7 @@ if __name__ == '__main__':
     #     start_bias)
     #
     # # Plot Gain vs Contour Length after Optimization
-    # complex_bg.main_contour_length_routine(
+    # li_2006_routines.main_contour_length_routine(
     #     fragment,
     #     l1_activations_cb,
     #     l2_activations_cb,
@@ -437,7 +437,7 @@ if __name__ == '__main__':
     # )
     #
     # # Plot Gain vs Contour Spacing after Optimization
-    # complex_bg.main_contour_spacing_routine(
+    # li_2006_routines.main_contour_spacing_routine(
     #     fragment,
     #     l1_activations_cb,
     #     l2_activations_cb,
@@ -545,7 +545,7 @@ if __name__ == '__main__':
     print("Comparing Model & Neurophysiological results for neuron at location: ", tgt_neuron_location)
 
     # Plot Gain vs Contour Length after Optimization
-    complex_bg.main_contour_length_routine(
+    li_2006_routines.main_contour_length_routine(
         fragment,
         l1_activations_cb,
         l2_activations_cb,
@@ -558,7 +558,7 @@ if __name__ == '__main__':
     )
 
     # Plot Gain vs Contour Spacing after Optimization
-    complex_bg.main_contour_spacing_routine(
+    li_2006_routines.main_contour_spacing_routine(
         fragment,
         l1_activations_cb,
         l2_activations_cb,

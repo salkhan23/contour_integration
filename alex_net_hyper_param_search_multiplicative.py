@@ -26,11 +26,11 @@ import keras.backend as K
 
 from contour_integration_models.alex_net import masked_models as cont_int_models
 import alex_net_utils
-import alex_net_cont_int_complex_bg as complex_bg
+import li_2006_routines
 
 reload(cont_int_models)
 reload(alex_net_utils)
-reload(complex_bg)
+reload(li_2006_routines)
 
 np.random.seed(7)  # Set the random seed for reproducibility
 
@@ -366,7 +366,7 @@ if __name__ == "__main__":
     plot_optimized_weights(contour_integration_model, tgt_filter_idx, start_weights, start_bias)
 
     # Plot Gain vs Contour Length after Optimization
-    complex_bg.main_contour_length_routine(
+    li_2006_routines.main_contour_length_routine(
         fragment,
         l1_activations_cb,
         l2_activations_cb,
@@ -378,7 +378,7 @@ if __name__ == "__main__":
     )
 
     # Plot Gain vs Contour Spacing after Optimization
-    complex_bg.main_contour_spacing_routine(
+    li_2006_routines.main_contour_spacing_routine(
         fragment,
         l1_activations_cb,
         l2_activations_cb,
@@ -410,7 +410,7 @@ if __name__ == "__main__":
     plot_optimized_weights(contour_integration_model, tgt_filter_idx, start_weights, start_bias)
 
     # Plot Gain vs Contour Length after Optimization
-    complex_bg.main_contour_length_routine(
+    li_2006_routines.main_contour_length_routine(
         fragment,
         l1_activations_cb,
         l2_activations_cb,
@@ -422,7 +422,7 @@ if __name__ == "__main__":
     )
 
     # Plot Gain vs Contour Spacing after Optimization
-    complex_bg.main_contour_spacing_routine(
+    li_2006_routines.main_contour_spacing_routine(
         fragment,
         l1_activations_cb,
         l2_activations_cb,

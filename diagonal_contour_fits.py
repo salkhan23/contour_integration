@@ -8,13 +8,13 @@ from contour_integration_models.alex_net import masked_models as cont_int_models
 import gabor_fits
 import alex_net_utils
 import alex_net_hyper_param_search_multiplicative as multiplicative_model
-import alex_net_cont_int_complex_bg as complex_bg
+import li_2006_routines
 
 reload(gabor_fits)
 reload(cont_int_models)
 reload(alex_net_utils)
 reload(multiplicative_model)
-reload(complex_bg)
+reload(li_2006_routines)
 
 np.random.seed(10)  # Set the random seed for reproducibility
 
@@ -148,7 +148,7 @@ if __name__ == "__main__":
         fig.suptitle("learning rate = %f" % learning_rate)
 
         # Plot Gain vs Contour Length after Optimization
-        complex_bg.main_contour_length_routine(
+        li_2006_routines.main_contour_length_routine(
             fragment,
             feat_extract_activations_cb,
             cont_int_activations_cb,
@@ -160,7 +160,7 @@ if __name__ == "__main__":
         )
 
         # Plot Gain vs Contour Spacing after Optimization
-        complex_bg.main_contour_spacing_routine(
+        li_2006_routines.main_contour_spacing_routine(
             fragment,
             feat_extract_activations_cb,
             cont_int_activations_cb,
