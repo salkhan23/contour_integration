@@ -90,21 +90,22 @@ if __name__ == '__main__':
     # ------------------------------------------------------------------------------------
     # Generate Images
     # ------------------------------------------------------------------------------------
-
     # Temp for now just choose some arbitrary gain enhancement.
     # TODO: get actual enhancement gain, absolute for straight contour from Li-2006
     # TODO: relative for curved contours from Fields 1993
     enhancement_gain_arr = np.array([2.0, 1.6, 1.0, 1.0])
 
-    train_dict = {}
+    data_key_dict = {}
 
     for c_len in contour_len_arr:
 
-        destination_dir = 'filter_{0}/c_len_{1}'.format(tgt_filter_idx, c_len)
+        c_len_dir = base_dir + '/c_len_{0}'.format(c_len)
 
         for b_idx, beta in enumerate(beta_rotation_arr):
 
-            abs_destination_dir = os.path.join(DATA_DIRECTORY, destination_dir, 'beta_{0}'.format(beta))
+            beta_dir = c_len_dir + '/beta_{0}'.format(beta)
+
+            abs_destination_dir = os.path.join(DATA_DIRECTORY, beta_dir)
             if not os.path.exists(abs_destination_dir):
                 os.makedirs(abs_destination_dir)
 
@@ -120,10 +121,9 @@ if __name__ == '__main__':
             )
 
             for filename in file_names:
-                train_dict[filename] = enhancement_gain_arr[b_idx]
+                data_key_dict[filename] = enhancement_gain_arr[b_idx]
 
-    pickle_file_loc = 'filter_{}'.format(tgt_filter_idx)
-    abs_destination_dir = os.path.join(DATA_DIRECTORY, pickle_file_loc, 'trainKey.pickle')
-
-    with open(abs_destination_dir, 'wb') as handle:
-        pickle.dump(train_dict, handle)
+    # Store the data_key_dict (X,y) pairs
+    pickle_file_loc = os.path.join(DATA_DIRECTORY, base_dir, 'data_key.pickle')
+    with open(pickle_file_loc, 'wb') as handle:
+        pickle.dump(data_key_dict, handle)
