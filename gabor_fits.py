@@ -12,7 +12,7 @@ import scipy.optimize as optimize
 
 import keras.backend as K
 
-from contour_integration_models.alex_net import alex_net_cont_int_models as cont_int_models
+from contour_integration_models.alex_net import masked_models as cont_int_models
 import alex_net_utils
 
 reload(cont_int_models)

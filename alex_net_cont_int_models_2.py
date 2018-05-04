@@ -22,7 +22,7 @@ from keras.engine.topology import Layer
 import keras.activations as activations
 from keras.regularizers import l1
 
-from contour_integration_models.alex_net import alex_net_cont_int_models as old_cont_int_models
+from contour_integration_models.alex_net import masked_models as old_cont_int_models
 import contour_image_generator
 import alex_net_utils
 import alex_net_hyper_param_search_multiplicative as mult_param_opt
