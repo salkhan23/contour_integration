@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------------------------------------
-# Generate Curved Contour Images
+# Scripts generates sets of training images for curved contours
 #
 # Author: Salman Khan
 # Date  : 21/04/18
@@ -7,7 +7,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from scipy.misc import imrotate
 import pickle
 
 import keras.backend as K
@@ -17,6 +16,8 @@ import base_alex_net
 import gabor_fits
 
 reload(curved_contour_image_generator)
+reload(base_alex_net)
+reload(gabor_fits)
 
 BASE_DIRECTORY = os.path.join(os.path.dirname(__file__), "data/curved_contours")
 
@@ -43,6 +44,12 @@ if __name__ == '__main__':
 
     contour_len_arr = np.array([9])
     beta_rotation_arr = np.array([15, 30, 45, 60])
+
+    # Check to confirm data will be overwritten
+    if os.listdir(os.path.join(BASE_DIRECTORY, "filter_{0}".format(tgt_filter_idx))):
+        ans = raw_input("Generated Images will overwrite existing images. Continue? (Y/N)")
+        if 'y' not in ans.lower():
+            raise SystemExit()
 
     # -----------------------------------------------------------------------------------
     # Target Kernel
@@ -108,13 +115,7 @@ if __name__ == '__main__':
                 train_dict[filename] = enhancement_gain_arr[b_idx]
 
     pickle_file_loc = 'filter_{}'.format(tgt_filter_idx)
-    abs_destination_dir = os.path.join(BASE_DIRECTORY, pickle_file_loc,'trainKey.pickle')
+    abs_destination_dir = os.path.join(BASE_DIRECTORY, pickle_file_loc, 'trainKey.pickle')
 
     with open(abs_destination_dir, 'wb') as handle:
         pickle.dump(train_dict, handle)
-
-
-
-
-
-
