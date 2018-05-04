@@ -16,14 +16,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import keras.backend as K
-from keras.layers import Input, Conv2D, Dense
+from keras.layers import Input, Conv2D
 from keras.models import Model
 from keras.engine.topology import Layer
-import keras
 import keras.activations as activations
 from keras.regularizers import l1
 
-import alex_net_cont_int_models as old_cont_int_models
+from contour_integration_models import alex_net_cont_int_models as old_cont_int_models
 import contour_image_generator
 import alex_net_utils
 import alex_net_hyper_param_search_multiplicative as mult_param_opt

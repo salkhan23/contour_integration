@@ -10,10 +10,9 @@ import matplotlib.pyplot as plt
 import pickle
 
 import keras.backend as K
-from keras.optimizers import Adam
 
 import alex_net_utils
-import alex_net_cont_int_models as cont_int_models
+from contour_integration_models import alex_net_cont_int_models as cont_int_models
 import alex_net_hyper_param_search_multiplicative as mult_param_opt
 import alex_net_cont_int_complex_bg as complex_bg
 

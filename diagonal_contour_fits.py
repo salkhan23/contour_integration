@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 import keras.backend as K
 
-import alex_net_cont_int_models as cont_int_models
+from contour_integration_models import alex_net_cont_int_models as cont_int_models
 import gabor_fits
 import alex_net_utils
 import alex_net_hyper_param_search_multiplicative as multiplicative_model
