@@ -19,10 +19,10 @@ reload(curved_contour_image_generator)
 reload(base_alex_net)
 reload(gabor_fits)
 
-BASE_DIRECTORY = os.path.join(os.path.dirname(__file__), "data/curved_contours")
+DATA_DIRECTORY = os.path.join(os.path.dirname(__file__), "data/curved_contours")
 
-if not os.path.exists(BASE_DIRECTORY):
-    os.makedirs(BASE_DIRECTORY)
+if not os.path.exists(DATA_DIRECTORY):
+    os.makedirs(DATA_DIRECTORY)
 
 
 if __name__ == '__main__':
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
-    tgt_filter_idx = 5
+    tgt_filter_idx = 10
 
     n_images = 20
 
@@ -45,20 +45,27 @@ if __name__ == '__main__':
     contour_len_arr = np.array([9])
     beta_rotation_arr = np.array([15, 30, 45, 60])
 
-    # Check to confirm data will be overwritten
-    if os.listdir(os.path.join(BASE_DIRECTORY, "filter_{0}".format(tgt_filter_idx))):
-        ans = raw_input("Generated Images will overwrite existing images. Continue? (Y/N)")
-        if 'y' not in ans.lower():
-            raise SystemExit()
-
     # -----------------------------------------------------------------------------------
     # Target Kernel
     # -----------------------------------------------------------------------------------
     tgt_filter = base_alex_net.get_target_feature_extracting_kernel(tgt_filter_idx)
+    print("Feature extracting kernel @ index {} selected.".format(tgt_filter_idx))
 
     # -----------------------------------------------------------------------------------
     # Contour Fragment
     # -----------------------------------------------------------------------------------
+    # Check to confirm data will be overwritten
+    base_dir = "filter_{0}".format(tgt_filter_idx)
+
+    if os.path.isdir(os.path.join(DATA_DIRECTORY, base_dir)) and \
+       os.listdir(os.path.join(DATA_DIRECTORY, base_dir)):
+
+        ans = raw_input("Generated Images will overwrite existing images. Continue? (Y/N)")
+
+        if 'y' not in ans.lower():
+            raise SystemExit()
+
+    # Gabor fit parameters derived from the Target Filter
     fragment_gabor_params = curved_contour_image_generator.get_gabor_from_target_filter(
         tgt_filter,
         # match=[ 'x0', 'y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma']
@@ -67,6 +74,7 @@ if __name__ == '__main__':
     )
     fragment_gabor_params['theta_deg'] = np.int(fragment_gabor_params['theta_deg'])
 
+    # Generate a gabor fragment
     fragment = gabor_fits.get_gabor_fragment(
         fragment_gabor_params, frag_tile_size[0:2])
 
@@ -96,7 +104,7 @@ if __name__ == '__main__':
 
         for b_idx, beta in enumerate(beta_rotation_arr):
 
-            abs_destination_dir = os.path.join(BASE_DIRECTORY, destination_dir, 'beta_{0}'.format(beta))
+            abs_destination_dir = os.path.join(DATA_DIRECTORY, destination_dir, 'beta_{0}'.format(beta))
             if not os.path.exists(abs_destination_dir):
                 os.makedirs(abs_destination_dir)
 
@@ -115,7 +123,7 @@ if __name__ == '__main__':
                 train_dict[filename] = enhancement_gain_arr[b_idx]
 
     pickle_file_loc = 'filter_{}'.format(tgt_filter_idx)
-    abs_destination_dir = os.path.join(BASE_DIRECTORY, pickle_file_loc, 'trainKey.pickle')
+    abs_destination_dir = os.path.join(DATA_DIRECTORY, pickle_file_loc, 'trainKey.pickle')
 
     with open(abs_destination_dir, 'wb') as handle:
         pickle.dump(train_dict, handle)
