@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------------------------------
-#  Generate Curved Contours embedded in a sea of distractors. Image generation and tile size is
-#  matched to the reference
+#  Generate curved contour stimuli identical to those used by Fields -1993
+#  Image generation and tile size is matched to the reference
 #
 #  "Field, Hayes & Hess - 1993 - Contour Integration by the Human Visual System: Evidence for a
 #  local association field "
@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     full_tile_size = np.array([32, 32])
 
-    contour_len = 13
+    contour_len = 12
     beta_rotation = 15
 
     inter_fragment_distance = full_tile_size[0]
@@ -67,19 +67,21 @@ if __name__ == '__main__':
     # ----------------------------------------------------------------------------------
     #  Contour Path
     # ----------------------------------------------------------------------------------
-    test_image, path_fragment_starts = curved_contour_image_generator.add_contour_path_constant_separation(
-        test_image,
-        fragment,
-        fragment_gabor_params,
-        contour_len,
-        beta_rotation,
-        full_tile_size[0],
-    )
+    test_image, path_fragment_starts = \
+        curved_contour_image_generator.add_contour_path_constant_separation(
+            test_image,
+            fragment,
+            fragment_gabor_params,
+            contour_len,
+            beta_rotation,
+            full_tile_size[0],
+        )
 
     # plt.figure()
     # plt.imshow(test_image)
     # plt.title("Contour")
 
+    # Plot rotations of the fragment
     curved_contour_image_generator.plot_fragment_rotations(fragment, fragment_gabor_params)
 
     # ----------------------------------------------------------------------------------
@@ -92,9 +94,14 @@ if __name__ == '__main__':
             path_fragment_starts,
             full_tile_size,
             beta_rotation,
-            fragment_gabor_params
+            fragment_gabor_params,
+            relocate_allowed=False
         )
 
     plt.figure()
     plt.imshow(test_image)
-    plt.title("Contour embedded in a sea of distractors")
+    plt.title("Contour in a sea of distractors, Orientation {0}, beta {1}, length {2}".format(
+        fragment_gabor_params['theta_deg'],
+        beta_rotation,
+        contour_len
+    ))

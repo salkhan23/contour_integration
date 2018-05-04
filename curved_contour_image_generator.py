@@ -336,7 +336,8 @@ def get_nonoverlapping_bg_fragment(f_tile_start, c_tile_starts, c_tile_size, max
     return None
 
 
-def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_params):
+def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_params,
+                             relocate_allowed=True):
     """
 
     :param img:
@@ -345,6 +346,9 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
     :param f_tile_size:
     :param beta:
     :param frag_params:
+    :param relocate_allowed: If a bg frag overlaps with a contour fragment, try to
+        relocate fragment, so it can fit in the tile without overlapping with the
+        contour fragment
 
     :return: (1) image with background tiles added
              (2) array of bg fragment tiles
@@ -396,13 +400,15 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
             f_tile_start = f_tile_starts[bg_frag_idx, :]
 
-            # Is relocation possible?
-            novlp_bg_frag = get_nonoverlapping_bg_fragment(
-                np.squeeze(f_tile_start, axis=0),
-                c_frag_starts,
-                frag.shape[0:2],
-                max_displace
-            )
+            novlp_bg_frag = None
+            if relocate_allowed:
+                # Is relocation possible?
+                novlp_bg_frag = get_nonoverlapping_bg_fragment(
+                    np.squeeze(f_tile_start, axis=0),
+                    c_frag_starts,
+                    frag.shape[0:2],
+                    max_displace
+                )
 
             if novlp_bg_frag is not None:
                 # print("Relocating tile @ {0} to {1}".format(bg_frag_starts[bg_frag_idx, :], novlp_bg_frag))
