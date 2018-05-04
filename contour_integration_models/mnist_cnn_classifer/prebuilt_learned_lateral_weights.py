@@ -11,8 +11,7 @@ import numpy as np
 
 from keras.models import load_model
 
-
-import learned_lateral_weights
+from contour_integration_models.mnist_cnn_classifer import learned_lateral_weights
 import utils
 reload(utils)  # Force Reload utils to pick up latest changes
 reload(learned_lateral_weights)
