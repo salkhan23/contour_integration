@@ -3,7 +3,7 @@
 # Consistent way of increasing font sizes.
 #
 # Plots enhancement gain vs contour length, contour spacing for horizontal (index 5), vertical
-# (index 10) and diagonal contours (index 54)
+# (index 10) and diagonal contours (index 54) linear contours
 #
 # Author: Salman Khan
 # Date  : 05/04/18
