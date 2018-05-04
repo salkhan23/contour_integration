@@ -12,11 +12,11 @@ import pickle
 import keras.backend as K
 
 import curved_contour_image_generator
-from base_models import base_alex_net
+from base_models import alex_net
 import gabor_fits
 
 reload(curved_contour_image_generator)
-reload(base_alex_net)
+reload(alex_net)
 reload(gabor_fits)
 
 DATA_DIRECTORY = os.path.join(os.path.dirname(__file__), "data/curved_contours")
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Target Kernel
     # -----------------------------------------------------------------------------------
-    tgt_filter = base_alex_net.get_target_feature_extracting_kernel(tgt_filter_idx)
+    tgt_filter = alex_net.get_target_feature_extracting_kernel(tgt_filter_idx)
     print("Feature extracting kernel @ index {} selected.".format(tgt_filter_idx))
 
     # -----------------------------------------------------------------------------------

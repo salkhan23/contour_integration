@@ -17,7 +17,7 @@ from keras.engine.topology import Layer
 import keras.backend as K
 import keras.activations as activations
 
-from base_models import base_alex_net as alex_net
+from base_models import alex_net
 import alex_net_utils as alex_net_utils
 import utils as common_utils
 

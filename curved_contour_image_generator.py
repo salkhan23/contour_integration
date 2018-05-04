@@ -12,11 +12,11 @@ import os
 
 import keras.backend as K
 
-from base_models import base_alex_net
+from base_models import alex_net
 import gabor_fits
 import alex_net_utils
 
-reload(base_alex_net)
+reload(alex_net)
 reload(gabor_fits)
 reload(alex_net_utils)
 
@@ -658,7 +658,7 @@ if __name__ == '__main__':
     #  Target Feature and its orientation
     # -----------------------------------------------------------------------------------
     tgt_filter_idx = 10
-    tgt_filter = base_alex_net.get_target_feature_extracting_kernel(tgt_filter_idx)
+    tgt_filter = alex_net.get_target_feature_extracting_kernel(tgt_filter_idx)
 
     # # Display the target filter
     # plt.figure()
