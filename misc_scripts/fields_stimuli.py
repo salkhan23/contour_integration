@@ -12,11 +12,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import gabor_fits
-import curved_contour_image_generator
+import image_generator_curve
 import alex_net_utils
 
 reload(gabor_fits)
-reload(curved_contour_image_generator)
+reload(image_generator_curve)
 reload(alex_net_utils)
 
 
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     # Send background to mean value of the fragment
     # bg_value = np.mean(fragment, axis=(0, 1))
     # bg_value = [np.uint8(chan) for chan in bg_value]
-    bg_value = curved_contour_image_generator.get_mean_pixel_value_at_boundary(fragment)
+    bg_value = image_generator_curve.get_mean_pixel_value_at_boundary(fragment)
 
     test_image = np.ones(image_size, dtype=np.uint8) * bg_value
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     #  Contour Path
     # ----------------------------------------------------------------------------------
     test_image, path_fragment_starts = \
-        curved_contour_image_generator.add_contour_path_constant_separation(
+        image_generator_curve.add_contour_path_constant_separation(
             test_image,
             fragment,
             fragment_gabor_params,
@@ -82,13 +82,13 @@ if __name__ == '__main__':
     # plt.title("Contour")
 
     # Plot rotations of the fragment
-    curved_contour_image_generator.plot_fragment_rotations(fragment, fragment_gabor_params)
+    image_generator_curve.plot_fragment_rotations(fragment, fragment_gabor_params)
 
     # ----------------------------------------------------------------------------------
     #  Background Fragments
     # ----------------------------------------------------------------------------------
     test_image, bg_tiles, bg_removed_tiles, bg_relocated_tiles = \
-        curved_contour_image_generator.add_background_fragments(
+        image_generator_curve.add_background_fragments(
             test_image,
             fragment,
             path_fragment_starts,

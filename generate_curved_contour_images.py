@@ -11,11 +11,11 @@ import pickle
 
 import keras.backend as K
 
-import curved_contour_image_generator
+import image_generator_curve
 from base_models import alex_net
 import gabor_fits
 
-reload(curved_contour_image_generator)
+reload(image_generator_curve)
 reload(alex_net)
 reload(gabor_fits)
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
             raise SystemExit()
 
     # Gabor fit parameters derived from the Target Filter
-    fragment_gabor_params = curved_contour_image_generator.get_gabor_from_target_filter(
+    fragment_gabor_params = image_generator_curve.get_gabor_from_target_filter(
         tgt_filter,
         # match=[ 'x0', 'y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma']
         match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
@@ -109,7 +109,7 @@ if __name__ == '__main__':
             if not os.path.exists(abs_destination_dir):
                 os.makedirs(abs_destination_dir)
 
-            file_names = curved_contour_image_generator.generate_contour_images(
+            file_names = image_generator_curve.generate_contour_images(
                 n_images,
                 fragment,
                 fragment_gabor_params,
