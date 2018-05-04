@@ -1,5 +1,7 @@
 # -------------------------------------------------------------------------------------------------
-#  Create a contour image generator
+#  Create a contour image generator that can be used to by the fit generator function of keras
+#  for linear contours of any direction. The generator does not need to store the images, but
+#  generates them on the fly.
 #
 # Author: Salman Khan
 # Date  : 01/02/18

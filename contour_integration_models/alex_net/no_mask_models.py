@@ -23,14 +23,14 @@ import keras.activations as activations
 from keras.regularizers import l1
 
 from contour_integration_models.alex_net import masked_models as old_cont_int_models
-import contour_image_generator
+import linear_contour_image_generator
 import alex_net_utils
 import alex_net_hyper_param_search_multiplicative as mult_param_opt
 import alex_net_cont_int_complex_bg as complex_bg
 import gabor_fits
 
 reload(old_cont_int_models)
-reload(contour_image_generator)
+reload(linear_contour_image_generator)
 reload(alex_net_utils)
 reload(mult_param_opt)
 reload(complex_bg)
@@ -496,7 +496,7 @@ if __name__ == '__main__':
     fragment *= 255
     fragment = np.repeat(fragment[:, :, np.newaxis], 3, axis=2)
 
-    train_image_generator = contour_image_generator.ContourImageGenerator(
+    train_image_generator = linear_contour_image_generator.ContourImageGenerator(
         tgt_filt=feature_extract_kernel,
         tgt_filt_idx=tgt_filter_idx,
         contour_tile_loc_cb=alex_net_utils.diagonal_contour_generator,
