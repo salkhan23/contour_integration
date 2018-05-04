@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------------------------------------
 # All conv net model with contour integration after the first pooling replacement layer.
-# For base mode see base_all_conv_net.py
-# According to the ref, and as can be seen in the plots of base_all_conv_net.py, Gabors develop after the
+# For base mode see all_conv_net.py
+# According to the ref, and as can be seen in the plots of all_conv_net.py, Gabors develop after the
 # third convolution layer. (the max pooling replacement layer)
 #
 # Author: Salman Khan
