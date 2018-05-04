@@ -24,7 +24,7 @@ import pickle
 
 import keras.backend as K
 
-from contour_integration_models import alex_net_cont_int_models as cont_int_models
+from contour_integration_models.alex_net import alex_net_cont_int_models as cont_int_models
 import alex_net_utils
 import alex_net_cont_int_complex_bg as complex_bg
 
