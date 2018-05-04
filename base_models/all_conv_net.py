@@ -27,7 +27,7 @@ from keras.models import Sequential
 from keras.layers import Conv2D, Dropout, GlobalAveragePooling2D, Activation
 from keras.optimizers import SGD
 
-import high_dim_kernel_visualization as hd_vis
+from misc_scripts import high_dim_kernel_visualization as hd_vis
 import utils
 reload(hd_vis)
 reload(utils)
