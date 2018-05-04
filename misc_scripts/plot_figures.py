@@ -2,6 +2,9 @@
 # Example Code for plotting figures, that are good for publishing in papers.
 # Consistent way of increasing font sizes.
 #
+# Plots enhancement gain vs contour length, contour spacing for horizontal (index 5), vertical
+# (index 10) and diagonal contours (index 54)
+#
 # Author: Salman Khan
 # Date  : 05/04/18
 # -------------------------------------------------------------------------------------------------
