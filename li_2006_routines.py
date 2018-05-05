@@ -64,13 +64,13 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
     # This ensures that this central neuron is looking directly at the fragment and has a maximal response.
     # This is similar to the Ref, where the center contour fragment was in the center of the RF of the neuron
     # being monitored and the origin of the visual field
-    start_x, start_y = alex_net_utils.get_background_tiles_locations(
+    bg_tile_locations = alex_net_utils.get_background_tiles_locations(
         frag_len, test_image_len, offset, space_bw_tiles, center_neuron_loc)
 
     test_image = alex_net_utils.tile_image(
         test_image,
         frag,
-        (start_x, start_y),
+        bg_tile_locations,
         rotate=True,
         gaussian_smoothing=smooth_tiles
     )
@@ -84,11 +84,12 @@ def get_contour_responses(l1_act_cb, l2_act_cb, tgt_filt_idx, frag, contour_len,
         cont_start_loc=center_neuron_loc,
         row_offset=offset
     )
+    cont_coordinates = np.array(cont_coordinates)
 
     test_image = alex_net_utils.tile_image(
         test_image,
         frag,
-        cont_coordinates,
+        cont_coordinates.T,
         rotate=False,
         gaussian_smoothing=smooth_tiles
     )
@@ -177,7 +178,7 @@ def main_contour_length_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fil
                  % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
 
     # Plot Neurophysiological data Data from [Li-2006]
-    with open('.//neuro_data//Li2006.pickle', 'rb') as handle:
+    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
         data = pickle.load(handle)
 
     ax.plot(data['contour_len_ma_len'], data['contour_len_ma_gain'],
@@ -264,7 +265,7 @@ def main_contour_spacing_routine(frag, l1_act_cb, l2_act_cb, cont_gen_cb, tgt_fi
                  % (tgt_neuron_loc[0], tgt_neuron_loc[1], tgt_filt_idx))
 
     # Plot Neurophysiological data Data from [Li-2006]
-    with open('.//neuro_data//Li2006.pickle', 'rb') as handle:
+    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
         data = pickle.load(handle)
 
     ax.plot(data['contour_separation_ma_rcd'], data['contour_separation_ma_gain'],
