@@ -49,7 +49,7 @@ class ContourImageGenerator(object):
         self.image_len = 227  # Alexnet expects input of size (227, 227, 3)
         self.tgt_neuron_rf_start = 27 * 4  # Start with the neuron at the center of the activation
 
-        with open('.//neuro_data//Li2006.pickle', 'rb') as handle:
+        with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
             data = pickle.load(handle)
 
         # Rather than calculate the contour fragment and background tiles locations everytime
@@ -69,7 +69,7 @@ class ContourImageGenerator(object):
                 row_offset=row_offset
             )
 
-            self.c_len_cont_tile_loc.append(tile_locations)
+            self.c_len_cont_tile_loc.append(np.array(tile_locations))
 
         # Contour spacing experiment variables
         self.c_spacing_expected_gains = data['contour_separation_avg_gain']
@@ -88,7 +88,7 @@ class ContourImageGenerator(object):
                 cont_start_loc=self.tgt_neuron_rf_start,
                 row_offset=row_offset
             )
-            self.c_spacing_cont_tile_loc.append(tile_locations)
+            self.c_spacing_cont_tile_loc.append(np.array(tile_locations))
 
             bg_tile_locations = alex_net_utils.get_background_tiles_locations(
                 self.frag_len,
@@ -182,7 +182,7 @@ class ContourImageGenerator(object):
                     test_image = alex_net_utils.tile_image(
                         test_image,
                         self.frag,
-                        self.c_len_cont_tile_loc[select_idx],
+                        self.c_len_cont_tile_loc[select_idx].T,
                         rotate=False,
                         gaussian_smoothing=True,
                     )
@@ -213,7 +213,7 @@ class ContourImageGenerator(object):
                     test_image = alex_net_utils.tile_image(
                         test_image,
                         self.frag,
-                        self.c_spacing_cont_tile_loc[select_idx],
+                        self.c_spacing_cont_tile_loc[select_idx].T,
                         rotate=False,
                         gaussian_smoothing=True,
                     )
