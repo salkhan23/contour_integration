@@ -70,7 +70,7 @@ def optimize_contour_enhancement_layer_weights(
 
     # 1. Extract the neural data to match
     # -----------------------------------
-    with open('.//neuro_data//Li2006.pickle', 'rb') as handle:
+    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
         data = pickle.load(handle)
 
     expected_gains = []
@@ -140,30 +140,31 @@ def optimize_contour_enhancement_layer_weights(
                 test_image_len = test_image.shape[0]
 
                 # Background Tiles
-                start_x, start_y = alex_net_utils.get_background_tiles_locations(
+                bg_tile_locations = alex_net_utils.get_background_tiles_locations(
                     frag_len, test_image_len, offset, 0, tgt_n_visual_rf_start)
 
                 test_image = alex_net_utils.tile_image(
                     test_image,
                     frag,
-                    (start_x, start_y),
+                    bg_tile_locations,
                     rotate=True,
                     gaussian_smoothing=smooth_edges
                 )
 
                 # Place contour in image
-                start_x, start_y = contour_generator_cb(
+                contour_tile_locations = contour_generator_cb(
                     frag_len,
                     bw_tile_spacing=0,
                     cont_len=c_len,
                     cont_start_loc=tgt_n_visual_rf_start,
                     row_offset=offset
                 )
+                contour_tile_locations = np.array(contour_tile_locations)
 
                 test_image = alex_net_utils.tile_image(
                     test_image,
                     frag,
-                    (start_x, start_y),
+                    contour_tile_locations.T,
                     rotate=False,
                     gaussian_smoothing=smooth_edges
                 )
@@ -194,30 +195,31 @@ def optimize_contour_enhancement_layer_weights(
                 test_image_len = test_image.shape[0]
 
                 # Background Tiles
-                start_x, start_y = alex_net_utils.get_background_tiles_locations(
+                bg_tile_locations = alex_net_utils.get_background_tiles_locations(
                     frag_len, test_image_len, offset, spacing, tgt_n_visual_rf_start)
 
                 test_image = alex_net_utils.tile_image(
                     test_image,
                     frag,
-                    (start_x, start_y),
+                    bg_tile_locations,
                     rotate=True,
                     gaussian_smoothing=smooth_edges
                 )
 
                 # Place contour in image
-                start_x, start_y = contour_generator_cb(
+                contour_tile_locations = contour_generator_cb(
                     frag_len,
                     bw_tile_spacing=spacing,
                     cont_len=contour_spacing_contour_len,
                     cont_start_loc=tgt_n_visual_rf_start,
                     row_offset=offset
                 )
+                contour_tile_locations = np.array(contour_tile_locations)
 
                 test_image = alex_net_utils.tile_image(
                     test_image,
                     frag,
-                    (start_x, start_y),
+                    contour_tile_locations.T,
                     rotate=False,
                     gaussian_smoothing=smooth_edges
                 )
@@ -322,8 +324,9 @@ if __name__ == "__main__":
     plt.ion()
     K.clear_session()
 
+    # ------------------------------------------------------------------------------------
     # 1. Build the model
-    # ---------------------------------------------------------------------
+    # -----------------------------------------------------------------------------------
     K.set_image_dim_ordering('th')
     print("Building Contour Integration Model...")
 
@@ -344,49 +347,50 @@ if __name__ == "__main__":
     # Store the start weights & bias for comparison later
     start_weights, start_bias = contour_integration_model.layers[2].get_weights()
 
-    # --------------------------------------------------------------------------------------------
-    # 2. Vertical Contours
-    # --------------------------------------------------------------------------------------------
-    print('#'*25, ' Vertical Contours ', '#'*25)
-    tgt_filter_idx = 10
-    fragment = np.zeros((11, 11, 3))
-    fragment[:, (0, 3, 4, 5, 9, 10), :] = 255.0
-
-    optimize_contour_enhancement_layer_weights(
-        contour_integration_model,
-        tgt_filter_idx,
-        fragment,
-        alex_net_utils.vertical_contour_generator,
-        n_runs=1000,
-        offset=0,
-        optimize_type='both',
-        learning_rate=0.00025
-    )
-
-    plot_optimized_weights(contour_integration_model, tgt_filter_idx, start_weights, start_bias)
-
-    # Plot Gain vs Contour Length after Optimization
-    li_2006_routines.main_contour_length_routine(
-        fragment,
-        l1_activations_cb,
-        l2_activations_cb,
-        alex_net_utils.vertical_contour_generator,
-        tgt_filter_idx,
-        smoothing=True,
-        row_offset=0,
-        n_runs=100,
-    )
-
-    # Plot Gain vs Contour Spacing after Optimization
-    li_2006_routines.main_contour_spacing_routine(
-        fragment,
-        l1_activations_cb,
-        l2_activations_cb,
-        alex_net_utils.vertical_contour_generator,
-        tgt_filter_idx,
-        smoothing=True,
-        row_offset=0,
-        n_runs=100)
+    # # ----------------------------------------------------------------------------------
+    # # 2. Vertical Contours
+    # # ----------------------------------------------------------------------------------
+    # print('#'*25, ' Vertical Contours ', '#'*25)
+    # tgt_filter_idx = 10
+    # fragment = np.zeros((11, 11, 3))
+    # fragment[:, (0, 3, 4, 5, 9, 10), :] = 255.0
+    #
+    # # Note: optimize type both no longer works with updated tensorflow/keras library
+    # optimize_contour_enhancement_layer_weights(
+    #     contour_integration_model,
+    #     tgt_filter_idx,
+    #     fragment,
+    #     alex_net_utils.vertical_contour_generator,
+    #     n_runs=1000,
+    #     offset=0,
+    #     optimize_type='length',
+    #     learning_rate=0.00025
+    # )
+    #
+    # plot_optimized_weights(contour_integration_model, tgt_filter_idx, start_weights, start_bias)
+    #
+    # # Plot Gain vs Contour Length after Optimization
+    # li_2006_routines.main_contour_length_routine(
+    #     fragment,
+    #     l1_activations_cb,
+    #     l2_activations_cb,
+    #     alex_net_utils.vertical_contour_generator,
+    #     tgt_filter_idx,
+    #     smoothing=True,
+    #     row_offset=0,
+    #     n_runs=100,
+    # )
+    #
+    # # Plot Gain vs Contour Spacing after Optimization
+    # li_2006_routines.main_contour_spacing_routine(
+    #     fragment,
+    #     l1_activations_cb,
+    #     l2_activations_cb,
+    #     alex_net_utils.vertical_contour_generator,
+    #     tgt_filter_idx,
+    #     smoothing=True,
+    #     row_offset=0,
+    #     n_runs=100)
 
     # --------------------------------------------------------------------------------------------
     # 3. Horizontal Contours
@@ -403,7 +407,7 @@ if __name__ == "__main__":
         alex_net_utils.horizontal_contour_generator,
         n_runs=1000,
         offset=0,
-        optimize_type='both',
+        optimize_type='length',
         learning_rate=0.00025
     )
 
