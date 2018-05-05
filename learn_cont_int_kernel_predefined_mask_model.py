@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     # 2. Extract the neural data we would like to match
     # ---------------------------------------------------------------------
-    with open('.//neuro_data//Li2006.pickle', 'rb') as handle:
+    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
         data = pickle.load(handle)
 
     expected_gains = data['contour_len_avg_gain']
@@ -76,17 +76,19 @@ if __name__ == "__main__":
         # print("Creating image with contour of length %d" % c_len)
         test_image = np.zeros((227, 227, 3))
 
-        start_x, start_y = alex_net_utils.vertical_contour_generator(
+        contour_tile_locations = alex_net_utils.vertical_contour_generator(
             fragment.shape[0],
             bw_tile_spacing=0,
             cont_len=c_len,
             cont_start_loc=tgt_neuron_loc * 4
         )
 
+        contour_tile_locations = np.array(contour_tile_locations)
+
         test_image = alex_net_utils.tile_image(
             test_image,
             fragment,
-            (start_x, start_y),
+            contour_tile_locations.T,
             rotate=False,
             gaussian_smoothing=False
         )
