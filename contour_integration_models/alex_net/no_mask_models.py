@@ -257,9 +257,26 @@ if __name__ == '__main__':
     K.clear_session()
     K.set_image_dim_ordering('th')
 
-    # # --------------------------------
-    # tgt_filter_idx = 10
-    #
+    tgt_filter_idx = 10
+
+    # --------------------------------------------------------------------------------
+    # Build the contour integration model
+    # --------------------------------------------------------------------------------
+    print("Building Model ...")
+    contour_integration_model = build_contour_integration_training_model(
+        rf_size=25,
+        tgt_filt_idx=tgt_filter_idx
+    )
+
+    print contour_integration_model.summary()
+
+
+
+
+
+
+
+
     # # Build the contour integration model
     # # -----------------------------------
     # print("Building Model ...")
