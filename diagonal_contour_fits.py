@@ -7,13 +7,13 @@ import keras.backend as K
 from contour_integration_models.alex_net import masked_models as cont_int_models
 import gabor_fits
 import alex_net_utils
-import alex_net_hyper_param_search_multiplicative as multiplicative_model
+import learn_cont_int_kernel_generic_mask_model as learn_cont_int_kernels
 import li_2006_routines
 
 reload(gabor_fits)
 reload(cont_int_models)
 reload(alex_net_utils)
-reload(multiplicative_model)
+reload(learn_cont_int_kernels)
 reload(li_2006_routines)
 
 np.random.seed(10)  # Set the random seed for reproducibility
@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
         contour_integration_model.layers[2].set_weights((start_weights, start_bias))
 
-        images = multiplicative_model.optimize_contour_enhancement_layer_weights(
+        images = learn_cont_int_kernels.optimize_contour_enhancement_layer_weights(
             contour_integration_model,
             tgt_feat_extract_kernel_idx,
             fragment,
@@ -138,7 +138,7 @@ if __name__ == "__main__":
         )
         ax.legend()
 
-        multiplicative_model.plot_optimized_weights(
+        learn_cont_int_kernels.plot_optimized_weights(
             contour_integration_model,
             tgt_feat_extract_kernel_idx,
             start_weights,

@@ -25,14 +25,12 @@ from keras.regularizers import l1
 from contour_integration_models.alex_net import masked_models as old_cont_int_models
 import image_generator_linear
 import alex_net_utils
-import alex_net_hyper_param_search_multiplicative as mult_param_opt
 import li_2006_routines
 import gabor_fits
 
 reload(old_cont_int_models)
 reload(image_generator_linear)
 reload(alex_net_utils)
-reload(mult_param_opt)
 reload(li_2006_routines)
 reload(gabor_fits)
 

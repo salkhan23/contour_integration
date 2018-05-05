@@ -15,12 +15,12 @@ import keras.backend as K
 
 import alex_net_utils
 from contour_integration_models.alex_net import masked_models as cont_int_models
-import alex_net_hyper_param_search_multiplicative as mult_param_opt
+import learn_cont_int_kernel_generic_mask_model as learn_cont_int_kernels
 import li_2006_routines
 
 reload(alex_net_utils)
 reload(cont_int_models)
-reload(mult_param_opt)
+reload(learn_cont_int_kernels)
 reload(li_2006_routines)
 
 
@@ -237,7 +237,7 @@ def optimize_contour_enhancement_weights(
     """
 
     This function is similar to the function with the same name in
-    alex_net_hyper_param_search_multiplicative.py but uses the new contour image generator
+    learn_cont_int_kernel_generic_mask_model.py but uses the new contour image generator
 
     :param model:
     :param tgt_filt_idx:
@@ -379,11 +379,11 @@ if __name__ == "__main__":
     K.clear_session()
     K.set_image_dim_ordering('th')
 
-    # --------------------------
     tgt_filter_idx = 10
 
+    # --------------------------------------------------------------------------------
     # Build Contour Integration Model
-    # -------------------------------
+    # ---------------------------------------------
     print("Building Contour Integration Model...")
 
     # Multiplicative Model
@@ -440,7 +440,7 @@ if __name__ == "__main__":
 
     # Plot the Learnt weights
     # -----------------------
-    mult_param_opt.plot_optimized_weights(
+    learn_cont_int_kernels.plot_optimized_weights(
         contour_integration_model,
         tgt_filter_idx,
         start_weights,
