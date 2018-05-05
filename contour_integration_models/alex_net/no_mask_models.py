@@ -118,7 +118,7 @@ class MultiplicativeContourIntegrationLayer(Layer):
     def __init__(self, rf_size=25, activation=None, **kwargs):
         """
         Contour Integration layer - Different from the old multiplicative contour integration layer
-        no mask is assumed.
+        no mask is assumed and connections to all neighbors (including overlapping ones) are allowed
 
         :param tgt_filt_idx:
         :param tgt_neuron_loc:
