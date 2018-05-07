@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import os
 
 import keras.backend as K
+import keras
 
 from base_models import alex_net
 import gabor_fits
@@ -499,7 +500,7 @@ def generate_contour_images(
             img, frag, frag_params, c_len, beta, f_tile_size[0])
 
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
-            img, frag, c_frag_starts, f_tile_size, beta, frag_params)
+            img, frag, c_frag_starts, f_tile_size, 15, frag_params)
 
         # # Highlight Contour tiles
         # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], c_frag_starts)
@@ -531,7 +532,7 @@ def generate_contour_images(
 
         plt.imsave(os.path.join(destination, filename), img, format=image_format)
 
-        files_generated.append(filename)
+        files_generated.append((os.path.join(destination, filename)))
 
     return files_generated
 
@@ -647,6 +648,85 @@ def get_mean_pixel_value_at_boundary(frag, width=1):
     mean_border_value = [np.uint8(ch) for ch in mean_border_value]
 
     return mean_border_value
+
+
+class DataGenerator(keras.utils.Sequence):
+    def __init__(self, data_key_dict, batch_size=32, img_size=(227, 227, 3), shuffle=True,
+                 data_dir='data/curved_contours'):
+        """
+        A Python generator (actually a keras sequencer object) that can be used to
+        dynamically load images when the batch is run. Saves a lot on memory.
+
+        Compared to a generator a sequencer object iterates over all images once during
+        an epoch
+
+        Ref: https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly.html
+
+        :param data_key_dict: dictionary of (image_location: label(enhancement gain)) of all
+                              images in the data set.
+        :param batch_size:
+        :param img_size:
+        :param shuffle: [default=True]
+        :param data_dir: [default = data/curved_contour]
+
+        """
+        self.data_dir = data_dir
+        self.shuffle = shuffle
+        self.img_size = img_size
+        self.batch_size = batch_size
+        self.data_key_dict = data_key_dict
+
+        self.list_ids = self.data_key_dict.keys()
+        self.on_epoch_end()
+
+    def on_epoch_end(self):
+        """
+        Routines to run at the end of each epoch
+
+        :return:
+        """
+        self.idx_arr = np.arange(len(self.data_key_dict))
+
+        if self.shuffle:
+            np.random.shuffle(self.idx_arr)
+
+    def __data_generation(self, list_ids_temp):
+        """
+
+        :param list_ids_temp:
+        :return:
+        """
+        x_arr = np.zeros((self.batch_size, self.img_size[2], self.img_size[1], self.img_size[0]))
+        y_arr = np.zeros(self.batch_size)
+
+        print("Loading a new batch")
+
+        for idx, list_id in enumerate(list_ids_temp):
+            # print ("Loading image {0}".format(os.path.join(self.data_dir, list_id)))
+            temp = plt.imread((os.path.join(self.data_dir, list_id)))
+            x_arr[idx, ] = np.transpose(temp, [2, 0, 1])
+            y_arr[idx] = self.data_key_dict[list_id]
+
+        return x_arr, y_arr
+
+    def __len__(self):
+        """ The number of batches per epoch"""
+        return int(np.floor(len(self.data_key_dict) / self.batch_size))
+
+    def __getitem__(self, index):
+        """
+        Get one batch of data 
+        :param index: 
+        :return: 
+        """
+        idx_arr = self.idx_arr[index * self.batch_size: (index + 1) * self.batch_size]
+
+        # find the list of ids
+        list_ids_temp = [self.list_ids[k] for k in idx_arr]
+
+        x_arr, y_arr = self.__data_generation(list_ids_temp)
+
+        return x_arr, y_arr
 
 
 if __name__ == '__main__':
