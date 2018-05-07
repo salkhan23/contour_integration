@@ -43,7 +43,7 @@ if __name__ == '__main__':
     frag_tile_size = np.array((11, 11))
 
     contour_len_arr = np.array([9])
-    beta_rotation_arr = np.array([15, 30, 45, 60])
+    beta_rotation_arr = np.array([0, 15, 30, 45, 60])
 
     # -----------------------------------------------------------------------------------
     # Target Kernel
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     # Temp for now just choose some arbitrary gain enhancement.
     # TODO: get actual enhancement gain, absolute for straight contour from Li-2006
     # TODO: relative for curved contours from Fields 1993
-    enhancement_gain_arr = np.array([2.0, 1.6, 1.0, 1.0])
+    enhancement_gain_arr = np.array([3.0, 2.0, 1.6, 1.1, 1.0])
 
     data_key_dict = {}
 
