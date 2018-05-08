@@ -235,6 +235,9 @@ def optimize_contour_enhancement_weights(
         model, tgt_filt_idx, frag, contour_generator_cb,
         n_runs=1000, learning_rate=0.00025, offset=0, optimize_type='both', axis=None):
     """
+    ***************
+    NOTE: this is the old training method, new way is in leanr_cont_int_kernel_no_mask_model
+    *****************
 
     This function is similar to the function with the same name in
     learn_cont_int_kernel_generic_mask_model.py but uses the new contour image generator
