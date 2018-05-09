@@ -129,7 +129,7 @@ class ContourIntegrationLayer3D(Layer):
         return outputs
 
 
-def build_contour_integration_model(tgt_filt_idx):
+def build_contour_integration_model(tgt_filt_idx, rf_size=25, stride_length=(4, 4)):
     """
     Build a (short) model of 3D contour integration that can be used to train the model.
 
@@ -137,23 +137,25 @@ def build_contour_integration_model(tgt_filt_idx):
     and only trains the contour integration layer. THe complete model can still be used for
     object classification
 
+    :param rf_size:
+    :param stride_length:
     :param tgt_filt_idx:
     :return:
     """
     input_layer = Input(shape=(3, 227, 227))
 
-    feature_extract_layer_1 = Conv2D(
-        96, (11, 11), strides=(4, 4), activation='relu', name='feature_extract_layer_1')(input_layer)
+    conv_1 = Conv2D(96, (11, 11), strides=stride_length, activation='relu', name='conv_1')(input_layer)
 
-    contour_integrate_layer = ContourIntegrationLayer3D(rf_size=25)(feature_extract_layer_1)
+    contour_integrate_layer = ContourIntegrationLayer3D(rf_size=rf_size)(conv_1)
 
     contour_gain_layer = ContourGainCalculatorLayer(tgt_filt_idx)([
-        feature_extract_layer_1, contour_integrate_layer])
+        conv_1, contour_integrate_layer])
 
     model = Model(input_layer, outputs=contour_gain_layer)
 
     model.layers[1].trainable = False  # Set the feature extracting layer as untrainable.
 
+    model.load_weights("trained_models/AlexNet/alexnet_weights.h5", by_name=True)
     model.compile(optimizer='Adam', loss='mse')
 
     return model
