@@ -49,7 +49,7 @@ if __name__ == '__main__':
         train_data_dict,
         batch_size=batch_size,
         img_size=image_size,
-        shuffle=False,
+        shuffle=True,
         data_dir=DATA_DIR
     )
 
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     history = cont_int_model.fit_generator(
         generator=train_image_generator,
-        epochs=10,
+        epochs=100,
         verbose=2,
         # max_q_size=1,
         # workers=1,
