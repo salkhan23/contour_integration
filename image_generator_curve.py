@@ -699,7 +699,7 @@ class DataGenerator(keras.utils.Sequence):
         x_arr = np.zeros((self.batch_size, self.img_size[2], self.img_size[1], self.img_size[0]))
         y_arr = np.zeros(self.batch_size)
 
-        print("Loading a new batch")
+        # print("Loading a new batch")
 
         for idx, list_id in enumerate(list_ids_temp):
             # print ("Loading image {0}".format(os.path.join(self.data_dir, list_id)))
