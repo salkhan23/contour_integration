@@ -54,18 +54,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Contour Fragment
     # -----------------------------------------------------------------------------------
-    # Check to confirm data will be overwritten
-    base_dir = "filter_{0}".format(tgt_filter_idx)
-
-    if os.path.isdir(os.path.join(DATA_DIRECTORY, base_dir)) and \
-       os.listdir(os.path.join(DATA_DIRECTORY, base_dir)):
-
-        ans = raw_input("Generated Images will overwrite existing images. Continue? (Y/N)")
-
-        if 'y' not in ans.lower():
-            raise SystemExit()
-
-    # Gabor fit parameters derived from the Target Filter
+    # Gabor fit parameters target filter. Params that are not fit are defaulted.
     fragment_gabor_params = image_generator_curve.get_gabor_from_target_filter(
         tgt_filter,
         # match=[ 'x0', 'y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma']
@@ -75,8 +64,7 @@ if __name__ == '__main__':
     fragment_gabor_params['theta_deg'] = np.int(fragment_gabor_params['theta_deg'])
 
     # Generate a gabor fragment
-    fragment = gabor_fits.get_gabor_fragment(
-        fragment_gabor_params, frag_tile_size[0:2])
+    fragment = gabor_fits.get_gabor_fragment(fragment_gabor_params, frag_tile_size[0:2])
 
     # # Display the contour fragment
     # plt.figure()
@@ -90,6 +78,17 @@ if __name__ == '__main__':
     # ------------------------------------------------------------------------------------
     # Generate Images
     # ------------------------------------------------------------------------------------
+    # Inform existing data will be overwritten.
+    base_dir = "filter_{0}".format(tgt_filter_idx)
+
+    if os.path.isdir(os.path.join(DATA_DIRECTORY, base_dir)) and \
+            os.listdir(os.path.join(DATA_DIRECTORY, base_dir)):
+
+        ans = raw_input("Generated Images will overwrite existing images. Continue? (Y/N)")
+
+        if 'y' not in ans.lower():
+            raise SystemExit()
+
     # Temp for now just choose some arbitrary gain enhancement.
     # TODO: get actual enhancement gain, absolute for straight contour from Li-2006
     # TODO: relative for curved contours from Fields 1993
