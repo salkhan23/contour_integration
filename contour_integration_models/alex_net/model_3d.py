@@ -121,10 +121,10 @@ class ContourIntegrationLayer3D(Layer):
 
         outputs = K.conv2d(inputs, self.kernel, strides=(1, 1), padding='same')
 
-        outputs = outputs * inputs
+        #outputs = outputs * inputs
         outputs = K.bias_add(outputs, self.bias)
 
-        outputs = self.activation(outputs) + inputs
+        outputs = self.activation(outputs) #+ inputs
 
         return outputs
 
