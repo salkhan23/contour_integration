@@ -24,7 +24,6 @@ DATA_DIRECTORY = os.path.join(os.path.dirname(__file__), "data/curved_contours")
 if not os.path.exists(DATA_DIRECTORY):
     os.makedirs(DATA_DIRECTORY)
 
-
 if __name__ == '__main__':
     plt.ion()
     K.clear_session()
@@ -35,15 +34,32 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     tgt_filter_idx = 10
 
-    n_images = 20
+    n_images = 100
 
     image_size = np.array((227, 227, 3))
 
     full_tile_size = np.array((17, 17))
     frag_tile_size = np.array((11, 11))
 
-    contour_len_arr = np.array([9])
+    contour_len_arr = np.array([1, 3, 5, 7, 9])
     beta_rotation_arr = np.array([0, 15, 30, 45, 60])
+
+    # -----------------------------------------------------------------------------------
+    # Get neurophysiological Data
+    # -----------------------------------------------------------------------------------
+    # TODO: Add relative spacing data
+
+    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
+        Li2006Data = pickle.load(handle)
+
+    # TODO: Get Data from Fields - 1993
+    relative_gain_curvature = {
+        0: 1.00,
+        15: 0.98,
+        30: 0.87,
+        45: 0.85,
+        60: 0.61
+    }
 
     # -----------------------------------------------------------------------------------
     # Target Kernel
@@ -89,21 +105,17 @@ if __name__ == '__main__':
         if 'y' not in ans.lower():
             raise SystemExit()
 
-    # Temp for now just choose some arbitrary gain enhancement.
-    # TODO: get actual enhancement gain, absolute for straight contour from Li-2006
-    # TODO: relative for curved contours from Fields 1993
-    enhancement_gain_arr = np.array([3.0, 2.0, 1.6, 1.1, 1.0])
-
     data_key_dict = {}
-
     for c_len in contour_len_arr:
 
         c_len_dir = base_dir + '/c_len_{0}'.format(c_len)
 
         for b_idx, beta in enumerate(beta_rotation_arr):
 
-            beta_dir = c_len_dir + '/beta_{0}'.format(beta)
+            if c_len == 1 and beta != 0:
+                continue
 
+            beta_dir = c_len_dir + '/beta_{0}'.format(beta)
             abs_destination_dir = os.path.join(DATA_DIRECTORY, beta_dir)
             if not os.path.exists(abs_destination_dir):
                 os.makedirs(abs_destination_dir)
@@ -119,8 +131,15 @@ if __name__ == '__main__':
                 img_size=image_size
             )
 
+            c_len_idx = (c_len - 1) / 2
+            abs_gain = Li2006Data['contour_len_avg_gain'][c_len_idx] * relative_gain_curvature[beta]
+            # print("clen {0}, beta {1}, abs gain={2}".format(c_len, beta, abs_gain))
+
+            beta_dict = {}
             for filename in file_names:
-                data_key_dict[filename] = enhancement_gain_arr[b_idx]
+                beta_dict[filename] = abs_gain
+
+            data_key_dict['c_len_{}_beta_{}'.format(c_len, beta)] = beta_dict
 
     # Store the data_key_dict (X,y) pairs
     pickle_file_loc = os.path.join(DATA_DIRECTORY, base_dir, 'data_key.pickle')
