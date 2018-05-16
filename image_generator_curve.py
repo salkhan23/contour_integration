@@ -12,10 +12,12 @@ import os
 
 import keras.backend as K
 import keras
+from keras.preprocessing.image import load_img
 
 from base_models import alex_net
 import gabor_fits
 import alex_net_utils
+
 
 reload(alex_net)
 reload(gabor_fits)
@@ -460,7 +462,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
 
 def generate_contour_images(
-        n_images, frag, frag_params, c_len, beta, f_tile_size, destination, img_size=None, image_format='JPEG'):
+        n_images, frag, frag_params, c_len, beta, f_tile_size, destination, img_size=None, image_format='PNG'):
     """
 
     # In the Ref, a visible stimulus of a small size is placed inside a large tile
@@ -527,7 +529,7 @@ def generate_contour_images(
         #     img, f_tile_size, f_tile_starts, edge_color=(255, 255, 0))
 
         # ------------------------------------------------------------
-        filename = "orient_{0}_clen_{1}_beta_{2}__{3}.jpg".format(
+        filename = "orient_{0}_clen_{1}_beta_{2}__{3}.png".format(
             frag_params["theta_deg"], c_len, beta, img_idx)
 
         plt.imsave(os.path.join(destination, filename), img, format=image_format)
@@ -703,8 +705,12 @@ class DataGenerator(keras.utils.Sequence):
 
         for idx, list_id in enumerate(list_ids_temp):
             # print ("Loading image {0}".format(os.path.join(self.data_dir, list_id)))
-            temp = plt.imread((os.path.join(self.data_dir, list_id)))
-            x_arr[idx, ] = np.transpose(temp, [2, 0, 1])
+            # temp = plt.imread((os.path.join(self.data_dir, list_id)))
+            temp = load_img((os.path.join(self.data_dir, list_id)))
+
+            in_img = np.transpose(temp, axes=(2, 0, 1))
+
+            x_arr[idx, ] = in_img.astype(np.uint8)
             y_arr[idx] = self.data_key_dict[list_id]
 
         return x_arr, y_arr
