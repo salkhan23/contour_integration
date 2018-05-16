@@ -170,9 +170,9 @@ def find_best_fit_2d_gabor(kernel):
 
         theta = 0
 
-        # gabor_2d((x, y), x0, y0, theta_deg, amp, sigma, lambda1, psi, gamma):
-        bounds = ([-1, -1,   0, -np.inf, 0.1,      0,         0, -2],
-                  [ 1,  1, 180,  np.inf,   4, np.inf, 2 * np.pi,  6])
+        # gabor_2d(     x0,      y0, theta_deg,     amp, sigma, lambda1,       psi, gamma):
+        bounds = ([-half_x, -half_y,      -160, -np.inf,   0.1,       0,         0,     0],
+                  [ half_x,  half_y,       180,  np.inf,     4,  np.inf, 2 * np.pi,     6])
 
         while not opt_params_found:
 
@@ -191,11 +191,10 @@ def find_best_fit_2d_gabor(kernel):
                     opt_params_found = True
                     opt_params_list.append(popt)
 
-                    # print("Optimal Parameter for channel %d:" % chan_idx)
-                    # print( "(x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, lambda=%0.2f, "
-                    #        "psi=%0.2f, gamma=%0.2f"
-                    #        % (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7]))
-                    #
+                    print( "[%d]: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, lambda=%0.2f, "
+                           "psi=%0.2f, gamma=%0.2f"
+                           % (chan_idx, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7]))
+
                     # print("Err: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, "
                     #       "lambda=%0.2f, psi=%0.2f, gamma=%0.2f"
                     #       % (one_sd_error[0], one_sd_error[1], one_sd_error[2], one_sd_error[3], one_sd_error[4],
