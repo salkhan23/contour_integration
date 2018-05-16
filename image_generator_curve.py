@@ -56,11 +56,11 @@ def do_tiles_overlap(l1, r1, l2, r2):
     :return:  True of the input tiles overlap, false otherwise
     """
     # Does one square lie to the Left of the other
-    if l1[1] >= r2[1] or l2[1] >= r1[1]:
+    if l1[1] > r2[1] or l2[1] > r1[1]:
         return False
 
         # Does one square lie above the other
-    if l1[0] >= r2[0] or l2[0] >= r1[0]:
+    if l1[0] > r2[0] or l2[0] > r1[0]:
         return False
 
     return True
