@@ -191,9 +191,9 @@ def find_best_fit_2d_gabor(kernel):
                     opt_params_found = True
                     opt_params_list.append(popt)
 
-                    print( "[%d]: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, lambda=%0.2f, "
-                           "psi=%0.2f, gamma=%0.2f"
-                           % (chan_idx, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7]))
+                    # print( "[%d]: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, lambda=%0.2f, "
+                    #        "psi=%0.2f, gamma=%0.2f"
+                    #        % (chan_idx, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7]))
 
                     # print("Err: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, "
                     #       "lambda=%0.2f, psi=%0.2f, gamma=%0.2f"
