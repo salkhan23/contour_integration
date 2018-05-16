@@ -709,8 +709,9 @@ class DataGenerator(keras.utils.Sequence):
             temp = load_img((os.path.join(self.data_dir, list_id)))
 
             in_img = np.transpose(temp, axes=(2, 0, 1))
+            in_img = in_img / 255.0
 
-            x_arr[idx, ] = in_img.astype(np.uint8)
+            x_arr[idx, ] = in_img
             y_arr[idx] = self.data_key_dict[list_id]
 
         return x_arr, y_arr
