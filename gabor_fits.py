@@ -96,7 +96,7 @@ def get_gabor_fragment(params, spatial_size):
 
     xx, yy = np.meshgrid(x, y)
 
-    if type(params) is list and len(params) is not 3:
+    if type(params) is list and len(params) not in (1, 3):
         raise Exception("Only length 3 list of parameters can be specified")
 
     if type(params) is not list:
