@@ -64,7 +64,7 @@ def plot_contour_integration_weights_in_channels(weights, out_chan_idx, margin=1
     if axis is None:
         f, axis = plt.subplots()
 
-    axis.imshow(tiled_img)
+    axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
 
 
 def plot_contour_integration_weights_out_channels(weights, in_chan_idx, margin=1, axis=None):
@@ -107,7 +107,7 @@ def plot_contour_integration_weights_out_channels(weights, in_chan_idx, margin=1
     if axis is None:
         f, axis = plt.subplots()
 
-    axis.imshow(tiled_img)
+    axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
     axis.set_title("out channels")
 
 
@@ -204,8 +204,9 @@ if __name__ == '__main__':
     # ===================================================================================
     tgt_filter_idx = 5
 
+    # -----------------------------------------------------------------------------------
     # Contour Integration Model
-    # -------------------------
+    # -----------------------------------------------------------------------------------
     cont_int_model = contour_integration_model_3d.build_contour_integration_model(
         tgt_filter_idx, rf_size=25)
 
@@ -216,11 +217,15 @@ if __name__ == '__main__':
     feat_extract_kernels = K.eval(cont_int_model.layers[1].weights[0])
     tgt_filter = feat_extract_kernels[:, :, :, tgt_filter_idx]
 
+    l1_activations_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
+    l2_activations_cb = alex_net_utils.get_activation_cb(cont_int_model, 2)
+
     # Store the start weights & bias for comparison later
     start_weights, _ = cont_int_model.layers[2].get_weights()
 
+    # -----------------------------------------------------------------------------------
     # Fragment
-    # --------
+    # -----------------------------------------------------------------------------------
     frag = np.zeros((11, 11, 3))
     frag[0:6, :, :] = 255.0
 
@@ -229,8 +234,9 @@ if __name__ == '__main__':
     # plt.imshow(frag)
     # plt.title("Fragment")
 
+    # -----------------------------------------------------------------------------------
     # Create a Linear contour image generator
-    # ---------------------------------------
+    # -----------------------------------------------------------------------------------
     gen_class = image_generator_linear.ContourImageGenerator(
         tgt_filt=tgt_filter,
         tgt_filt_idx=tgt_filter_idx,
@@ -244,8 +250,9 @@ if __name__ == '__main__':
     # X, y = train_image_generator.next()
     # gen_class.show_image_batch(X, y)
 
+    # -----------------------------------------------------------------------------------
     # Train the model
-    # ---------------
+    # -----------------------------------------------------------------------------------
     history = cont_int_model.fit_generator(
         generator=train_image_generator,
         steps_per_epoch=1,
@@ -261,18 +268,60 @@ if __name__ == '__main__':
     plt.ylabel('loss')
     plt.xlabel('epoch')
 
-    # Plot the learned weights
-    # -------------------------
+    # ----------------------------------------------------------------------------------
+    #  Plot Results
+    # ----------------------------------------------------------------------------------
+    # 1. PLot all feature maps that feed into output mask at index tgt_filter_idx
     fig, ax_arr = plt.subplots(1, 2)
-    plot_contour_integration_weights_in_channels(start_weights, tgt_filter_idx, axis=ax_arr[0])
+    plot_contour_integration_weights_in_channels(
+        start_weights, tgt_filter_idx, axis=ax_arr[0])
 
     learnt_weights, _ = cont_int_model.layers[2].get_weights()
-    plot_contour_integration_weights_in_channels(learnt_weights, tgt_filter_idx, axis=ax_arr[1])
+    plot_contour_integration_weights_in_channels(
+        learnt_weights, tgt_filter_idx, axis=ax_arr[1])
     fig.suptitle('Input channel of filter @ {}'.format(tgt_filter_idx))
 
+    # 2. Plot all output feature maps that receive from input channel at index tgt_filter_idx
     fig, ax_arr = plt.subplots(1, 2)
-    plot_contour_integration_weights_out_channels(start_weights, tgt_filter_idx, axis=ax_arr[0])
+    plot_contour_integration_weights_out_channels(
+        start_weights, tgt_filter_idx, axis=ax_arr[0])
 
     learnt_weights, _ = cont_int_model.layers[2].get_weights()
-    plot_contour_integration_weights_out_channels(learnt_weights, tgt_filter_idx, axis=ax_arr[1])
+    plot_contour_integration_weights_out_channels(
+        learnt_weights, tgt_filter_idx, axis=ax_arr[1])
     fig.suptitle('Output channel of filter @ {}'.format(tgt_filter_idx))
+
+    # 3. Compare Results with Neurophysiological Data
+    # --------------------------------------------
+    tgt_neuron_location = cont_int_model.layers[2].output_shape[2:]
+    tgt_neuron_location = [loc >> 1 for loc in tgt_neuron_location]
+    print("Comparing Model & Neurophysiological results for neuron at location {}".format(
+        tgt_neuron_location))
+
+    # 3a. Plot Gain vs Contour Length after Optimization
+    li_2006_routines.main_contour_length_routine(
+        frag,
+        l1_activations_cb,
+        l2_activations_cb,
+        alex_net_utils.horizontal_contour_generator,
+        tgt_filter_idx,
+        smoothing=True,
+        row_offset=0,
+        n_runs=100,
+        tgt_neuron_loc=tgt_neuron_location
+    )
+
+    # 3.b Plot Gain vs Contour Spacing after Optimization
+    li_2006_routines.main_contour_spacing_routine(
+        frag,
+        l1_activations_cb,
+        l2_activations_cb,
+        alex_net_utils.horizontal_contour_generator,
+        tgt_filter_idx,
+        smoothing=True,
+        row_offset=0,
+        n_runs=100,
+        tgt_neuron_loc=tgt_neuron_location
+    )
+
+
