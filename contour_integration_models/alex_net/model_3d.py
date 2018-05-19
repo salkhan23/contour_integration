@@ -91,7 +91,7 @@ class ContourIntegrationLayer3D(Layer):
             initializer='glorot_normal',
             name='kernel',
             trainable=True,
-            regularizer=l1(0.001)
+            regularizer=l1(0.005)
         )
 
         self.bias = self.add_weight(
