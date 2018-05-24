@@ -121,10 +121,10 @@ class ContourIntegrationLayer3D(Layer):
 
         outputs = K.conv2d(inputs, self.kernel, strides=(1, 1), padding='same')
 
-        #outputs = outputs * inputs
+        outputs = outputs * inputs
         outputs = K.bias_add(outputs, self.bias)
 
-        outputs = self.activation(outputs) #+ inputs
+        outputs = self.activation(outputs) + inputs
 
         return outputs
 
@@ -145,9 +145,10 @@ def build_contour_integration_model(tgt_filt_idx, rf_size=25):
 
     conv_1 = Conv2D(96, (11, 11), strides=(4, 4), activation='relu', name='conv_1')(input_layer)
 
-    contour_integrate_layer = ContourIntegrationLayer3D(rf_size=rf_size, activation='relu')(conv_1)
+    contour_integrate_layer = ContourIntegrationLayer3D(
+        rf_size=rf_size, activation='relu', name='contour_integration_layer')(conv_1)
 
-    contour_gain_layer = ContourGainCalculatorLayer(tgt_filt_idx)([
+    contour_gain_layer = ContourGainCalculatorLayer(tgt_filt_idx, name='gain_calculating_layer')([
         conv_1, contour_integrate_layer])
 
     model = Model(input_layer, outputs=contour_gain_layer)
