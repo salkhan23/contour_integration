@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import keras.backend as K
+from keras.preprocessing.image import load_img
 
 import image_generator_linear
 import alex_net_utils
@@ -324,4 +325,19 @@ if __name__ == '__main__':
         tgt_neuron_loc=tgt_neuron_location
     )
 
+    #  4. Performance on sample  Li Stimuli
+    # ----------------------------------------------------------------------------------
+    # 1. Plot the activations of the model for an image with a straight contour
+    d = load_img('./data/curved_contours/filter_5/c_len_9/beta_0/orient_92_clen_9_beta_0__0.png')
+    d1 = np.array(d)
+    alex_net_utils.plot_l1_and_l2_activations(
+        d1 / 255, l1_activations_cb, l2_activations_cb, tgt_filter_idx)
+    plt.title('straight')
+
+    # 2. Plot the activations of the model for an image with a straight contour
+    d = load_img('./data/curved_contours/filter_5/c_len_9/beta_15/orient_92_clen_9_beta_15__0.png')
+    d1 = np.array(d)
+    alex_net_utils.plot_l1_and_l2_activations(
+        d1 / 255, l1_activations_cb, l2_activations_cb, tgt_filter_idx)
+    plt.title('15 degrees')
 
