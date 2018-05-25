@@ -7,9 +7,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import shutil
 import pickle
 
 import keras.backend as K
+from keras.preprocessing.image import load_img
 
 import image_generator_curve
 from base_models import alex_net
@@ -32,7 +34,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
-    tgt_filter_idx = 10
+    tgt_filter_idx = 5
 
     n_images = 100
 
@@ -74,7 +76,8 @@ if __name__ == '__main__':
     fragment_gabor_params = image_generator_curve.get_gabor_params_from_target_filter(
         tgt_filter,
         # match=[ 'x0', 'y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma']
-        match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
+        match=[ 'x0', 'y0', 'theta_deg', 'amp', 'lambda1', 'psi', 'gamma']
+        # match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
         # match=['theta_deg']
     )
     fragment_gabor_params['theta_deg'] = np.int(fragment_gabor_params['theta_deg'])
@@ -88,27 +91,29 @@ if __name__ == '__main__':
     # plt.title("Contour Fragment")
     #
     # # Plot rotations of the fragment
-    # curved_contour_image_generator.plot_fragment_rotations(
+    # image_generator_curve.plot_fragment_rotations(
     #     fragment, fragment_gabor_params, delta_rot=15)
 
     # ------------------------------------------------------------------------------------
     # Generate Images
     # ------------------------------------------------------------------------------------
-    # Inform existing data will be overwritten.
-    base_dir = "filter_{0}".format(tgt_filter_idx)
+    # Inform existing data will be overwritten if it exists
+    filter_idx_dir = "filter_{0}".format(tgt_filter_idx)
 
-    if os.path.isdir(os.path.join(DATA_DIRECTORY, base_dir)) and \
-            os.listdir(os.path.join(DATA_DIRECTORY, base_dir)):
+    if os.path.isdir(os.path.join(DATA_DIRECTORY, filter_idx_dir)) and \
+            os.listdir(os.path.join(DATA_DIRECTORY, filter_idx_dir)):
 
         ans = raw_input("Generated Images will overwrite existing images. Continue? (Y/N)")
 
         if 'y' not in ans.lower():
             raise SystemExit()
+        else:
+            shutil.rmtree(os.path.join(DATA_DIRECTORY, filter_idx_dir))
 
     data_key_dict = {}
     for c_len in contour_len_arr:
 
-        c_len_dir = base_dir + '/c_len_{0}'.format(c_len)
+        c_len_dir = filter_idx_dir + '/c_len_{0}'.format(c_len)
 
         for b_idx, beta in enumerate(beta_rotation_arr):
 
@@ -120,28 +125,57 @@ if __name__ == '__main__':
             if not os.path.exists(abs_destination_dir):
                 os.makedirs(abs_destination_dir)
 
-            file_names = image_generator_curve.generate_contour_images(
-                n_images,
-                fragment,
-                fragment_gabor_params,
-                c_len,
-                beta,
-                full_tile_size,
-                abs_destination_dir,
+            images = image_generator_curve.generate_contour_images(
+                n_images=n_images,
+                frag=fragment,
+                frag_params=fragment_gabor_params,
+                c_len=c_len,
+                beta=beta,
+                f_tile_size=full_tile_size,
                 img_size=image_size
             )
 
+            # Save the images to file & create a dictionary key of (Image, Expected gain)
+            # that can be used by a python generator / keras sequence object
             c_len_idx = (c_len - 1) / 2
             abs_gain = Li2006Data['contour_len_avg_gain'][c_len_idx] * relative_gain_curvature[beta]
-            # print("clen {0}, beta {1}, abs gain={2}".format(c_len, beta, abs_gain))
 
             beta_dict = {}
-            for filename in file_names:
+
+            for img_idx in range(images.shape[0]):
+
+                filename = "clen_{0}_beta_{1}__{2}.png".format(c_len, beta, img_idx)
+
+                plt.imsave(
+                    os.path.join(abs_destination_dir, filename),
+                    images[img_idx, ],
+                    format='PNG'
+                )
+
                 beta_dict[filename] = abs_gain
 
+            # Add this dictionary to the dictionary of dictionaries
             data_key_dict['c_len_{}_beta_{}'.format(c_len, beta)] = beta_dict
 
-    # Store the data_key_dict (X,y) pairs
-    pickle_file_loc = os.path.join(DATA_DIRECTORY, base_dir, 'data_key.pickle')
-    with open(pickle_file_loc, 'wb') as handle:
+    # Store the dictionary of Dictionaries
+    # Each entry in this dictionary is dictionary of image index and its absolute gain value
+    # for a particular c_len, beta rotation value
+    master_key_file_loc = os.path.join(DATA_DIRECTORY, filter_idx_dir, 'data_key.pickle')
+    with open(master_key_file_loc, 'wb') as handle:
         pickle.dump(data_key_dict, handle)
+
+    # -----------------------------------------------------------------------------------
+    #  Debug
+    # -----------------------------------------------------------------------------------
+    # Load a sample image to see that it is created and stored correctly
+    c_len = 9
+    beta = 15
+    img_idx = 0
+    test_img_loc = os.path.join(
+        DATA_DIRECTORY, filter_idx_dir, "c_len_{0}".format(c_len), "beta_{0}".format(beta),
+        "clen_{0}_beta_{1}__{2}.png".format(c_len, beta, img_idx))
+
+    img = load_img(test_img_loc)
+    plt.figure()
+    plt.imshow(img)
+    plt.title("Sample Generated Image")

@@ -462,7 +462,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
 
 def generate_contour_images(
-        n_images, frag, frag_params, c_len, beta, f_tile_size, destination, img_size=None, image_format='PNG'):
+        n_images, frag, frag_params, c_len, beta, f_tile_size, img_size=None):
     """
 
     # In the Ref, a visible stimulus of a small size is placed inside a large tile
@@ -474,9 +474,7 @@ def generate_contour_images(
     :param c_len:
     :param beta:
     :param f_tile_size
-    :param destination:
     :param img_size:
-    :param image_format:
 
     :return: list of file names generated
     """
@@ -490,7 +488,7 @@ def generate_contour_images(
     # bg = [np.uint8(chan) for chan in bg_value]
     bg = get_mean_pixel_value_at_boundary(frag)
 
-    files_generated = []
+    images = np.zeros((n_images, img_size[0], img_size[1], img_size[2]), dtype='uint8')
 
     for img_idx in range(n_images):
 
@@ -503,6 +501,8 @@ def generate_contour_images(
 
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
             img, frag, c_frag_starts, f_tile_size, 15, frag_params)
+
+        images[img_idx, ] = img
 
         # # Highlight Contour tiles
         # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], c_frag_starts)
@@ -528,15 +528,15 @@ def generate_contour_images(
         # img = alex_net_utils.highlight_tiles(
         #     img, f_tile_size, f_tile_starts, edge_color=(255, 255, 0))
 
-        # ------------------------------------------------------------
-        filename = "orient_{0}_clen_{1}_beta_{2}__{3}.png".format(
-            frag_params["theta_deg"], c_len, beta, img_idx)
+        # # ------------------------------------------------------------
+        # filename = "orient_{0}_clen_{1}_beta_{2}__{3}.png".format(
+        #     frag_params["theta_deg"], c_len, beta, img_idx)
+        #
+        # plt.imsave(os.path.join(destination, filename), img, format=image_format)
+        #
+        # files_generated.append((os.path.join(destination, filename)))
 
-        plt.imsave(os.path.join(destination, filename), img, format=image_format)
-
-        files_generated.append((os.path.join(destination, filename)))
-
-    return files_generated
+    return images
 
 
 def plot_fragment_rotations(frag, frag_params, delta_rot=15):
