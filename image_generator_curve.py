@@ -572,9 +572,9 @@ def plot_fragment_rotations(frag, frag_params, delta_rot=15):
         ax_arr[row_idx][col_idx].set_title("Angle = {}".format(rot_ang))
 
 
-def get_gabor_from_target_filter(tgt_filt, match=None):
+def get_gabor_params_from_target_filter(tgt_filt, match=None):
     """
-    Get best Fit gabor from feature extracting kernel
+    Get best fit 2D gabor parameters from feature extracting kernel
     Best fit parameters for the channel with the highest absolute amplitude are used
 
     :param tgt_filt: target filter to match
@@ -755,7 +755,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Contour Fragment
     # -----------------------------------------------------------------------------------
-    fragment_gabor_params = get_gabor_from_target_filter(
+    fragment_gabor_params = get_gabor_params_from_target_filter(
         tgt_filter,
         # match=[ 'x0', 'y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma']
         # match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']

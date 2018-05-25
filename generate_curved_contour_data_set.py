@@ -71,7 +71,7 @@ if __name__ == '__main__':
     # Contour Fragment
     # -----------------------------------------------------------------------------------
     # Gabor fit parameters target filter. Params that are not fit are defaulted.
-    fragment_gabor_params = image_generator_curve.get_gabor_from_target_filter(
+    fragment_gabor_params = image_generator_curve.get_gabor_params_from_target_filter(
         tgt_filter,
         # match=[ 'x0', 'y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma']
         match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
