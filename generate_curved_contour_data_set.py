@@ -152,7 +152,8 @@ if __name__ == '__main__':
                     format='PNG'
                 )
 
-                beta_dict[filename] = abs_gain
+                beta_dict[os.path.join(abs_destination_dir, filename)] = abs_gain
+
 
             # Add this dictionary to the dictionary of dictionaries
             data_key_dict['c_len_{}_beta_{}'.format(c_len, beta)] = beta_dict
