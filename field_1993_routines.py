@@ -9,8 +9,12 @@ import matplotlib.pyplot as plt
 import pickle
 
 import image_generator_curve
+import alex_net_utils
+
+from keras.preprocessing.image import load_img
 
 reload(image_generator_curve)
+reload(alex_net_utils)
 
 
 def contour_gain_vs_inter_fragment_rotation(model, data_key, c_len, n_runs=100, axis=None):
@@ -216,3 +220,24 @@ def contour_gain_vs_length(model, data_key, beta, n_runs=100, axis=None):
     axis.set_xlabel("Contour Length")
     axis.set_ylabel("Gain")
     axis.set_title("Enhancement gain vs Contour Length")
+
+
+def plot_activations(model, img_file, tgt_filt_idx,):
+    """
+
+    PLot the Feature Extract and Contour Integration Activations for the specified image.
+
+    :param model:
+    :param img_file:
+    :param tgt_filt_idx:
+    :return:
+    """
+    # Callbacks to get activations of feature extract and contour integration layers
+    feat_extract_act_cb = alex_net_utils.get_activation_cb(model, 1)
+    cont_int_act_cb = alex_net_utils.get_activation_cb(model, 2)
+
+    d = load_img(img_file)
+    d1 = np.array(d)
+
+    alex_net_utils.plot_l1_and_l2_activations(
+        d1 / 255.0, feat_extract_act_cb, cont_int_act_cb, tgt_filt_idx)

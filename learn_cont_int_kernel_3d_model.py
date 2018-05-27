@@ -5,13 +5,11 @@
 # Author: Salman Khan
 # Date  : 06/05/18
 # -------------------------------------------------------------------------------------------------
-import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import os
 
 import keras.backend as K
-from keras.preprocessing.image import load_img
 
 import alex_net_utils
 import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
@@ -78,10 +76,6 @@ if __name__ == '__main__':
     # Target feature extracting kernel
     feat_extract_kernels = K.eval(cont_int_model.layers[1].weights[0])
     tgt_feat_extract_kernel = feat_extract_kernels[:, :, :, tgt_kernel_idx]
-
-    # Callbacks to get activations of feature extract and contour integration layers
-    feat_extract_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
-    cont_int_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 2)
 
     # Store starting weights for comparision later
     start_weights, _ = cont_int_model.layers[2].get_weights()
@@ -225,7 +219,7 @@ if __name__ == '__main__':
         axis=ax
     )
 
-    # 4. Linear Enhancement gain vs Contour Length
+    # 4. Enhancement gain vs contour length
     # -------------------------------------------------------------------------
     _, ax = plt.subplots()
 
@@ -253,20 +247,12 @@ if __name__ == '__main__':
     image_idx = 0
     image_loc = './data/curved_contours/train/filter_{0}/c_len_9/beta_0/c_len_9_beta_0__{1}.png'.format(
         tgt_kernel_idx, image_idx)
-    d = load_img(image_loc)
-    d1 = np.array(d)
-
-    alex_net_utils.plot_l1_and_l2_activations(
-        d1 / 255.0, feat_extract_act_cb, cont_int_act_cb, tgt_kernel_idx)
+    field_1993_routines.plot_activations(cont_int_model, image_loc, tgt_kernel_idx)
     plt.suptitle("Linear Contour")
 
-    # 2. 15 Rotation Array
+    # 2. 15 Rotation Contour
     image_idx = 0
     image_loc = './data/curved_contours/train/filter_{0}/c_len_9/beta_15/c_len_9_beta_15__{1}.png'.format(
         tgt_kernel_idx, image_idx)
-    d = load_img(image_loc)
-    d1 = np.array(d)
-
-    alex_net_utils.plot_l1_and_l2_activations(
-        d1 / 255.0, feat_extract_act_cb, cont_int_act_cb, tgt_kernel_idx)
-    plt.title("Contour with inter-fragment rotation of 15")
+    field_1993_routines.plot_activations(cont_int_model, image_loc, tgt_kernel_idx)
+    plt.suptitle("Contour with inter-fragment rotation of 15")
