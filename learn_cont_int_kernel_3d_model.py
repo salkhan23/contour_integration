@@ -129,21 +129,21 @@ if __name__ == '__main__':
         data_dir=DATA_DIR
     )
 
-    # Test the generator (sequence) object
-    gen_out = iter(train_image_generator)
-    X, y = gen_out.next()
-
-    plt.figure()
-    plt.imshow(np.transpose(X[0, ], (1, 2, 0)))
-    plt.title("Expected gain {0}".format(y[0]))
+    # # Test the generator (sequence) object
+    # gen_out = iter(train_image_generator)
+    # X, y = gen_out.next()
+    #
+    # plt.figure()
+    # plt.imshow(np.transpose(X[0, ], (1, 2, 0)))
+    # plt.title("Expected gain {0}".format(y[0]))
 
     # -----------------------------------------------------------------------------------
     # Train the model
     # -----------------------------------------------------------------------------------
     history = cont_int_model.fit_generator(
         generator=train_image_generator,
-        epochs=10,
-        steps_per_epoch=50,
+        epochs=100,
+        steps_per_epoch=10,
         verbose=2,
         validation_data=test_image_generator,
         validation_steps=10,
