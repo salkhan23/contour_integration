@@ -20,8 +20,8 @@ def contour_gain_vs_inter_fragment_rotation(model, data_key, c_len, n_runs=100, 
 
     :param model: Contour Integration Model
         (Should be training model with last layer = enhancement gain calculating layer)
-    :param c_len: Contour Length
     :param data_key: data key (dictionary of dictionaries) that describes the data
+    :param c_len: Contour Length
     :param n_runs: number of runs to average results over for each point
     :param axis: [Default=None]
 
@@ -132,11 +132,12 @@ def contour_gain_vs_length(model, data_key, beta, n_runs=100, axis=None):
     contour as specified by Li -2006. Not that inter-fragment spacing is different from
     Li 2006 Results.
 
-    :param model:
-    :param data_key:
-    :param beta:
-    :param n_runs:
-    :param axis:
+    :param model: Contour Integration Model
+        (Should be training model with last layer = enhancement gain calculating layer)
+    :param data_key: data key (dictionary of dictionaries) that describes the data
+    :param beta: Consider contours with inter-fragment rotations of this amount
+    :param n_runs: number of runs to average results over for each point
+    :param axis: [Default None]
 
     :return:
     """
