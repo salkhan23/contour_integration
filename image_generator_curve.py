@@ -462,11 +462,12 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
 
 def generate_contour_images(
-        n_images, frag, frag_params, c_len, beta, f_tile_size, img_size=None):
+        n_images, frag, frag_params, c_len, beta, f_tile_size, img_size=None, bg_frag_relocate=True):
     """
+    Generate n_images with the specified fragment parameters.
 
-    # In the Ref, a visible stimulus of a small size is placed inside a large tile
-    # Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
+    In the Ref, a visible stimulus of a small size is placed inside a large tile
+    Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
 
     :param n_images:
     :param frag:
@@ -474,7 +475,9 @@ def generate_contour_images(
     :param c_len:
     :param beta:
     :param f_tile_size
-    :param img_size:
+    :param img_size: [Default = (227, 227, 3)]
+    :param bg_frag_relocate: If True, for a full tile that contains a background fragment, try to
+             relocate bg fragment within the full tile to see if it can fit.
 
     :return: list of file names generated
     """
@@ -500,7 +503,7 @@ def generate_contour_images(
             img, frag, frag_params, c_len, beta, f_tile_size[0])
 
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
-            img, frag, c_frag_starts, f_tile_size, 15, frag_params)
+            img, frag, c_frag_starts, f_tile_size, 15, frag_params, bg_frag_relocate)
 
         images[img_idx, ] = img
 
