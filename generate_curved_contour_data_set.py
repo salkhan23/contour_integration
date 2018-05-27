@@ -52,6 +52,14 @@ def generate_data_set(
     with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
         li_2006_data = pickle.load(handle)
 
+    absolute_gain_linear = {
+        1: li_2006_data['contour_len_avg_gain'][0],
+        3: li_2006_data['contour_len_avg_gain'][1],
+        5: li_2006_data['contour_len_avg_gain'][2],
+        7: li_2006_data['contour_len_avg_gain'][3],
+        9: li_2006_data['contour_len_avg_gain'][4],
+    }
+
     # TODO: Put data in Pickle Format
     relative_gain_curvature = {
         0: 1.00,
@@ -110,8 +118,7 @@ def generate_data_set(
 
             # Save the images to file & create a dictionary key of (Image, Expected gain)
             # that can be used by a python generator / keras sequence object
-            c_len_idx = (c_len - 1) / 2
-            abs_gain = li_2006_data['contour_len_avg_gain'][c_len_idx] * relative_gain_curvature[beta]
+            abs_gain = absolute_gain_linear[c_len] * relative_gain_curvature[beta]
 
             beta_dict = {}
             for img_idx in range(img_arr.shape[0]):
