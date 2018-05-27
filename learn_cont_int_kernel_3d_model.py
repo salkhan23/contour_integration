@@ -332,4 +332,4 @@ if __name__ == '__main__':
 
     alex_net_utils.plot_l1_and_l2_activations(
         d1 / 255.0, feat_extract_act_cb, cont_int_act_cb, tgt_kernel_idx)
-    plt.title("Contour with Inte fragment rotation of 15")
+    plt.title("Contour with inter-fragment rotation of 15")
