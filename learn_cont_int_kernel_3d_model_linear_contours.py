@@ -64,9 +64,11 @@ def plot_contour_integration_weights_in_channels(weights, out_chan_idx, margin=1
 
     if axis is None:
         f, axis = plt.subplots()
+    else:
+        f = plt.gcf()
 
-    axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
-    axis.colorbar(orientation='horizontal')
+    cax = axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
+    f.colorbar(cax, orientation='horizontal', ax=axis)
 
 
 def plot_contour_integration_weights_out_channels(weights, in_chan_idx, margin=1, axis=None):
@@ -108,9 +110,11 @@ def plot_contour_integration_weights_out_channels(weights, in_chan_idx, margin=1
 
     if axis is None:
         f, axis = plt.subplots()
+    else:
+        f = plt.gcf()
 
-    axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
-    axis.colorbar(orientation='horizontal')
+    cax = axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
+    f.colorbar(cax, orientation='horizontal', ax=axis)
 
 
 if __name__ == '__main__':
