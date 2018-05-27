@@ -144,7 +144,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
-    tgt_filter_idx = 5
+    tgt_filter_idx = 10
 
     n_train_images = 500
     n_test_images = 100
@@ -223,7 +223,7 @@ if __name__ == '__main__':
     test_img_loc = os.path.join(
         DATA_DIRECTORY,
         'test',
-        tgt_filter_idx,
+        'filter_{}'.format(tgt_filter_idx),
         "c_len_{0}".format(contour_len),
         "beta_{0}".format(inter_fragment_rotation),
         "c_len_{0}_beta_{1}__{2}.png".format(contour_len, inter_fragment_rotation, image_idx)
