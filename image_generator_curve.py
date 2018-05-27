@@ -481,8 +481,8 @@ def generate_contour_images(
     if img_size is None:
         img_size = np.array([227, 227, 3])
 
-    print("Generating {0} images for fragment [orientation {1}, contour length {2},"
-          "inter fragment rotation {3}]".format(n_images, frag_params['theta_deg'], c_len, beta))
+    print("Generating {0} images for fragment [ contour length {1}, inter fragment rotation {2}]".format(
+        n_images, c_len, beta))
 
     # bg = np.mean(fragment, axis=(0, 1))
     # bg = [np.uint8(chan) for chan in bg_value]
@@ -492,7 +492,7 @@ def generate_contour_images(
 
     for img_idx in range(n_images):
 
-        print("Image {}".format(img_idx))
+        # print("Image {}".format(img_idx))
 
         img = np.ones(img_size, dtype=np.uint8) * bg
 
@@ -706,7 +706,7 @@ class DataGenerator(keras.utils.Sequence):
         for idx, list_id in enumerate(list_ids_temp):
             # print ("Loading image {0}".format(os.path.join(self.data_dir, list_id)))
             # temp = plt.imread((os.path.join(self.data_dir, list_id)))
-            temp = load_img((os.path.join(self.data_dir, list_id)))
+            temp = load_img(list_id)
 
             in_img = np.transpose(temp, axes=(2, 0, 1))
             in_img = in_img / 255.0
