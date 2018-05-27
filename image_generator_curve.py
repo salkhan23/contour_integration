@@ -656,8 +656,7 @@ def get_mean_pixel_value_at_boundary(frag, width=1):
 
 
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, data_key_dict, batch_size=32, img_size=(227, 227, 3), shuffle=True,
-                 data_dir='data/curved_contours'):
+    def __init__(self, data_key_dict, batch_size=32, img_size=(227, 227, 3), shuffle=True):
         """
         A Python generator (actually a keras sequencer object) that can be used to
         dynamically load images when the batch is run. Saves a lot on memory.
@@ -672,10 +671,8 @@ class DataGenerator(keras.utils.Sequence):
         :param batch_size:
         :param img_size:
         :param shuffle: [default=True]
-        :param data_dir: [default = data/curved_contour]
 
         """
-        self.data_dir = data_dir
         self.shuffle = shuffle
         self.img_size = img_size
         self.batch_size = batch_size
@@ -707,8 +704,7 @@ class DataGenerator(keras.utils.Sequence):
         # print("Loading a new batch")
 
         for idx, list_id in enumerate(list_ids_temp):
-            # print ("Loading image {0}".format(os.path.join(self.data_dir, list_id)))
-            # temp = plt.imread((os.path.join(self.data_dir, list_id)))
+
             temp = load_img(list_id)
 
             in_img = np.transpose(temp, axes=(2, 0, 1))
