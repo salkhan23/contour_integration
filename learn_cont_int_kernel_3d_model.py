@@ -207,7 +207,7 @@ if __name__ == '__main__':
 
     # 3. Fields - 1993 - Experiment 1 - Curvature vs Gain
     # --------------------------------------------------------------------------
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
 
     field_1993_routines.contour_gain_vs_inter_fragment_rotation(
         cont_int_model,
@@ -227,61 +227,25 @@ if __name__ == '__main__':
 
     # 4. Linear Enhancement gain vs Contour Length
     # -------------------------------------------------------------------------
-    # Get Neurological Data
-    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
-        li_2006_data = pickle.load(handle)
+    _, ax = plt.subplots()
 
-    relative_gain_curvature = {
-        0: 1.00,
-        15: 0.98,
-        30: 0.87,
-        45: 0.85,
-        60: 0.61
-    }
+    # Linear contours
+    field_1993_routines.contour_gain_vs_length(
+        cont_int_model,
+        test_data_dict,
+        0,
+        n_runs=100,
+        axis=ax
+    )
 
-    curve_rot_arr = np.array([0, 15, 30, 45, 60])
-
-    expected_gain = li_2006_data['contour_len_avg_gain']
-    contour_len_arr = li_2006_data['contour_len_avg_len']
-
-    # Initialization
-    n_runs = 100
-
-    plt.figure()
-    plt.plot(contour_len_arr, expected_gain, label='Li 2006 Results', marker='square')
-
-    avg_gain_per_len = []
-    sd_gain_per_len = []
-
-    for c_len_idx, c_len in enumerate(contour_len_arr):
-        print("Getting Results for c_len {}".format(c_len))
-
-        # image generator
-        train_dict = train_data_dict['c_len_{0}_beta_{1}'.format(c_len, 0)]
-        train_image_generator = image_generator_curve.DataGenerator(
-            train_dict,
-            batch_size=1,
-            img_size=IMAGE_SIZE,
-            shuffle=True,
-        )
-        gen_out = iter(train_image_generator)
-
-        # get the predictions
-        y_hat_arr = []
-        for r_idx in range(n_runs):
-            X, y = gen_out.next()
-
-            y_hat = cont_int_model.predict(X, batch_size=1, verbose=0)
-            y_hat_arr.append(y_hat)
-
-        avg_gain_per_len.append(np.mean(y_hat_arr))
-        sd_gain_per_len.append(np.std(y_hat_arr))
-
-    plt.errorbar(contour_len_arr, avg_gain_per_len, sd_gain_per_len, marker='o', label='model', color='g')
-    plt.legend()
-    plt.xlabel("Contour Length")
-    plt.ylabel("Gain")
-    plt.title("Enhancement Gain vs. Contour Length - Linear Contours")
+    # For inter-fragment rotation of 15 degrees
+    field_1993_routines.contour_gain_vs_length(
+        cont_int_model,
+        test_data_dict,
+        15,
+        n_runs=100,
+        axis=ax
+    )
 
     # 5. Enhancement Visualization over Sample Images
     # -----------------------------------------------
