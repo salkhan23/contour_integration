@@ -1,0 +1,113 @@
+# -------------------------------------------------------------------------------------------------
+#  Experiments from Fields - 1993 -
+#
+# Author: Salman Khan
+# Date  : 25/05/18
+# -------------------------------------------------------------------------------------------------
+import numpy as np
+import matplotlib.pyplot as plt
+import pickle
+
+import image_generator_curve
+
+reload(image_generator_curve)
+
+
+def contour_gain_vs_inter_fragment_rotation(model, data_key, c_len, n_runs=100, axis=None):
+    """
+    Compare the performance of the model with the results of Fields-1993 Experiment 1
+    Enhancement gain as a function of inter-fragment rotation.
+
+    :param model: Contour Integration Model
+        (Should be training model with last layer = enhancement gain calculating layer)
+    :param c_len: Contour Length
+    :param data_key: data key (dictionary of dictionaries) that describes the data
+    :param n_runs: number of runs to average results over for each point
+    :param axis: [Default=None]
+
+    :return:
+    """
+    # --------------------------------------
+    # Validation
+    # --------------------------------------
+    if c_len not in [1, 3, 5, 7, 9]:
+        raise Exception("Invalid contour length {0} specified. Allowed = [1, 3, 5, 7, 9]")
+
+    print("Model Contour Gain vs inter-fragment rotation for contour length {}".format(c_len))
+
+    # --------------------------------------
+    # Get Neurophysiological Data
+    # --------------------------------------
+    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
+        li_2006_data = pickle.load(handle)
+
+    absolute_gain_linear = {
+        1: li_2006_data['contour_len_avg_gain'][0],
+        3: li_2006_data['contour_len_avg_gain'][1],
+        5: li_2006_data['contour_len_avg_gain'][2],
+        7: li_2006_data['contour_len_avg_gain'][3],
+        9: li_2006_data['contour_len_avg_gain'][4],
+
+    }
+
+    # TODO: Retrieve this from a pickle object.
+    relative_gain_curvature = {
+        0: 1.00,
+        15: 0.98,
+        30: 0.87,
+        45: 0.85,
+        60: 0.61
+    }
+
+    inter_frag_rotation_arr = np.array([0, 15, 30, 45, 60])
+
+    # Plot Neurophysiological data
+    if axis is None:
+        f, axis = plt.subplot()
+
+    absolute_gains = [
+        relative_gain_curvature[beta] * absolute_gain_linear[c_len] for beta in inter_frag_rotation_arr]
+
+    axis.plot(inter_frag_rotation_arr, absolute_gains,
+              label='Fields-1993-c_len_{}'.format(c_len), marker='s', linestyle='--')
+
+    avg_gain_per_angle = []
+    std_gain_per_angle = []
+
+    for b_idx, beta in enumerate(inter_frag_rotation_arr):
+
+        print("Processing c_len = {}, beta = {}".format(c_len, beta))
+
+        # Image Retriever
+        active_train_set = data_key["c_len_{0}_beta_{1}".format(c_len, beta)]
+        image_generator = image_generator_curve.DataGenerator(
+            active_train_set,
+            batch_size=1,
+            shuffle=True,
+        )
+
+        gen_out = iter(image_generator)
+
+        # Get the results
+        y_hat_arr = []
+        for r_idx in range(n_runs):
+
+            x_in, y = gen_out.next()
+
+            # TODO: look into using activations callbacks. Than this routine can be used by
+            # TODO: the full contour integration model, which does not have a gain calculating layer.
+            y_hat = model.predict(x_in, batch_size=1)
+            y_hat_arr.append(y_hat)
+            # print("Predicted gain {0}, Expected gain {1}".format(y_hat, y))
+
+        avg_gain_per_angle.append(np.mean(y_hat_arr))
+        std_gain_per_angle.append(np.std(y_hat_arr))
+
+    axis.errorbar(
+        inter_frag_rotation_arr, avg_gain_per_angle, std_gain_per_angle,
+        marker='o', label='model-c_len_{}'.format(c_len), linestyle='-')
+
+    axis.legend()
+    axis.set_xlabel("Inter-fragment rotation (Deg)")
+    axis.set_ylabel("Gain")
+    axis.set_title("Enhancement gain vs inter-fragment rotation - Fields -1993 (Exp 1)")

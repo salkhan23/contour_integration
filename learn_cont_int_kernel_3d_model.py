@@ -17,11 +17,13 @@ import alex_net_utils
 import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
 import image_generator_curve
 import learn_cont_int_kernel_3d_model_linear_contours as linear_contour_training
+import field_1993_routines
 
 reload(alex_net_utils)
 reload(contour_integration_model_3d)
 reload(image_generator_curve)
 reload(linear_contour_training)
+reload(field_1993_routines)
 
 
 DATA_DIR = './data/curved_contours'
@@ -118,7 +120,6 @@ if __name__ == '__main__':
         batch_size=batch_size,
         img_size=IMAGE_SIZE,
         shuffle=True,
-        data_dir=DATA_DIR
     )
 
     test_image_generator = image_generator_curve.DataGenerator(
@@ -126,7 +127,6 @@ if __name__ == '__main__':
         batch_size=batch_size,
         img_size=IMAGE_SIZE,
         shuffle=True,
-        data_dir=DATA_DIR
     )
 
     # # Test the generator (sequence) object
@@ -203,8 +203,28 @@ if __name__ == '__main__':
 
     fig.suptitle('Input channel feeding into output channel @ {}'.format(tgt_kernel_idx))
 
-    # 3. Fields - 1993 - Experiment 1 - Curvature vs Gain for contour length = 9
+    # 3. Fields - 1993 - Experiment 1 - Curvature vs Gain
     # --------------------------------------------------------------------------
+    fig, ax = plt.subplots()
+
+    field_1993_routines.contour_gain_vs_inter_fragment_rotation(
+        cont_int_model,
+        test_data_dict,
+        c_len=9,
+        n_runs=100,
+        axis=ax
+    )
+
+    field_1993_routines.contour_gain_vs_inter_fragment_rotation(
+        cont_int_model,
+        test_data_dict,
+        c_len=7,
+        n_runs=100,
+        axis=ax
+    )
+
+    # 4. Linear Enhancement gain vs Contour Length
+    # -------------------------------------------------------------------------
     # Get Neurological Data
     with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
         li_2006_data = pickle.load(handle)
@@ -219,54 +239,6 @@ if __name__ == '__main__':
 
     curve_rot_arr = np.array([0, 15, 30, 45, 60])
 
-    # Initialization
-    contour_len = 9
-    n_runs = 100
-    linear_abs_gain = li_2006_data['contour_len_avg_gain'][-1]
-
-    plt.figure()
-    abs_gains = [relative_gain_curvature[beta] * linear_abs_gain for beta in curve_rot_arr]
-    plt.plot(curve_rot_arr, abs_gains, label='Fields Results', marker='square')
-
-    avg_gain_per_angle = []
-    sd_gain_per_angle = []
-
-    for b_idx, beta in enumerate(curve_rot_arr):
-        print('Processing images for set c_len_{0}_beta_{1}'.format(contour_len, beta))
-
-        # image generator
-        train_dict = train_data_dict['c_len_{0}_beta_{1}'.format(contour_len, beta)]
-        train_image_generator = image_generator_curve.DataGenerator(
-            train_dict,
-            batch_size=1,
-            img_size=IMAGE_SIZE,
-            shuffle=True,
-            data_dir=DATA_DIR
-        )
-        gen_out = iter(train_image_generator)
-
-        # get the predictions
-        y_hat_arr = []
-        for r_idx in range(n_runs):
-            X, y = gen_out.next()
-
-            y_hat = cont_int_model.predict(X, batch_size=1, verbose=0)
-            y_hat_arr.append(y_hat)
-            # print("Predicted gain {0}, Expected gain {1}".format(y_hat, y))
-
-        avg_gain_per_angle.append(np.mean(y_hat_arr))
-        sd_gain_per_angle.append(np.std(y_hat_arr))
-
-    plt.errorbar(curve_rot_arr, avg_gain_per_angle, sd_gain_per_angle,
-                 marker='o', label='model', color='g')
-    plt.legend()
-    plt.xlabel("Inter Fragment Rotation")
-    plt.ylabel("Gain")
-    plt.title("Enhancement Gain vs Inter fragment rotation - Fields  Exp 1")
-
-    # 4. Linear Enhancement gain vs Contour Length
-    # --------------------------------------------------------------------------
-    # Get Neurological Data
     expected_gain = li_2006_data['contour_len_avg_gain']
     contour_len_arr = li_2006_data['contour_len_avg_len']
 
@@ -289,7 +261,6 @@ if __name__ == '__main__':
             batch_size=1,
             img_size=IMAGE_SIZE,
             shuffle=True,
-            data_dir=DATA_DIR
         )
         gen_out = iter(train_image_generator)
 
