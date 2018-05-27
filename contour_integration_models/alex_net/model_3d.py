@@ -91,7 +91,7 @@ class ContourIntegrationLayer3D(Layer):
             initializer='glorot_normal',
             name='kernel',
             trainable=True,
-            regularizer=l1(0.005)
+            regularizer=l1(0.01)
         )
 
         self.bias = self.add_weight(
@@ -146,7 +146,9 @@ def build_contour_integration_model(tgt_filt_idx, rf_size=25):
     conv_1 = Conv2D(96, (11, 11), strides=(4, 4), activation='relu', name='conv_1')(input_layer)
 
     contour_integrate_layer = ContourIntegrationLayer3D(
-        rf_size=rf_size, activation='relu', name='contour_integration_layer')(conv_1)
+        rf_size=rf_size,
+        # activation='relu',
+        name='contour_integration_layer')(conv_1)
 
     contour_gain_layer = ContourGainCalculatorLayer(tgt_filt_idx, name='gain_calculating_layer')([
         conv_1, contour_integrate_layer])
