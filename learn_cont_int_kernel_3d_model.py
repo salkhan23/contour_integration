@@ -140,9 +140,11 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Train the model
     # -----------------------------------------------------------------------------------
+    print("Learning Contour Integration kernels for Filter @ index {}".format(tgt_kernel_idx))
+
     history = cont_int_model.fit_generator(
         generator=train_image_generator,
-        epochs=100,
+        epochs=25,
         steps_per_epoch=10,
         verbose=2,
         validation_data=test_image_generator,
