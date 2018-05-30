@@ -24,7 +24,7 @@ reload(linear_contour_training)
 reload(field_1993_routines)
 
 
-DATA_DIR = './data/curved_contours'
+DATA_DIR = './data/curved_contours/full_tile_32x32'
 IMAGE_SIZE = (227, 227, 3)
 
 if __name__ == '__main__':
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     K.clear_session()
     K.set_image_dim_ordering('th')
 
-    tgt_kernel_idx = 5
+    tgt_kernel_idx = 10
     batch_size = 10
 
     # Set of images to train with
@@ -84,10 +84,10 @@ if __name__ == '__main__':
     # Image Generators
     # ------------------------------------------------------------------------------------
     train_data_key_loc = os.path.join(
-        DATA_DIR, "train//filter_{}".format(tgt_kernel_idx), "data_key.pickle")
+        DATA_DIR, "train/filter_{}".format(tgt_kernel_idx), "data_key.pickle")
 
     test_data_key_loc = os.path.join(
-        DATA_DIR, "test//filter_{}".format(tgt_kernel_idx), "data_key.pickle")
+        DATA_DIR, "test/filter_{}".format(tgt_kernel_idx), "data_key.pickle")
 
     with open(train_data_key_loc, 'rb') as handle:
         train_data_dict = pickle.load(handle)  # Returns a list of dictionaries
@@ -245,14 +245,32 @@ if __name__ == '__main__':
     # -----------------------------------------------
     # 1. Linear Contour
     image_idx = 0
-    image_loc = './data/curved_contours/train/filter_{0}/c_len_9/beta_0/c_len_9_beta_0__{1}.png'.format(
-        tgt_kernel_idx, image_idx)
+    beta = 0
+    c_len = 9
+
+    image_loc = os.path.join(
+        DATA_DIR,
+        'train',
+        'filter_{}'.format(tgt_kernel_idx),
+        'c_len_{}'.format(c_len),
+        'beta_{}'.format(beta),
+        'c_len_{0}_beta_{1}__{2}.png'.format(c_len, beta, image_idx)
+    )
     field_1993_routines.plot_activations(cont_int_model, image_loc, tgt_kernel_idx)
     plt.suptitle("Linear Contour")
 
     # 2. 15 Rotation Contour
     image_idx = 0
-    image_loc = './data/curved_contours/train/filter_{0}/c_len_9/beta_15/c_len_9_beta_15__{1}.png'.format(
-        tgt_kernel_idx, image_idx)
+    beta = 15
+    c_len = 9
+
+    image_loc = os.path.join(
+        DATA_DIR,
+        'train',
+        'filter_{}'.format(tgt_kernel_idx),
+        'c_len_{}'.format(c_len),
+        'beta_{}'.format(beta),
+        'c_len_{0}_beta_{1}__{2}.png'.format(c_len, beta, image_idx)
+    )
     field_1993_routines.plot_activations(cont_int_model, image_loc, tgt_kernel_idx)
     plt.suptitle("Contour with inter-fragment rotation of 15")
