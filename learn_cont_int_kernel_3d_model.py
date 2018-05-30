@@ -24,7 +24,7 @@ reload(linear_contour_training)
 reload(field_1993_routines)
 
 
-DATA_DIR = './data/curved_contours/full_tile_32x32'
+DATA_DIR = './data/curved_contours'
 IMAGE_SIZE = (227, 227, 3)
 
 if __name__ == '__main__':
