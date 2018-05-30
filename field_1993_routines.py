@@ -188,6 +188,9 @@ def contour_gain_vs_length(model, data_key, beta, n_runs=100, axis=None):
 
         print("Processing c_len = {}, beta = {}".format(c_len, beta))
 
+        if c_len == 1 and beta != 0:
+            continue
+
         # Image Retriever
         active_train_set = data_key["c_len_{0}_beta_{1}".format(c_len, beta)]
         image_generator = image_generator_curve.DataGenerator(
@@ -211,6 +214,9 @@ def contour_gain_vs_length(model, data_key, beta, n_runs=100, axis=None):
 
         avg_gain_per_len.append(np.mean(y_hat_arr))
         std_gain_per_len.append(np.std(y_hat_arr))
+
+    if beta != 0:
+        c_len_arr = c_len_arr[1:]  # c_len = 1 for beta !=0, DNE
 
     axis.errorbar(
         c_len_arr, avg_gain_per_len, std_gain_per_len,
