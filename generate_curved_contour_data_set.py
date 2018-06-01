@@ -97,8 +97,8 @@ def generate_data_set(
 
         for b_idx, beta in enumerate(beta_rot_arr):
 
-            if c_len == 1 and beta != 0:
-                continue
+            # if c_len == 1 and beta != 0:
+            #     continue
 
             beta_n_clen_dir = os.path.join(c_len_dir, 'beta_{0}'.format(beta))
 
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
-    tgt_filter_idx = 10
+    tgt_filter_idx = 5
 
     n_train_images = 500
     n_test_images = 100
