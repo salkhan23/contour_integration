@@ -93,9 +93,9 @@ if __name__ == '__main__':
     # Store starting weights for comparision later
     start_weights, _ = cont_int_model.layers[2].get_weights()
 
-    # # Verify Weights were located correctly
-    linear_contour_training.plot_contour_integration_weights_in_channels(
-        start_weights, prev_trained_kernel_idx)
+    # # # Verify Weights were located correctly
+    # linear_contour_training.plot_contour_integration_weights_in_channels(
+    #     start_weights, prev_trained_kernel_idx)
 
     # Complete the model and setup Tensorboard
     # -----------------------------------------
@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     tensorboard = TensorBoard(
         log_dir='logs/{}'.format(time()),
-        # histogram_freq=1,
+        histogram_freq=1,
         write_grads=True,
         batch_size=1,
     )
@@ -146,10 +146,13 @@ if __name__ == '__main__':
 
     test_image_generator = image_generator_curve.DataGenerator(
         active_test_set,
-        batch_size=batch_size,
+        batch_size=1000,
         img_size=IMAGE_SIZE,
         shuffle=True,
     )
+
+    gen_out = iter(train_image_generator)
+    test_images, test_labels = gen_out.next()
 
     # # Test the generator (sequence) object
     # gen_out = iter(train_image_generator)
@@ -166,11 +169,11 @@ if __name__ == '__main__':
 
     history = cont_int_model.fit_generator(
         generator=train_image_generator,
-        epochs=25,
-        steps_per_epoch=10,
+        epochs=50,
+        steps_per_epoch=5,
         verbose=2,
-        validation_data=test_image_generator,
-        validation_steps=10,
+        validation_data=(test_images, test_labels),
+        validation_steps=1,
         # max_q_size=1,
         workers=8,
         callbacks=[tensorboard]
