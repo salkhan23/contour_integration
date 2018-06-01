@@ -70,8 +70,12 @@ def contour_gain_vs_inter_fragment_rotation(model, data_key, c_len, n_runs=100, 
     if axis is None:
         f, axis = plt.subplot()
 
+    # Relative gain curvature is actually detectability.
+    # at 100% detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
     absolute_gains = [
-        relative_gain_curvature[beta] * absolute_gain_linear[c_len] for beta in inter_frag_rotation_arr]
+        1 + 2 * (relative_gain_curvature[beta] - 0.5) * (absolute_gain_linear[c_len] - 1)
+        for beta in inter_frag_rotation_arr
+    ]
 
     axis.plot(inter_frag_rotation_arr, absolute_gains,
               label='Fields-1993-c_len_{}'.format(c_len), marker='s', linestyle='--')
@@ -125,7 +129,7 @@ def contour_gain_vs_length(model, data_key, beta, n_runs=100, axis=None):
     """
 
     Plot the models contour gain vs. length performance.
-    While tis is not an experiment conducted by Fields-1993.
+    While this is not an experiment conducted by Fields-1993.
     It is derived from the experiment conducted by Li 2006.
 
     Different from the previous version of this routine (Li2006Routines), here stimuli are
@@ -171,7 +175,10 @@ def contour_gain_vs_length(model, data_key, beta, n_runs=100, axis=None):
 
     c_len_arr = np.array([1, 3, 5, 7, 9])
 
-    absolute_gains = relative_gain_curvature[beta] * li_2006_data['contour_len_avg_gain']
+    # Relative gain curvature is actually detectability.
+    # at 100% detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
+    absolute_gains = 1 + (li_2006_data['contour_len_avg_gain'] - 1) \
+        * 2 * (relative_gain_curvature[beta] - 0.5)
 
     # Plot Neurophysiological data
     # --------------------------------------

@@ -118,7 +118,10 @@ def generate_data_set(
 
             # Save the images to file & create a dictionary key of (Image, Expected gain)
             # that can be used by a python generator / keras sequence object
-            abs_gain = absolute_gain_linear[c_len] * relative_gain_curvature[beta]
+
+            #  Relative gain curvature is actually detectability.
+            #  at 100% detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
+            abs_gain = 1 + 2 * (relative_gain_curvature[beta] - 0.5) * (absolute_gain_linear[c_len] - 1)
 
             beta_dict = {}
             for img_idx in range(img_arr.shape[0]):
