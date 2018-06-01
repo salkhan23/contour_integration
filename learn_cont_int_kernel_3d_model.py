@@ -8,8 +8,10 @@
 import matplotlib.pyplot as plt
 import pickle
 import os
+from time import time
 
 import keras.backend as K
+from keras.callbacks import TensorBoard
 
 import alex_net_utils
 import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
@@ -35,7 +37,7 @@ if __name__ == '__main__':
     K.clear_session()
     K.set_image_dim_ordering('th')
 
-    tgt_kernel_idx = 5
+    tgt_kernel_idx = 10
     batch_size = 8
 
     # Set of images to train with
@@ -94,6 +96,17 @@ if __name__ == '__main__':
     # # Verify Weights were located correctly
     linear_contour_training.plot_contour_integration_weights_in_channels(
         start_weights, prev_trained_kernel_idx)
+
+    # Complete the model and setup Tensorboard
+    # -----------------------------------------
+    cont_int_model.compile(optimizer='Adam', loss='mse')
+
+    tensorboard = TensorBoard(
+        log_dir='logs/{}'.format(time()),
+        # histogram_freq=1,
+        write_grads=True,
+        batch_size=1,
+    )
 
     # ------------------------------------------------------------------------------------
     # Image Generators
@@ -159,7 +172,8 @@ if __name__ == '__main__':
         validation_data=test_image_generator,
         validation_steps=10,
         # max_q_size=1,
-        # workers=1,
+        workers=8,
+        callbacks=[tensorboard]
     )
 
     # Save the models/weights
