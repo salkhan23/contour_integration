@@ -35,12 +35,16 @@ if __name__ == '__main__':
     K.clear_session()
     K.set_image_dim_ordering('th')
 
-    tgt_kernel_idx = 10
-    batch_size = 10
+    tgt_kernel_idx = 5
+    batch_size = 8
 
     # Set of images to train with
     train_set = [
         'c_len_1_beta_0',
+        'c_len_1_beta_15',
+        'c_len_1_beta_30',
+        'c_len_1_beta_45',
+        'c_len_1_beta_60',
 
         'c_len_3_beta_0',
         'c_len_3_beta_15',
@@ -77,8 +81,19 @@ if __name__ == '__main__':
     feat_extract_kernels = K.eval(cont_int_model.layers[1].weights[0])
     tgt_feat_extract_kernel = feat_extract_kernels[:, :, :, tgt_kernel_idx]
 
+    # Load weights of a previously trained kernel
+    # -------------------------------------------
+    prev_trained_kernel_idx = 5
+    # load learnt weights of the horizontal contour integration model
+    previous_learnt_weights_file = os.path.join(
+        DATA_DIR, "train", "filter_{}".format(prev_trained_kernel_idx), 'trained_model.hf')
+
     # Store starting weights for comparision later
     start_weights, _ = cont_int_model.layers[2].get_weights()
+
+    # # Verify Weights were located correctly
+    linear_contour_training.plot_contour_integration_weights_in_channels(
+        start_weights, prev_trained_kernel_idx)
 
     # ------------------------------------------------------------------------------------
     # Image Generators
@@ -180,6 +195,9 @@ if __name__ == '__main__':
     # --------------------------------------
     learnt_weights, _ = cont_int_model.layers[2].get_weights()
 
+    # --------------
+    # Target Kernel
+    # --------------
     # All input channels feeding into target output filter
     fig, ax_arr = plt.subplots(1, 2)
     linear_contour_training.plot_contour_integration_weights_in_channels(
@@ -197,7 +215,19 @@ if __name__ == '__main__':
     linear_contour_training.plot_contour_integration_weights_out_channels(
         learnt_weights, tgt_kernel_idx, axis=ax_arr[1])
 
-    fig.suptitle('Input channel feeding into output channel @ {}'.format(tgt_kernel_idx))
+    fig.suptitle('Output channel feed by input channel @ {}'.format(tgt_kernel_idx))
+
+    # -----------------
+    # Horizontal Kernel
+    # -----------------
+    prev_learnt_kernel_idx = 5
+    fig, ax_arr = plt.subplots(1, 2)
+    linear_contour_training.plot_contour_integration_weights_in_channels(
+        start_weights, prev_learnt_kernel_idx, axis=ax_arr[0])
+    linear_contour_training.plot_contour_integration_weights_in_channels(
+        learnt_weights, prev_learnt_kernel_idx, axis=ax_arr[1])
+
+    fig.suptitle('Input channel feeding into output channel @ {}'.format(prev_learnt_kernel_idx))
 
     # 3. Fields - 1993 - Experiment 1 - Curvature vs Gain
     # --------------------------------------------------------------------------
