@@ -14,7 +14,7 @@ import keras.backend as K
 from keras.layers import Input, Conv2D
 from keras.engine.topology import Layer
 import keras.activations as activations
-from keras.regularizers import l1
+from keras.regularizers import l1, Regularizer
 import keras
 from keras.models import Model
 
@@ -62,9 +62,24 @@ class ContourGainCalculatorLayer(Layer):
         return K.expand_dims(gain, axis=-1)
 
 
+class FeatureMapL1Regularizer(Regularizer):
+
+    def __init__(self, tgt_filt_idx, l1=0.):
+        self.tgt_filt_idx = tgt_filt_idx
+        self.l1 = K.cast_to_floatx(l1)
+
+    def __call__(self, x):
+        regularization = K.sum(K.abs(x[:, :, :, self.tgt_filt_idx]) * self.l1)
+
+        return regularization
+
+    def get_config(self):
+        return {'tgt_filt_idx': int(self.tgt_filt_idx), 'l1': float(self.l1)}
+
+
 class ContourIntegrationLayer3D(Layer):
 
-    def __init__(self, rf_size=25, activation=None, **kwargs):
+    def __init__(self, tgt_filt_idx, rf_size=25, activation=None, **kwargs):
         """
         Contour Integration layer. Different from previous contour integration layers,
         the contour integration kernel is 3D and allows connections between feature maps
@@ -77,6 +92,7 @@ class ContourIntegrationLayer3D(Layer):
         if 0 == (rf_size & 1):
             raise Exception("Specified RF size should be odd")
 
+        self.tgt_filt_idx = tgt_filt_idx
         self.n = rf_size
         self.activation = activations.get(activation)
         super(ContourIntegrationLayer3D, self).__init__(**kwargs)
@@ -91,7 +107,7 @@ class ContourIntegrationLayer3D(Layer):
             initializer='glorot_normal',
             name='kernel',
             trainable=True,
-            regularizer=l1(0.01)
+            regularizer=FeatureMapL1Regularizer(self.tgt_filt_idx, 0.025)
         )
 
         self.bias = self.add_weight(
@@ -146,6 +162,7 @@ def build_contour_integration_model(tgt_filt_idx, rf_size=25):
     conv_1 = Conv2D(96, (11, 11), strides=(4, 4), activation='relu', name='conv_1')(input_layer)
 
     contour_integrate_layer = ContourIntegrationLayer3D(
+        tgt_filt_idx=tgt_filt_idx,
         rf_size=rf_size,
         # activation='relu',
         name='contour_integration_layer')(conv_1)
