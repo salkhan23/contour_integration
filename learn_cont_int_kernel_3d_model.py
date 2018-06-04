@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import pickle
 import os
 from time import time
+import gc
 
 import keras.backend as K
 from keras.callbacks import TensorBoard
@@ -35,10 +36,13 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     plt.ion()
     K.clear_session()
+    gc.collect()
     K.set_image_dim_ordering('th')
 
-    tgt_kernel_idx = 10
+    tgt_kernel_idx = 5
     batch_size = 8
+
+    prev_trained_kernel_idx = 10
 
     # Set of images to train with
     train_set = [
@@ -85,8 +89,7 @@ if __name__ == '__main__':
 
     # Load weights of a previously trained kernel
     # -------------------------------------------
-    prev_trained_kernel_idx = 5
-    # load learnt weights of the horizontal contour integration model
+    # load weights of the previously learnt contour integration model
     previous_learnt_weights_file = os.path.join(
         DATA_DIR, "train", "filter_{}".format(prev_trained_kernel_idx), 'trained_model.hf')
 
@@ -169,7 +172,7 @@ if __name__ == '__main__':
 
     history = cont_int_model.fit_generator(
         generator=train_image_generator,
-        epochs=50,
+        epochs=30,
         steps_per_epoch=5,
         verbose=2,
         validation_data=(test_images, test_labels),
@@ -237,14 +240,14 @@ if __name__ == '__main__':
     # -----------------
     # Horizontal Kernel
     # -----------------
-    prev_learnt_kernel_idx = 5
     fig, ax_arr = plt.subplots(1, 2)
     linear_contour_training.plot_contour_integration_weights_in_channels(
-        start_weights, prev_learnt_kernel_idx, axis=ax_arr[0])
+        start_weights, prev_trained_kernel_idx, axis=ax_arr[0])
     linear_contour_training.plot_contour_integration_weights_in_channels(
-        learnt_weights, prev_learnt_kernel_idx, axis=ax_arr[1])
+        learnt_weights, prev_trained_kernel_idx, axis=ax_arr[1])
 
-    fig.suptitle('Input channel feeding into output channel @ {}'.format(prev_learnt_kernel_idx))
+    fig.suptitle('Input channel feeding into output channel @ {} (Previously learnt)'.format(
+        prev_trained_kernel_idx))
 
     # 3. Fields - 1993 - Experiment 1 - Curvature vs Gain
     # --------------------------------------------------------------------------
