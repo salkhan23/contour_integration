@@ -30,6 +30,56 @@ reload(field_1993_routines)
 DATA_DIR = './data/curved_contours'
 IMAGE_SIZE = (227, 227, 3)
 
+PREV_LEARNT_WEIGHTS = os.path.join(
+        "trained_models", "ContourIntegrationModel3d", "contour_integration_weights.hf")
+PREV_LEARNT_SUMMARY = os.path.join(
+        "trained_models", "ContourIntegrationModel3d", "summary.txt")
+
+
+def load_learnt_weights(model):
+
+    print("Loading previously learnt weights")
+
+    if os.path.exists(PREV_LEARNT_WEIGHTS):
+        model.load_weights(PREV_LEARNT_WEIGHTS, by_name=True)
+
+        if os.path.exists(PREV_LEARNT_SUMMARY):
+
+            with open(PREV_LEARNT_SUMMARY, 'r') as fid:
+                read_in = fid.read()
+                print("previously trained Kernels @ indexes")
+                print(read_in)
+        else:
+            print('summary File Does not exist')
+
+    else:
+        print("No previously trained weights file")
+
+
+def save_learnt_weights(model, tgt_filt_idx):
+
+    tgt_filt_prev_learnt = False
+
+    print("Saving Learnt Weights")
+
+    if os.path.exists(PREV_LEARNT_SUMMARY):
+        with open(PREV_LEARNT_SUMMARY, 'rb+') as fid:
+            read_in = fid.read()
+
+        for line in read_in:
+            if str(tgt_filt_idx) in line:
+                tgt_filt_prev_learnt = True
+                print ("Updating stored weights at index {}".format(tgt_filt_idx))
+                break
+
+    model.save_weights(PREV_LEARNT_WEIGHTS)
+
+    # update the summary file
+    if not tgt_filt_prev_learnt:
+        with open(PREV_LEARNT_SUMMARY, 'a+') as fid:
+            fid.write(str(tgt_filt_idx) + '\n')
+
+
 if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
@@ -43,6 +93,8 @@ if __name__ == '__main__':
     batch_size = 8
 
     prev_trained_kernel_idx = 10
+
+    update_common_shared_weights = True
 
     # Set of images to train with
     train_set = [
@@ -87,21 +139,19 @@ if __name__ == '__main__':
     feat_extract_kernels = K.eval(cont_int_model.layers[1].weights[0])
     tgt_feat_extract_kernel = feat_extract_kernels[:, :, :, tgt_kernel_idx]
 
-    # Load weights of a previously trained kernel
+    # Load previously learnt weights
     # -------------------------------------------
-    # load weights of the previously learnt contour integration model
-    previous_learnt_weights_file = os.path.join(
-        DATA_DIR, "train", "filter_{}".format(prev_trained_kernel_idx), 'trained_model.hf')
+    load_learnt_weights(cont_int_model)
+
+    # # Verify weights were loaded correctly
+    # linear_contour_training.plot_contour_integration_weights_in_channels(
+    #     start_weights, prev_trained_kernel_idx)
 
     # Store starting weights for comparision later
     start_weights, _ = cont_int_model.layers[2].get_weights()
 
-    # # # Verify Weights were located correctly
-    # linear_contour_training.plot_contour_integration_weights_in_channels(
-    #     start_weights, prev_trained_kernel_idx)
-
-    # Complete the model and setup Tensorboard
-    # -----------------------------------------
+    # Compile the model and setup Tensorboard callbacks
+    # -------------------------------------------------
     cont_int_model.compile(optimizer='Adam', loss='mse')
 
     tensorboard = TensorBoard(
@@ -172,7 +222,7 @@ if __name__ == '__main__':
 
     history = cont_int_model.fit_generator(
         generator=train_image_generator,
-        epochs=30,
+        epochs=40,
         steps_per_epoch=5,
         verbose=2,
         validation_data=(test_images, test_labels),
@@ -182,16 +232,15 @@ if __name__ == '__main__':
         callbacks=[tensorboard]
     )
 
-    # Save the models/weights
+    # Save the model/weights
+    # --------------------------------------
+    # Update stored shared weights
+    if update_common_shared_weights:
+        save_learnt_weights(cont_int_model, tgt_kernel_idx)
+
+    # Save the weights of the kernel trained individually
     stored_weights_file = os.path.join(
         DATA_DIR, "train", "filter_{}".format(tgt_kernel_idx), 'trained_model.hf')
-
-    cont_int_model.save_weights(stored_weights_file)
-
-    # Save the models/weights
-    stored_weights_file = os.path.join(
-        DATA_DIR, "train", "filter_{}".format(tgt_kernel_idx), 'trained_model.hf')
-
     cont_int_model.save_weights(stored_weights_file)
 
     # Make a new model and load the saved weights
@@ -238,7 +287,7 @@ if __name__ == '__main__':
     fig.suptitle('Output channel feed by input channel @ {}'.format(tgt_kernel_idx))
 
     # -----------------
-    # Horizontal Kernel
+    # Non Target Kernel
     # -----------------
     fig, ax_arr = plt.subplots(1, 2)
     linear_contour_training.plot_contour_integration_weights_in_channels(
