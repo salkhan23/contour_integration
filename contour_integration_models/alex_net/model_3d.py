@@ -107,7 +107,7 @@ class ContourIntegrationLayer3D(Layer):
             initializer='glorot_normal',
             name='kernel',
             trainable=True,
-            regularizer=FeatureMapL1Regularizer(self.tgt_filt_idx, 0.025)
+            regularizer=FeatureMapL1Regularizer(self.tgt_filt_idx, 0.01)
         )
 
         self.bias = self.add_weight(
