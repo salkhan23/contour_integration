@@ -473,15 +473,17 @@ def find_most_active_l1_kernel_index(frag, l1_act_cb, plot=True):
     start_x = 27 * 4  # Visual starting point of RF of neuron in the center of L1 activation map.
     start_y = 27 * 4
 
-    test_image = np.zeros((227, 227, 3))
+    test_image = np.zeros((227, 227, 3), dtype=np.float)
 
     test_image = tile_image(
         test_image,
         frag,
-        (start_x, start_y),
+        np.array([start_x, start_y]).T,
         rotate=False,
         gaussian_smoothing=False
     )
+
+    test_image = (test_image - test_image.min()) / (test_image.max() - test_image.min())
 
     test_image = np.transpose(test_image, (2, 0, 1))  # Theano back-end expects channel first format
     test_image = np.reshape(test_image, [1, test_image.shape[0], test_image.shape[1], test_image.shape[2]])
@@ -500,13 +502,13 @@ def find_most_active_l1_kernel_index(frag, l1_act_cb, plot=True):
     test_image = np.transpose(test_image, (1, 2, 0))
 
     title = "Max active neuron at Index %d and value %0.2f" % (max_active_filt, max_active_value)
-    print(title)
+    # print(title)
 
     if plot:
         f = plt.figure()
         f.add_subplot(1, 2, 1)
 
-        plt.imshow(test_image / 255.0)
+        plt.imshow(test_image)
         plt.title('Input')
         f.add_subplot(1, 2, 2)
         plt.plot(tgt_l1_act)
@@ -514,7 +516,7 @@ def find_most_active_l1_kernel_index(frag, l1_act_cb, plot=True):
         plt.ylabel('Activation')
         plt.title(title)
 
-    return max_active_filt
+    return max_active_filt, max_active_value
 
 
 def plot_l2_visual_field(location, l2_kernel_mask, img, margin=4):
