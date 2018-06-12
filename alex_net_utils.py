@@ -91,9 +91,11 @@ def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx):
 
     l1_act = l1_act[0, tgt_filt_idx, :, :]
     l2_act = l2_act[0, tgt_filt_idx, :, :]
+    diff = l2_act - l1_act
 
     min_l2_act = l1_act.min()
     max_l2_act = l2_act.max()
+    max_diff = np.max(abs(diff))
 
     f2 = plt.figure()
     f2.add_subplot(1, 3, 1)
@@ -108,8 +110,8 @@ def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx):
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
-    f2.add_subplot(1, 4, 4)
-    plt.imshow(l2_act - l1_act, cmap='seismic')
+    f2.add_subplot(1, 3, 3)
+    plt.imshow(diff, vmin=-max_diff, vmax=max_diff, cmap='seismic')
     plt.colorbar(orientation='horizontal')
     plt.title("Difference")
     plt.grid()
