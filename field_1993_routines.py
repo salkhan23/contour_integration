@@ -17,15 +17,33 @@ reload(image_generator_curve)
 reload(alex_net_utils)
 
 
-def contour_gain_vs_inter_fragment_rotation(model, data_key, c_len, n_runs=100, axis=None):
+def contour_gain_vs_inter_fragment_rotation(
+        model, data_key, c_len, frag_orient, n_runs=100, axis=None):
     """
-    Compare the performance of the model with the results of Fields-1993 Experiment 1
-    Enhancement gain as a function of inter-fragment rotation.
+    Compare model performance with Fields-1993 Experiment 1 - Contour enhancement gain as a
+    function of inter-fragment rotation.
 
-    :param model: Contour Integration Model
+    The behavioural results in Fields are presented as a relative detectability metric.
+    To get absolute enhancement gain, these results are combined with the results of Li-2006.
+
+    For example, for a contour length of 7, Li-2006 gives absolute gain values for a linear
+    contour. To get absolute enhancement gains for  contour of length 7 with inter-fragment
+    rotations of 15 degrees, the detectability results from Fields -1993 are multiplied
+    with the absolute gain of the linear contour of the same length.
+
+    Detectability = 100%, Absolute enhancement gain = Full linear gain
+    Detectability = 50%, absolute enhancement gain = 1
+
+    TODO: Inter-fragment spacing is currently not accounted for. Li-2006 presents
+    TODO: enhancement gain for relative spacing between fragments. The considered spacing
+    TODO: are too small for the base spacing considered in Fields-1993.
+    TODO: Need to properly account for these.
+
+    :param model: Contour Integration Model.
         (Should be training model with last layer = enhancement gain calculating layer)
     :param data_key: data key (dictionary of dictionaries) that describes the data
     :param c_len: Contour Length
+    :param frag_orient: base orientation of fragment [-90 = horizontal, 0 = vertical]
     :param n_runs: number of runs to average results over for each point
     :param axis: [Default=None]
 
@@ -37,7 +55,8 @@ def contour_gain_vs_inter_fragment_rotation(model, data_key, c_len, n_runs=100, 
     if c_len not in [1, 3, 5, 7, 9]:
         raise Exception("Invalid contour length {0} specified. Allowed = [1, 3, 5, 7, 9]")
 
-    print("Model Contour Gain vs inter-fragment rotation for contour length {}".format(c_len))
+    print("Model Contour Gain vs inter-fragment rotation "
+          "for contour length {0}, frag orientation {1}".format(c_len, frag_orient))
 
     # --------------------------------------
     # Get Neurophysiological Data
@@ -91,7 +110,8 @@ def contour_gain_vs_inter_fragment_rotation(model, data_key, c_len, n_runs=100, 
         print("Processing c_len = {}, beta = {}".format(c_len, beta))
 
         # Image Retriever
-        active_train_set = data_key["c_len_{0}_beta_{1}".format(c_len, beta)]
+        active_train_set = data_key["c_len_{0}_beta_{1}_rot_{2}".format(c_len, beta, frag_orient)]
+
         image_generator = image_generator_curve.DataGenerator(
             active_train_set,
             batch_size=1,
@@ -125,38 +145,48 @@ def contour_gain_vs_inter_fragment_rotation(model, data_key, c_len, n_runs=100, 
     axis.set_title("Enhancement gain vs inter-fragment rotation - Fields -1993 (Exp 1)")
 
 
-def contour_gain_vs_length(model, data_key, beta, n_runs=100, axis=None):
+def contour_gain_vs_length(model, data_key, beta, frag_orient, n_runs=100, axis=None):
     """
-
-    Plot the models contour gain vs. length performance.
-    While this is not an experiment conducted by Fields-1993.
-    It is derived from the experiment conducted by Li 2006.
-
-    Different from the previous version of this routine (Li2006Routines), here stimuli are
-    generated based on Fields -1993 Method.
+    Model contour enhancement gain as a function of contour length. This is similar
+    to an experiment from Li-2006 except that additionally contour curvature is considered.
 
     This is a derived Neurophysiological Result. Expected Gain for a given length is found by
     multiplying the relative curvature gain from Fields 1993 with the absolute gain for a linear
     contour as specified by Li -2006. Not that inter-fragment spacing is different from
     Li 2006 Results.
 
+    Detectability = 100%, Absolute enhancement gain = Full linear gain
+    Detectability = 50%, absolute enhancement gain = 1
+
+    TODO: Inter-fragment spacing is currently not accounted for. Li-2006 presents
+    TODO: enhancement gain for relative spacing between fragments. The considered spacing
+    TODO: are too small for the base spacing considered in Fields-1993.
+    TODO: Need to properly account for these.
+
+    Different from the previous version of this routine (Li2006Routines), here stimuli are
+    generated based on Fields -1993 Method.
+
     :param model: Contour Integration Model
         (Should be training model with last layer = enhancement gain calculating layer)
     :param data_key: data key (dictionary of dictionaries) that describes the data
     :param beta: Consider contours with inter-fragment rotations of this amount
+    :param frag_orient: Default orientation of contour fragment. [-90 = horizontal, 0 = vertical]
     :param n_runs: number of runs to average results over for each point
     :param axis: [Default None]
 
     :return:
     """
-
     # --------------------------------------
     # Validation
     # --------------------------------------
     if beta not in [0, 15, 30, 45, 60]:
         raise Exception("Invalid inter-fragment rotation {}. Allowed [0, 15, 30, 45, 60]".format(beta))
 
-    print("Model contour gain vs Length for inter-fragment spacing {}".format(beta))
+    print("Model contour gain vs length for inter-fragment spacing {0}, frag_orient {1}".format(
+        beta, frag_orient))
+
+    print("Model Contour Gain vs contour length"
+          "for inter-fragment rotation {0}, frag orientation {1}".format(beta, frag_orient))
 
     # --------------------------------------
     # Get Neurophysiological Data
@@ -199,7 +229,8 @@ def contour_gain_vs_length(model, data_key, beta, n_runs=100, axis=None):
         #     continue
 
         # Image Retriever
-        active_train_set = data_key["c_len_{0}_beta_{1}".format(c_len, beta)]
+        active_train_set = data_key["c_len_{0}_beta_{1}_rot_{2}".format(c_len, beta, frag_orient)]
+
         image_generator = image_generator_curve.DataGenerator(
             active_train_set,
             batch_size=1,
