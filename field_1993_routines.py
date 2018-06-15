@@ -182,9 +182,6 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient, n_runs=100, axis=
     if beta not in [0, 15, 30, 45, 60]:
         raise Exception("Invalid inter-fragment rotation {}. Allowed [0, 15, 30, 45, 60]".format(beta))
 
-    print("Model contour gain vs length for inter-fragment spacing {0}, frag_orient {1}".format(
-        beta, frag_orient))
-
     print("Model Contour Gain vs contour length"
           "for inter-fragment rotation {0}, frag orientation {1}".format(beta, frag_orient))
 
@@ -252,9 +249,6 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient, n_runs=100, axis=
 
         avg_gain_per_len.append(np.mean(y_hat_arr))
         std_gain_per_len.append(np.std(y_hat_arr))
-
-    # if beta != 0:
-    #     c_len_arr = c_len_arr[1:]  # c_len = 1 for beta !=0, DNE
 
     axis.errorbar(
         c_len_arr, avg_gain_per_len, std_gain_per_len,
