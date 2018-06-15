@@ -145,7 +145,8 @@ def _add_single_side_of_contour_constant_separation(
     return img, tile_starts
 
 
-def add_contour_path_constant_separation(img, frag, frag_params, c_len, beta, d):
+def add_contour_path_constant_separation(
+        img, frag, frag_params, c_len, beta, d, rand_inter_frag_direction_change=True):
     """
     Add curved contours to the test image as added in the ref. a constant separation (d)
     is projected from the previous tile to find the location of the next tile.
@@ -158,6 +159,7 @@ def add_contour_path_constant_separation(img, frag, frag_params, c_len, beta, d)
     :param c_len:
     :param beta:
     :param d:
+    :param rand_inter_frag_direction_change:
     :return:
     """
     img_size = np.array(img.shape[0:2])
@@ -179,12 +181,12 @@ def add_contour_path_constant_separation(img, frag, frag_params, c_len, beta, d)
 
     img, tiles = _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size, 'rhs',
-        random_frag_direction=True)
+        random_frag_direction=rand_inter_frag_direction_change)
     c_tile_starts.extend(tiles)
 
     img, tiles = _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size, 'lhs',
-        random_frag_direction=True)
+        random_frag_direction=rand_inter_frag_direction_change)
     c_tile_starts.extend(tiles)
 
     # ---------------------------
@@ -462,12 +464,14 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
 
 def generate_contour_images(
-        n_images, frag, frag_params, c_len, beta, f_tile_size, img_size=None, bg_frag_relocate=True):
+        n_images, frag, frag_params, c_len, beta, f_tile_size, img_size=None, bg_frag_relocate=True,
+        rand_inter_frag_direction_change=True):
     """
     Generate n_images with the specified fragment parameters.
 
     In the Ref, a visible stimulus of a small size is placed inside a large tile
     Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
+
 
     :param n_images:
     :param frag:
@@ -478,6 +482,7 @@ def generate_contour_images(
     :param img_size: [Default = (227, 227, 3)]
     :param bg_frag_relocate: If True, for a full tile that contains a background fragment, try to
              relocate bg fragment within the full tile to see if it can fit.
+    :param rand_inter_frag_direction_change:
 
     :return: list of file names generated
     """
@@ -500,7 +505,8 @@ def generate_contour_images(
         img = np.ones(img_size, dtype=np.uint8) * bg
 
         img, c_frag_starts = add_contour_path_constant_separation(
-            img, frag, frag_params, c_len, beta, f_tile_size[0])
+            img, frag, frag_params, c_len, beta, f_tile_size[0],
+            rand_inter_frag_direction_change=rand_inter_frag_direction_change)
 
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
             img, frag, c_frag_starts, f_tile_size, 15, frag_params, bg_frag_relocate)
