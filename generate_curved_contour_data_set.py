@@ -1,5 +1,6 @@
 # -------------------------------------------------------------------------------------------------
 # Scripts generates sets of training images for curved contours
+# Contour Fragments are generating by matching all gabor fragments from target filter
 #
 # Author: Salman Khan
 # Date  : 21/04/18
@@ -21,10 +22,7 @@ reload(image_generator_curve)
 reload(alex_net)
 reload(gabor_fits)
 
-DATA_DIRECTORY = "./data/curved_contours"
-
-if not os.path.exists(DATA_DIRECTORY):
-    os.makedirs(DATA_DIRECTORY)
+DATA_DIRECTORY = "./data/curved_contours/filt_matched_frag"
 
 
 def generate_data_set(
@@ -154,7 +152,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
-    tgt_filter_idx = 5
+    tgt_filter_idx = 10
 
     n_train_images = 500
     n_test_images = 100
@@ -163,6 +161,9 @@ if __name__ == '__main__':
 
     full_tile_size = np.array((17, 17))
     frag_tile_size = np.array((11, 11))
+
+    if not os.path.exists(DATA_DIRECTORY):
+        os.makedirs(DATA_DIRECTORY)
 
     # contour_len_arr = np.array([1, 3, 5, 7, 9])
     # beta_rotation_arr = np.array([0, 15, 30, 45, 60])
