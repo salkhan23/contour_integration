@@ -6,3 +6,6 @@ PyCharm MetaData
 #---------------------
 .idea
 
+#Tensorboard logs
+logs
+
