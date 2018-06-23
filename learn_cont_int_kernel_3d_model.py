@@ -5,11 +5,11 @@
 # Author: Salman Khan
 # Date  : 06/05/18
 # -------------------------------------------------------------------------------------------------
+import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import os
 from time import time
-import gc
 
 import keras.backend as K
 from keras.callbacks import TensorBoard
@@ -27,18 +27,22 @@ reload(linear_contour_training)
 reload(field_1993_routines)
 
 
-DATA_DIR = './data/curved_contours'
-IMAGE_SIZE = (227, 227, 3)
+DATA_DIR = './data/curved_contours/filt_matched_frag'
+MODEL_STORE_DIR = './trained_models/ContourIntegrationModel3d/filt_matched_frag'
+# DATA_DIR = './data/curved_contours/orientation_matched'
+# MODEL_STORE_DIR = './trained_models/ContourIntegrationModel3d/orientation_matched'
 
-PREV_LEARNT_WEIGHTS = os.path.join(
-        "trained_models", "ContourIntegrationModel3d", "contour_integration_weights.hf")
-PREV_LEARNT_SUMMARY = os.path.join(
-        "trained_models", "ContourIntegrationModel3d", "summary.txt")
+PREV_LEARNT_WEIGHTS = os.path.join(MODEL_STORE_DIR, "contour_integration_weights.hf")
+# This file lists indices of contour integration kernels whose weights are stored
+PREV_LEARNT_SUMMARY = os.path.join(MODEL_STORE_DIR, "summary.txt")
+
+IMAGE_SIZE = (227, 227, 3)
 
 
 def load_learnt_weights(model):
 
     print("Loading previously learnt weights")
+    prev_learn_idx_set = set()
 
     if os.path.exists(PREV_LEARNT_WEIGHTS):
         model.load_weights(PREV_LEARNT_WEIGHTS, by_name=True)
@@ -47,31 +51,39 @@ def load_learnt_weights(model):
 
             with open(PREV_LEARNT_SUMMARY, 'r') as fid:
                 read_in = fid.read()
-                print("previously trained Kernels @ indexes")
-                print(read_in)
+                read_in = read_in.split()
+                read_in = [int(k_idx) for k_idx in read_in]
+                print("previously trained Kernels @ indexes {}".format(read_in))
+                prev_learn_idx_set.update(read_in)
+
         else:
             print('summary File Does not exist')
 
     else:
         print("No previously trained weights file")
 
+    return prev_learn_idx_set
+
 
 def save_learnt_weights(model, tgt_filt_idx):
 
-    tgt_filt_prev_learnt = False
-
     print("Saving Learnt Weights")
 
+    tgt_filt_prev_learnt = False
+    prev_learn_idx_set = set()
+
     if os.path.exists(PREV_LEARNT_SUMMARY):
-        with open(PREV_LEARNT_SUMMARY, 'rb+') as fid:
+        with open(PREV_LEARNT_SUMMARY, 'r') as fid:
             read_in = fid.read()
+            read_in = read_in.split()
+            read_in = [int(k_idx) for k_idx in read_in]
+            prev_learn_idx_set.update(read_in)
 
-        for line in read_in:
-            if str(tgt_filt_idx) in line:
-                tgt_filt_prev_learnt = True
-                print ("Updating stored weights at index {}".format(tgt_filt_idx))
-                break
+    if tgt_filt_idx in prev_learn_idx_set:
+        tgt_filt_prev_learnt = True
 
+    if not os.path.exists(MODEL_STORE_DIR):
+        os.makedirs(MODEL_STORE_DIR)
     model.save_weights(PREV_LEARNT_WEIGHTS)
 
     # update the summary file
@@ -86,48 +98,62 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     plt.ion()
     K.clear_session()
-    gc.collect()
     K.set_image_dim_ordering('th')
 
-    tgt_kernel_idx = 5
+    tgt_kernel_idx = 10
     batch_size = 8
-
-    prev_trained_kernel_idx = 10
 
     update_common_shared_weights = True
 
+    # ------------------------------------------------------------------------------------
+    # Load data set keys
+    # ------------------------------------------------------------------------------------
+    train_data_key_loc = os.path.join(
+        DATA_DIR, "train/filter_{}".format(tgt_kernel_idx), "data_key.pickle")
+
+    test_data_key_loc = os.path.join(
+        DATA_DIR, "test/filter_{}".format(tgt_kernel_idx), "data_key.pickle")
+
+    with open(train_data_key_loc, 'rb') as handle:
+        train_data_dict = pickle.load(handle)  # Returns a list of dictionaries
+
+    with open(test_data_key_loc, 'rb') as handle:
+        test_data_dict = pickle.load(handle)  # Returns a list of dictionaries
+
     # Set of images to train with
-    train_set = [
-        'c_len_1_beta_0',
-        'c_len_1_beta_15',
-        'c_len_1_beta_30',
-        'c_len_1_beta_45',
-        'c_len_1_beta_60',
-
-        'c_len_3_beta_0',
-        'c_len_3_beta_15',
-        'c_len_3_beta_30',
-        'c_len_3_beta_45',
-        'c_len_3_beta_60',
-
-        'c_len_5_beta_0',
-        'c_len_5_beta_15',
-        'c_len_5_beta_30',
-        'c_len_5_beta_45',
-        'c_len_5_beta_60',
-
-        'c_len_7_beta_0',
-        'c_len_7_beta_15',
-        'c_len_7_beta_30',
-        'c_len_7_beta_45',
-        'c_len_7_beta_60',
-
-        'c_len_9_beta_0',
-        'c_len_9_beta_15',
-        'c_len_9_beta_30',
-        'c_len_9_beta_45',
-        'c_len_9_beta_60',
-    ]
+    # ---------------------------
+    # train_set = [
+    #     'c_len_1_beta_0',
+    #     'c_len_1_beta_15',
+    #     'c_len_1_beta_30',
+    #     'c_len_1_beta_45',
+    #     'c_len_1_beta_60',
+    #
+    #     'c_len_3_beta_0',
+    #     'c_len_3_beta_15',
+    #     'c_len_3_beta_30',
+    #     'c_len_3_beta_45',
+    #     'c_len_3_beta_60',
+    #
+    #     'c_len_5_beta_0',
+    #     'c_len_5_beta_15',
+    #     'c_len_5_beta_30',
+    #     'c_len_5_beta_45',
+    #     'c_len_5_beta_60',
+    #
+    #     'c_len_7_beta_0',
+    #     'c_len_7_beta_15',
+    #     'c_len_7_beta_30',
+    #     'c_len_7_beta_45',
+    #     'c_len_7_beta_60',
+    #
+    #     'c_len_9_beta_0',
+    #     'c_len_9_beta_15',
+    #     'c_len_9_beta_30',
+    #     'c_len_9_beta_45',
+    #     'c_len_9_beta_60',
+    # ]
+    train_set = train_data_dict
 
     # -----------------------------------------------------------------------------------
     # Contour Integration Model
@@ -141,7 +167,7 @@ if __name__ == '__main__':
 
     # Load previously learnt weights
     # -------------------------------------------
-    load_learnt_weights(cont_int_model)
+    prev_trained_kernel_idx_set = load_learnt_weights(cont_int_model)
 
     # # Verify weights were loaded correctly
     # linear_contour_training.plot_contour_integration_weights_in_channels(
@@ -164,18 +190,6 @@ if __name__ == '__main__':
     # ------------------------------------------------------------------------------------
     # Image Generators
     # ------------------------------------------------------------------------------------
-    train_data_key_loc = os.path.join(
-        DATA_DIR, "train/filter_{}".format(tgt_kernel_idx), "data_key.pickle")
-
-    test_data_key_loc = os.path.join(
-        DATA_DIR, "test/filter_{}".format(tgt_kernel_idx), "data_key.pickle")
-
-    with open(train_data_key_loc, 'rb') as handle:
-        train_data_dict = pickle.load(handle)  # Returns a list of dictionaries
-
-    with open(test_data_key_loc, 'rb') as handle:
-        test_data_dict = pickle.load(handle)  # Returns a list of dictionaries
-
     active_train_set = {}
     active_test_set = {}
 
@@ -222,7 +236,7 @@ if __name__ == '__main__':
 
     history = cont_int_model.fit_generator(
         generator=train_image_generator,
-        epochs=40,
+        epochs=20,
         steps_per_epoch=5,
         verbose=2,
         validation_data=(test_images, test_labels),
@@ -239,18 +253,18 @@ if __name__ == '__main__':
         save_learnt_weights(cont_int_model, tgt_kernel_idx)
 
     # Save the weights of the kernel trained individually
-    stored_weights_file = os.path.join(
-        DATA_DIR, "train", "filter_{}".format(tgt_kernel_idx), 'trained_model.hf')
-    cont_int_model.save_weights(stored_weights_file)
+    individually_trained_model_dir = os.path.join(MODEL_STORE_DIR, "filter_{}".format(tgt_kernel_idx))
+    if not os.path.exists(individually_trained_model_dir):
+        os.makedirs(individually_trained_model_dir)
 
-    # Make a new model and load the saved weights
-    # new_model = contour_integration_model_3d.build_contour_integration_model(tgt_kernel_idx)
-    # new_model.load_weights(stored_weights_file)
+    stored_weights_file = os.path.join(
+        MODEL_STORE_DIR, "filter_{}".format(tgt_kernel_idx), 'trained_model.hf')
+    cont_int_model.save_weights(stored_weights_file)
 
     # -----------------------------------------------------------------------------------
     # Results
     # -----------------------------------------------------------------------------------
-    # 1. Loss vs Time
+    # 1.  Plot Loss vs Time
     # --------------------------------------
     plt.figure()
     plt.plot(history.history['loss'], label='train')
@@ -260,116 +274,101 @@ if __name__ == '__main__':
     plt.xlabel('epoch')
     plt.legend()
 
-    # 2. Learnt Kernels
+    # 2.  Plot Learnt Kernels
     # --------------------------------------
     learnt_weights, _ = cont_int_model.layers[2].get_weights()
 
-    # --------------
     # Target Kernel
-    # --------------
-    # All input channels feeding into target output filter
     fig, ax_arr = plt.subplots(1, 2)
     linear_contour_training.plot_contour_integration_weights_in_channels(
         start_weights, tgt_kernel_idx, axis=ax_arr[0])
     linear_contour_training.plot_contour_integration_weights_in_channels(
         learnt_weights, tgt_kernel_idx, axis=ax_arr[1])
-
     fig.suptitle('Input channel feeding into output channel @ {}'.format(tgt_kernel_idx))
 
-    # All output channels receiving input from target input channel
-    fig, ax_arr = plt.subplots(1, 2)
-    linear_contour_training.plot_contour_integration_weights_out_channels(
-        start_weights, tgt_kernel_idx, axis=ax_arr[0])
+    # # All output channels receiving input from target input channel
+    # fig, ax_arr = plt.subplots(1, 2)
+    # linear_contour_training.plot_contour_integration_weights_out_channels(
+    #     start_weights, tgt_kernel_idx, axis=ax_arr[0])
+    # linear_contour_training.plot_contour_integration_weights_out_channels(
+    #     learnt_weights, tgt_kernel_idx, axis=ax_arr[1])
+    # fig.suptitle('Output channel feed by input channel @ {}'.format(tgt_kernel_idx))
 
-    linear_contour_training.plot_contour_integration_weights_out_channels(
-        learnt_weights, tgt_kernel_idx, axis=ax_arr[1])
-
-    fig.suptitle('Output channel feed by input channel @ {}'.format(tgt_kernel_idx))
-
-    # -----------------
-    # Non Target Kernel
-    # -----------------
-    fig, ax_arr = plt.subplots(1, 2)
-    linear_contour_training.plot_contour_integration_weights_in_channels(
-        start_weights, prev_trained_kernel_idx, axis=ax_arr[0])
-    linear_contour_training.plot_contour_integration_weights_in_channels(
-        learnt_weights, prev_trained_kernel_idx, axis=ax_arr[1])
-
-    fig.suptitle('Input channel feeding into output channel @ {} (Previously learnt)'.format(
-        prev_trained_kernel_idx))
+    # Previously trained kernels
+    for prev_trained_kernel_idx in prev_trained_kernel_idx_set:
+        fig, ax_arr = plt.subplots(1, 2)
+        linear_contour_training.plot_contour_integration_weights_in_channels(
+            start_weights, prev_trained_kernel_idx, axis=ax_arr[0])
+        linear_contour_training.plot_contour_integration_weights_in_channels(
+            learnt_weights, prev_trained_kernel_idx, axis=ax_arr[1])
+        fig.suptitle('Input channel feeding into output channel @ {} (Previously learnt)'.format(
+            prev_trained_kernel_idx))
 
     # 3. Fields - 1993 - Experiment 1 - Curvature vs Gain
     # --------------------------------------------------------------------------
-    _, ax = plt.subplots()
+    list_of_data_sets = train_data_dict.keys()
 
-    field_1993_routines.contour_gain_vs_inter_fragment_rotation(
-        cont_int_model,
-        test_data_dict,
-        c_len=9,
-        n_runs=100,
-        axis=ax
-    )
+    if 'rot' in list_of_data_sets[0]:
+        frag_orientation_arr = [np.int(item.split("rot_")[1]) for item in list_of_data_sets]
+        frag_orientation_arr = set(frag_orientation_arr)
+    else:
+        frag_orientation_arr = [None]
 
-    field_1993_routines.contour_gain_vs_inter_fragment_rotation(
-        cont_int_model,
-        test_data_dict,
-        c_len=7,
-        n_runs=100,
-        axis=ax
-    )
+    for frag_orientation in frag_orientation_arr:
+        fig, ax = plt.subplots()
+
+        field_1993_routines.contour_gain_vs_inter_fragment_rotation(
+            cont_int_model,
+            test_data_dict,
+            c_len=9,
+            frag_orient=frag_orientation,
+            n_runs=100,
+            axis=ax
+        )
+
+        field_1993_routines.contour_gain_vs_inter_fragment_rotation(
+            cont_int_model,
+            test_data_dict,
+            c_len=7,
+            frag_orient=frag_orientation,
+            n_runs=100,
+            axis=ax
+        )
+
+        fig.suptitle("Contour Rotation {}".format(frag_orientation))
 
     # 4. Enhancement gain vs contour length
     # -------------------------------------------------------------------------
-    _, ax = plt.subplots()
+    list_of_data_sets = train_data_dict.keys()
 
-    # Linear contours
-    field_1993_routines.contour_gain_vs_length(
-        cont_int_model,
-        test_data_dict,
-        0,
-        n_runs=100,
-        axis=ax
-    )
+    if 'rot' in list_of_data_sets[0]:
+        frag_orientation_arr = [np.int(item.split("rot_")[1]) for item in list_of_data_sets]
+        frag_orientation_arr = set(frag_orientation_arr)
+    else:
+        frag_orientation_arr = [None]
 
-    # For inter-fragment rotation of 15 degrees
-    field_1993_routines.contour_gain_vs_length(
-        cont_int_model,
-        test_data_dict,
-        15,
-        n_runs=100,
-        axis=ax
-    )
+    for frag_orientation in frag_orientation_arr:
 
-    # 5. Enhancement Visualization over Sample Images
-    # -----------------------------------------------
-    # 1. Linear Contour
-    image_idx = 0
-    beta = 0
-    c_len = 9
+        fig, ax = plt.subplots()
 
-    image_loc = os.path.join(
-        DATA_DIR,
-        'train',
-        'filter_{}'.format(tgt_kernel_idx),
-        'c_len_{}'.format(c_len),
-        'beta_{}'.format(beta),
-        'c_len_{0}_beta_{1}__{2}.png'.format(c_len, beta, image_idx)
-    )
-    field_1993_routines.plot_activations(cont_int_model, image_loc, tgt_kernel_idx)
-    plt.suptitle("Linear Contour")
+        # Linear contours
+        field_1993_routines.contour_gain_vs_length(
+            cont_int_model,
+            test_data_dict,
+            beta=0,
+            frag_orient=frag_orientation,
+            n_runs=100,
+            axis=ax
+        )
 
-    # 2. 15 Rotation Contour
-    image_idx = 0
-    beta = 15
-    c_len = 9
+        # For inter-fragment rotation of 15 degrees
+        field_1993_routines.contour_gain_vs_length(
+            cont_int_model,
+            test_data_dict,
+            beta=15,
+            frag_orient=frag_orientation,
+            n_runs=100,
+            axis=ax
+        )
 
-    image_loc = os.path.join(
-        DATA_DIR,
-        'train',
-        'filter_{}'.format(tgt_kernel_idx),
-        'c_len_{}'.format(c_len),
-        'beta_{}'.format(beta),
-        'c_len_{0}_beta_{1}__{2}.png'.format(c_len, beta, image_idx)
-    )
-    field_1993_routines.plot_activations(cont_int_model, image_loc, tgt_kernel_idx)
-    plt.suptitle("Contour with inter-fragment rotation of 15")
+        fig.suptitle("Contour Rotation {}".format(frag_orientation))

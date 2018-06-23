@@ -18,7 +18,7 @@ reload(alex_net_utils)
 
 
 def contour_gain_vs_inter_fragment_rotation(
-        model, data_key, c_len, frag_orient, n_runs=100, axis=None):
+        model, data_key, c_len, frag_orient=None, n_runs=100, axis=None):
     """
     Compare model performance with Fields-1993 Experiment 1 - Contour enhancement gain as a
     function of inter-fragment rotation.
@@ -110,7 +110,10 @@ def contour_gain_vs_inter_fragment_rotation(
         print("Processing c_len = {}, beta = {}".format(c_len, beta))
 
         # Image Retriever
-        active_train_set = data_key["c_len_{0}_beta_{1}_rot_{2}".format(c_len, beta, frag_orient)]
+        if frag_orient is None:
+            active_train_set = data_key["c_len_{0}_beta_{1}".format(c_len, beta, frag_orient)]
+        else:
+            active_train_set = data_key["c_len_{0}_beta_{1}_rot_{2}".format(c_len, beta, frag_orient)]
 
         image_generator = image_generator_curve.DataGenerator(
             active_train_set,
@@ -145,7 +148,7 @@ def contour_gain_vs_inter_fragment_rotation(
     axis.set_title("Enhancement gain vs inter-fragment rotation - Fields -1993 (Exp 1)")
 
 
-def contour_gain_vs_length(model, data_key, beta, frag_orient, n_runs=100, axis=None):
+def contour_gain_vs_length(model, data_key, beta, frag_orient=None, n_runs=100, axis=None):
     """
     Model contour enhancement gain as a function of contour length. This is similar
     to an experiment from Li-2006 except that additionally contour curvature is considered.
@@ -226,7 +229,10 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient, n_runs=100, axis=
         #     continue
 
         # Image Retriever
-        active_train_set = data_key["c_len_{0}_beta_{1}_rot_{2}".format(c_len, beta, frag_orient)]
+        if frag_orient is None:
+            active_train_set = data_key["c_len_{0}_beta_{1}".format(c_len, beta, frag_orient)]
+        else:
+            active_train_set = data_key["c_len_{0}_beta_{1}_rot_{2}".format(c_len, beta, frag_orient)]
 
         image_generator = image_generator_curve.DataGenerator(
             active_train_set,
