@@ -80,7 +80,7 @@ class FeatureMapL1Regularizer(Regularizer):
 class ContourIntegrationLayer3D(Layer):
 
     def __init__(self, tgt_filt_idx, inner_leaky_relu_alpha, outer_leaky_relu_alpha, rf_size=25,
-                 activation=None, **kwargs):
+                 activation=None, l1_reg_loss_weight=0.001, **kwargs):
         """
         Contour Integration layer. Different from previous contour integration layers,
         the contour integration kernel is 3D and allows connections between feature maps
@@ -98,6 +98,7 @@ class ContourIntegrationLayer3D(Layer):
         self.activation = activations.get(activation)
         self.inner_leaky_relu_alpha = inner_leaky_relu_alpha
         self.outer_leaky_relu_alpha = outer_leaky_relu_alpha
+        self.l1_reg_loss_weight = l1_reg_loss_weight
         super(ContourIntegrationLayer3D, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -110,7 +111,7 @@ class ContourIntegrationLayer3D(Layer):
             initializer='glorot_normal',
             name='kernel',
             trainable=True,
-            regularizer=FeatureMapL1Regularizer(self.tgt_filt_idx, 0.001)
+            regularizer=FeatureMapL1Regularizer(self.tgt_filt_idx, self.l1_reg_loss_weight)
         )
 
         self.bias = self.add_weight(
@@ -152,7 +153,7 @@ class ContourIntegrationLayer3D(Layer):
 
 
 def build_contour_integration_model(
-        tgt_filt_idx, rf_size=25, inner_leaky_relu_alpha=0.7, outer_leaky_relu_alpha=0.7):
+        tgt_filt_idx, rf_size=25, inner_leaky_relu_alpha=0.7, outer_leaky_relu_alpha=0.7, l1_reg_loss_weight=0.01):
     """
     Build a (short) model of 3D contour integration that can be used to train the model.
 
@@ -160,6 +161,7 @@ def build_contour_integration_model(
     and only trains the contour integration layer. THe complete model can still be used for
     object classification
 
+    :param l1_reg_loss_weight:
     :param outer_leaky_relu_alpha:
     :param inner_leaky_relu_alpha:
     :param rf_size:
@@ -175,6 +177,7 @@ def build_contour_integration_model(
         rf_size=rf_size,
         inner_leaky_relu_alpha=inner_leaky_relu_alpha,
         outer_leaky_relu_alpha=outer_leaky_relu_alpha,
+        l1_reg_loss_weight=l1_reg_loss_weight,
         name='contour_integration_layer')(conv_1)
 
     contour_gain_layer = ContourGainCalculatorLayer(
