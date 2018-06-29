@@ -173,12 +173,12 @@ def build_contour_integration_model(
     contour_integrate_layer = ContourIntegrationLayer3D(
         tgt_filt_idx=tgt_filt_idx,
         rf_size=rf_size,
+        inner_leaky_relu_alpha=inner_leaky_relu_alpha,
+        outer_leaky_relu_alpha=outer_leaky_relu_alpha,
         name='contour_integration_layer')(conv_1)
 
     contour_gain_layer = ContourGainCalculatorLayer(
         tgt_filt_idx,
-        inner_leaky_relu_alpha=inner_leaky_relu_alpha,
-        outer_leaky_relu_alpha=outer_leaky_relu_alpha,
         name='gain_calculating_layer')([conv_1, contour_integrate_layer])
 
     model = Model(input_layer, outputs=contour_gain_layer)
