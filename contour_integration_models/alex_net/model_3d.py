@@ -79,7 +79,8 @@ class FeatureMapL1Regularizer(Regularizer):
 
 class ContourIntegrationLayer3D(Layer):
 
-    def __init__(self, tgt_filt_idx, rf_size=25, activation=None, **kwargs):
+    def __init__(self, tgt_filt_idx, inner_leaky_relu_alpha, outer_leaky_relu_alpha, rf_size=25,
+                 activation=None, **kwargs):
         """
         Contour Integration layer. Different from previous contour integration layers,
         the contour integration kernel is 3D and allows connections between feature maps
@@ -95,6 +96,8 @@ class ContourIntegrationLayer3D(Layer):
         self.tgt_filt_idx = tgt_filt_idx
         self.n = rf_size
         self.activation = activations.get(activation)
+        self.inner_leaky_relu_alpha = inner_leaky_relu_alpha
+        self.outer_leaky_relu_alpha = outer_leaky_relu_alpha
         super(ContourIntegrationLayer3D, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -107,7 +110,7 @@ class ContourIntegrationLayer3D(Layer):
             initializer='glorot_normal',
             name='kernel',
             trainable=True,
-            regularizer=FeatureMapL1Regularizer(self.tgt_filt_idx, 0.01)
+            regularizer=FeatureMapL1Regularizer(self.tgt_filt_idx, 0.001)
         )
 
         self.bias = self.add_weight(
@@ -140,12 +143,16 @@ class ContourIntegrationLayer3D(Layer):
         outputs = outputs * inputs
         outputs = K.bias_add(outputs, self.bias)
 
-        outputs = self.activation(outputs) + inputs
+        # outputs = self.activation(outputs) + inputs
+        outputs = K.relu(outputs, alpha=self.inner_leaky_relu_alpha) + inputs
+
+        outputs = K.relu(outputs, alpha=self.outer_leaky_relu_alpha)
 
         return outputs
 
 
-def build_contour_integration_model(tgt_filt_idx, rf_size=25):
+def build_contour_integration_model(
+        tgt_filt_idx, rf_size=25, inner_leaky_relu_alpha=0.7, outer_leaky_relu_alpha=0.7):
     """
     Build a (short) model of 3D contour integration that can be used to train the model.
 
@@ -153,6 +160,8 @@ def build_contour_integration_model(tgt_filt_idx, rf_size=25):
     and only trains the contour integration layer. THe complete model can still be used for
     object classification
 
+    :param outer_leaky_relu_alpha:
+    :param inner_leaky_relu_alpha:
     :param rf_size:
     :param tgt_filt_idx:
     :return:
@@ -164,11 +173,13 @@ def build_contour_integration_model(tgt_filt_idx, rf_size=25):
     contour_integrate_layer = ContourIntegrationLayer3D(
         tgt_filt_idx=tgt_filt_idx,
         rf_size=rf_size,
-        # activation='relu',
         name='contour_integration_layer')(conv_1)
 
-    contour_gain_layer = ContourGainCalculatorLayer(tgt_filt_idx, name='gain_calculating_layer')([
-        conv_1, contour_integrate_layer])
+    contour_gain_layer = ContourGainCalculatorLayer(
+        tgt_filt_idx,
+        inner_leaky_relu_alpha=inner_leaky_relu_alpha,
+        outer_leaky_relu_alpha=outer_leaky_relu_alpha,
+        name='gain_calculating_layer')([conv_1, contour_integrate_layer])
 
     model = Model(input_layer, outputs=contour_gain_layer)
 
