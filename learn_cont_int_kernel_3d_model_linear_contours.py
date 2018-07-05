@@ -55,7 +55,7 @@ def plot_contour_integration_weights_in_channels(weights, out_chan_idx, margin=1
             if in_chan_idx >= in_ch:
                 break
 
-            print("Processing filter %d" % in_chan_idx)
+            # print("Processing filter %d" % in_chan_idx)
 
             tiled_img[
                 (r + margin) * r_idx: (r + margin) * r_idx + r,
