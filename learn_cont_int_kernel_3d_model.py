@@ -5,7 +5,6 @@
 # Author: Salman Khan
 # Date  : 06/05/18
 # -------------------------------------------------------------------------------------------------
-import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import os
@@ -272,20 +271,20 @@ if __name__ == '__main__':
     keras_backend.set_image_dim_ordering('th')
     keras_backend.clear_session()
 
-    target_kernel_idx_arr = [5, 10]
-
     batch_size = 32
     num_epochs = 200
 
+    use_prev_trained_weights = False
+    save_weights = False
+
+    target_kernel_idx_arr = [5, 10]
     data_directory = './data/curved_contours/filt_matched_frag'
     weights_store_file = './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
 
+    target_kernel_idx_arr = [22, 48, 66, 73, 78]
     # data_directory = './data/curved_contours/orientation_matched'
     # weights_store_file = \
     #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
-
-    use_prev_trained_weights = False
-    save_weights = False
 
     # -----------------------------------------------------------------------------------
     # Build
@@ -293,7 +292,7 @@ if __name__ == '__main__':
     cont_int_model = contour_integration_model_3d.build_contour_integration_model(
         tgt_filt_idx=0,
         rf_size=25,
-        inner_leaky_relu_alpha=0.66,
+        inner_leaky_relu_alpha=0.7,
         outer_leaky_relu_alpha=0.94,
         l1_reg_loss_weight=0.01
     )
