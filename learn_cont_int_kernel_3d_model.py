@@ -281,7 +281,7 @@ if __name__ == '__main__':
     data_directory = './data/curved_contours/filt_matched_frag'
     weights_store_file = './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
 
-    target_kernel_idx_arr = [22, 48, 66, 73, 78]
+    # target_kernel_idx_arr = [22, 48, 66, 73, 78]
     # data_directory = './data/curved_contours/orientation_matched'
     # weights_store_file = \
     #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
