@@ -32,7 +32,7 @@ class ContourGainCalculatorLayer(Layer):
         :param tgt_filt_idx:
         :param kwargs:
         """
-        self.tgt_filt_idx = tgt_filt_idx
+        self.tgt_filt_idx = K.variable(tgt_filt_idx, dtype='int32')
         super(ContourGainCalculatorLayer, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -93,7 +93,7 @@ class ContourIntegrationLayer3D(Layer):
         if 0 == (rf_size & 1):
             raise Exception("Specified RF size should be odd")
 
-        self.tgt_filt_idx = tgt_filt_idx
+        self.tgt_filt_idx = K.variable(tgt_filt_idx, dtype='int32')
         self.n = rf_size
         self.activation = activations.get(activation)
         self.inner_leaky_relu_alpha = inner_leaky_relu_alpha
@@ -191,6 +191,23 @@ def build_contour_integration_model(
     model.load_weights("trained_models/AlexNet/alexnet_weights.h5", by_name=True)
     model.compile(optimizer='Adam', loss='mse')
 
+    return model
+
+
+def update_contour_integration_kernel(model, new_tgt_filt_idx):
+    """
+
+    Given a contour integration model training model, update the contour integration kernel to be upgraded
+
+    :param model:
+    :param new_tgt_filt_idx:
+    :return:
+    """
+
+    K.set_value(model.layers[2].tgt_filt_idx, new_tgt_filt_idx)
+    K.set_value(model.layers[3].tgt_filt_idx, new_tgt_filt_idx)
+
+    # remember to recompile the model
     return model
 
 
