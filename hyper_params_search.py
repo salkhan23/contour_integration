@@ -1,56 +1,41 @@
 # -------------------------------------------------------------------------------------------------
-#  Sear
+#  Use HyperOpt Library to search for optimum Hyperparameters
 #
 # Author: Salman Khan
 # Date  : 03/09/17
 # -------------------------------------------------------------------------------------------------
-
 import matplotlib.pyplot as plt
 import numpy as np
+import gc
 
 import keras.backend as keras_backend
-import gc
 
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 
-
 import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
-import multi_contour_integration_kernel_training as multi_training
 import image_generator_curve
 import learn_cont_int_kernel_3d_model
 
 reload(contour_integration_model_3d)
-reload(multi_training)
 reload(image_generator_curve)
 reload(learn_cont_int_kernel_3d_model)
 
 
 TGT_KERNEL_INDEX = 5
 DATA_DIR = './data/curved_contours/filt_matched_frag'
+BATCH_SIZE = 32
 
-
-train_data_dict, test_data_dict = multi_training.get_train_n_test_data_dictionaries(
-    TGT_KERNEL_INDEX,
-    DATA_DIR,
-)
-
-train_set = train_data_dict  # Use all the data to train the model
-
-active_train_set = {}
-active_test_set = {}
-for set_id in train_set:
-    active_train_set.update(train_data_dict[set_id])
-    active_test_set.update(test_data_dict[set_id])
+train_data_dict, test_data_dict = learn_cont_int_kernel_3d_model.get_train_n_test_data_keys(TGT_KERNEL_INDEX, DATA_DIR)
 
 train_image_generator = image_generator_curve.DataGenerator(
-    active_train_set,
-    batch_size=32,
+    train_data_dict,
+    batch_size=BATCH_SIZE,
     shuffle=True,
 )
 
 test_image_generator = image_generator_curve.DataGenerator(
-    active_test_set,
-    batch_size=32,
+    test_data_dict,
+    batch_size=BATCH_SIZE,
     shuffle=True,
 )
 
