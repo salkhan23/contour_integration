@@ -274,16 +274,19 @@ if __name__ == '__main__':
     batch_size = 32
     num_epochs = 200
 
-    use_prev_trained_weights = False
     save_weights = False
+    prev_train_weights = None
 
     target_kernel_idx_arr = [5, 10]
     data_directory = './data/curved_contours/filt_matched_frag'
-    weights_store_file = './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
+    weights_store_file = './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights_2.hf'
+    prev_train_weights = './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
 
     # target_kernel_idx_arr = [22, 48, 66, 73, 78]
     # data_directory = './data/curved_contours/orientation_matched'
     # weights_store_file = \
+    #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights_2.hf'
+    # prev_train_weights = \
     #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
 
     # -----------------------------------------------------------------------------------
@@ -297,8 +300,8 @@ if __name__ == '__main__':
         l1_reg_loss_weight=0.01
     )
 
-    if use_prev_trained_weights:
-        load_pretrained_weights(cont_int_model, weights_store_file)
+    if prev_train_weights is not None:
+        load_pretrained_weights(cont_int_model, prev_train_weights)
 
     start_weights, _ = cont_int_model.layers[2].get_weights()
 
@@ -344,7 +347,7 @@ if __name__ == '__main__':
         )
 
         # load best weights
-        # cont_int_model.load_weights(TEMP_WEIGHT_STORE_FILE)  # load best weights
+        cont_int_model.load_weights(TEMP_WEIGHT_STORE_FILE)  # load best weights
 
         # Save the learnt weights
         if save_weights:
