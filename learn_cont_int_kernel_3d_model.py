@@ -50,6 +50,8 @@ def load_pretrained_weights(model, prev_trained_weights_file):
     if os.path.exists(prev_trained_weights_file):
         model.load_weights(prev_trained_weights_file, by_name=True)
 
+    return prev_learnt_kernels_set
+
 
 def get_weights_training_summary_file(w_store_file):
     train_summary_file = os.path.splitext(w_store_file)[0] + '_training_summary.txt'
@@ -309,8 +311,7 @@ if __name__ == '__main__':
     # prev_train_weights =
     # './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
 
-    # target_kernel_idx_arr = [5, 10, 19, 20, 21, 22]
-    target_kernel_idx_arr = [48, 49, 51, 59, 62, 64, 65, 66, 68, 72, 73, 74, 76, 77, 79, 80, 82, 85]
+    target_kernel_idx_arr = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 62, 64, 65, 66, 68, 72, 73, 74, 76, 77, 79, 80, 82, 85]
     data_directory = './data/curved_contours/orientation_matched2'
     weights_store_file = \
         './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights_2.hf'
@@ -328,8 +329,9 @@ if __name__ == '__main__':
         l1_reg_loss_weight=0.01
     )
 
+    prev_trained_kernel_idx_arr = []
     if prev_train_weights is not None:
-        load_pretrained_weights(cont_int_model, prev_train_weights)
+        prev_trained_kernel_idx_arr = load_pretrained_weights(cont_int_model, prev_train_weights)
 
     start_weights, _ = cont_int_model.layers[2].get_weights()
 
@@ -339,6 +341,11 @@ if __name__ == '__main__':
     fig, loss_vs_epoch_ax = plt.subplots()
 
     for target_kernel_idx in target_kernel_idx_arr:
+
+        if target_kernel_idx in prev_trained_kernel_idx_arr:
+            # Skip kernels that are already trained
+            print("Contour Integration kernel @ index {} already trained. Skipping Training".format(target_kernel_idx))
+            continue
 
         kernel_training_start_time = datetime.now()
 
