@@ -18,8 +18,9 @@ import matplotlib.pyplot as plt
 import os
 import shutil
 import pickle
+import datetime
 
-import keras.backend as K
+import keras.backend as keras_backend
 
 import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
 import gabor_fits
@@ -33,13 +34,15 @@ reload(alex_net_utils)
 reload(image_generator_curve)
 
 
-DATA_DIRECTORY = "./data/curved_contours/orientation_matched"
+DATA_DIRECTORY = "./data/curved_contours/orientation_matched2"
 
 
 def generate_data_set(
         base_dir, tgt_filt_idx, n_img_per_set, frag, frag_params, f_tile_size,
         img_size=(227, 227, 3)):
     """
+    Given a contour fragment and its gabor params, generate test and train images in
+    the base directory
 
     :param base_dir:
     :param tgt_filt_idx:
@@ -154,88 +157,125 @@ if __name__ == '__main__':
     # Initialization
     # -----------------------------------------------------------------------------------
     plt.ion()
-    K.clear_session()
-    K.set_image_dim_ordering('th')
+    keras_backend.clear_session()
+    keras_backend.set_image_dim_ordering('th')
+    start_time = datetime.datetime.now()
+
+    # -----------------------------------------------------------------------------------
+    # Contour Integration Model
+    # -----------------------------------------------------------------------------------
+    cont_int_model = contour_integration_model_3d.build_contour_integration_model(5)  # Index not important
+
+    feat_extract_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
+
+    # -----------------------------------------------------------------------------------
+    #  Search over gabor parameters and find sets that maximally activate a feature
+    #  extracting neuron
+    # -----------------------------------------------------------------------------------
+    print("Searching Gabor Parameter Ranges")
+    lambda1_arr = np.arange(15, 2, -0.5)
+    psi_arr = np.concatenate((np.arange(0, 8, 0.25), np.arange(-0.5, -7, -0.25)))
+
+    # Any larger does not fit within the 11x11 fragment size.
+    sigma_arr = [2.5, 2.60, 2.70, 2.80]
 
     # Gabor angles are wrt y axis (0 = vertical). We want fragments wrt to x axis. Hence -90
     theta_arr = -90 + np.arange(0, 180, 15)
 
-    # Base parameters of contour Fragment
-    gabor_params = {
-        'x0': 0,
-        'y0': 0,
-        'theta_deg': -90,
-        'amp': 1,
-        'sigma': 2.5,
-        'lambda1': 8,
-        'psi': 0,
-        'gamma': 1
-    }
+    x0_arr = np.arange(0, 3)
+    y0_arr = np.arange(0, 3)
 
-    # Create base directory if it doesnt exist
-    if not os.path.exists(DATA_DIRECTORY):
-        os.makedirs(DATA_DIRECTORY)
-    else:
-        ans = raw_input("Previous Data Set Exists. Overwrite? (Y/N)")
+    gabor_params_dict = {}
 
-        if 'y' not in ans.lower():
-            raise SystemExit()
-        else:
-            shutil.rmtree(DATA_DIRECTORY)
+    for lambda1 in lambda1_arr:
+        for psi in psi_arr:
+            for sigma in sigma_arr:
+                for theta in theta_arr:
+                    # for x0 in x0_arr:
+                    #     for y0 in y0_arr:
 
-    # -----------------------------------------------------------------------------------
-    # Load Contour Integration Model
-    # -----------------------------------------------------------------------------------
-    tgt_kernel_idx = 5  # Not important
-    cont_int_model = contour_integration_model_3d.build_contour_integration_model(
-        tgt_kernel_idx)
-    # cont_int_model.summary()
+                            gabor_params = {
+                                'x0': 0,
+                                'y0': 0,
+                                'theta_deg': theta,
+                                'amp': 1,
+                                'sigma': sigma,
+                                'lambda1': lambda1,
+                                'psi': psi,
+                                'gamma': 1
+                            }
 
-    feat_extract_kernels = K.eval(cont_int_model.layers[1].weights[0])
+                            fragment = gabor_fits.get_gabor_fragment(
+                                gabor_params,
+                                (11, 11)
+                            )
 
-    feat_extract_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
+                            kernel_idx, act_value = alex_net_utils.find_most_active_l1_kernel_index(
+                                fragment,
+                                feat_extract_act_cb,
+                                plot=False
+                            )
 
-    # # -----------------------------------------------------------------------------------
-    # #  Fit most active neuron for each considered angle
-    # # -----------------------------------------------------------------------------------
-    # for theta in theta_arr:
-    #     gabor_params['theta_deg'] = theta
-    #     fragment = gabor_fits.get_gabor_fragment(gabor_params, feat_extract_kernels.shape[0:2])
+                            if act_value > 3.0:
+                                # prev_trainable_kernel_set_len = len(trainable_kernel_set)
+                                # trainable_kernel_set.add(kernel_idx)
+                                # data_sets_included += 1
+                                # if len(trainable_kernel_set) > prev_trainable_kernel_set_len:
+                                #     list_of_gabor_params.append(gabor_params)
+
+                                if kernel_idx not in gabor_params_dict:
+                                    gabor_params_dict[kernel_idx] = {
+                                        "gabor_params": gabor_params,
+                                        "max_act": act_value
+                                    }
+                                else:
+                                    if act_value > gabor_params_dict[kernel_idx]["max_act"]:
+                                        gabor_params_dict[kernel_idx] = {
+                                            "gabor_params": gabor_params,
+                                            "max_act": act_value
+                                        }
+
+    print("Number of trainable kernels {0}".format(len(gabor_params_dict)))
+    for k_idx in gabor_params_dict.keys():
+        print("Kernel {0}, max_activation {1}".format(k_idx, gabor_params_dict[k_idx]["max_act"]))
+
+    # # ------------------------------------------------------------------------------
+    # # Plot all Gabors found to maximally activate neurons
+    # # ------------------------------------------------------------------------------
+    # for k_idx in gabor_params_dict.keys():
     #
-    #     kernel_idx, act_value = alex_net_utils.find_most_active_l1_kernel_index(
-    #         fragment,
-    #         feat_extract_act_cb,
-    #         plot=False
+    #     fragment = gabor_fits.get_gabor_fragment(
+    #         gabor_params_dict[k_idx]["gabor_params"],
+    #         (11, 11)
     #     )
     #
-    #     print("Fragment Orientation {0}: Max active kernel idx = {1}, value={2}".format(
-    #         theta, kernel_idx, act_value))
+    #     image_generator_curve.plot_fragment_rotations(fragment, gabor_params_dict[k_idx]["gabor_params"])
+    #     plt.suptitle("Max active Kernel @ index {0}. Act Value {1}".format(
+    #         k_idx,
+    #         gabor_params_dict[k_idx]["max_act"]
+    #     ))
+    #
+    #     print(gabor_params_dict[k_idx])
+    #     raw_input()
 
-    # -----------------------------------------------------------------------------------
-    #  Generate Data for each Orientation
-    # -----------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
+    # Generate the Data
+    # ------------------------------------------------------------------------------
     n_train_images = 500
     n_test_images = 100
-
-    image_size = np.array((227, 227, 3))
 
     full_tile_size = np.array((17, 17))
     frag_tile_size = np.array((11, 11))
 
-    for theta in theta_arr:
+    for kernel_idx in gabor_params_dict.keys():
+        print("Generated Data for Contour Integration kernel @ index {0} [Feature Extract Activation {1}]...".format(
+            kernel_idx, gabor_params_dict[kernel_idx]["max_act"]))
 
-        print("Processing contour fragment with base orientation {}".format(theta))
+        kernel_data_gen_start_time = datetime.datetime.now()
 
-        gabor_params['theta_deg'] = theta
-        fragment = gabor_fits.get_gabor_fragment(gabor_params, feat_extract_kernels.shape[0:2])
+        params = gabor_params_dict[kernel_idx]["gabor_params"]
 
-        # First max activated kernel
-        kernel_idx, act_value = alex_net_utils.find_most_active_l1_kernel_index(
-            fragment,
-            feat_extract_act_cb,
-            plot=False
-        )
-        print("Max responsive kernel index {0}, value={1}".format(kernel_idx, act_value))
+        fragment = gabor_fits.get_gabor_fragment(params, frag_tile_size)
 
         print("Generating Train Data Set")
         generate_data_set(
@@ -243,9 +283,9 @@ if __name__ == '__main__':
             tgt_filt_idx=kernel_idx,
             n_img_per_set=n_train_images,
             frag=fragment,
-            frag_params=gabor_params,
+            frag_params=params,
             f_tile_size=full_tile_size,
-            img_size=image_size
+            img_size=(227, 227, 3)
         )
 
         print("Generating Test Data Set")
@@ -254,17 +294,14 @@ if __name__ == '__main__':
             tgt_filt_idx=kernel_idx,
             n_img_per_set=n_test_images,
             frag=fragment,
-            frag_params=gabor_params,
+            frag_params=params,
             f_tile_size=full_tile_size,
             img_size=(227, 227, 3)
         )
 
-        # # check the created image key is correct
-        # master_key_file = os.path.join(
-        #     DATA_DIRECTORY, 'train', "filter_{0}".format(kernel_idx), 'data_key.pickle')
-        #
-        # with open(master_key_file, 'rb') as fid:
-        #     data_key = pickle.load(fid)
-        #
-        # print (data_key.keys())
-        # raw_input("Continue?")
+        print("Data Generation for kernel index {0} took {1}".format(
+            kernel_idx,
+            datetime.datetime.now() - kernel_data_gen_start_time
+        ))
+
+    print("Total Time {}".format(datetime.datetime.now() - start_time))
