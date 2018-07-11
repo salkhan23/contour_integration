@@ -5,11 +5,13 @@
 # Author: Salman Khan
 # Date  : 06/05/18
 # -------------------------------------------------------------------------------------------------
+import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import os
 from time import time
 import gc
+from datetime import datetime
 
 import keras.backend as keras_backend
 from keras.callbacks import TensorBoard, ModelCheckpoint
@@ -50,8 +52,10 @@ def load_pretrained_weights(model, prev_trained_weights_file):
 
 
 def get_weights_training_summary_file(w_store_file):
-    basedir = os.path.dirname(w_store_file)
-    return os.path.join(basedir, 'training_summary.txt')
+    train_summary_file = os.path.splitext(w_store_file)[0] + '_training_summary.txt'
+
+    # print("Previously trained summary file {}".format(train_summary_file))
+    return train_summary_file
 
 
 def get_prev_learnt_kernels(train_summary_file):
@@ -70,7 +74,7 @@ def get_prev_learnt_kernels(train_summary_file):
 
 def save_learnt_weights(model, tgt_filt_idx, w_store_file):
 
-    print("Saving Learnt Weights @ {}".format(w_store_file))
+    # print("Saving Learnt Weights @ {}".format(w_store_file))
 
     basedir = os.path.dirname(w_store_file)
     if not os.path.exists(os.path.dirname(basedir)):
@@ -263,6 +267,26 @@ def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w
     f.suptitle("Input channels feeding of contour integration kernel @ index {}".format(tgt_filt_idx))
 
 
+def clear_unlearnt_contour_integration_kernels(model, trained_kernels):
+    """
+
+    :param model:
+    :param trained_kernels:
+    :return:
+    """
+    w, b = model.layers[2].get_weights()
+    n_kernels = w.shape[3]
+
+    print("All Contour Integration Kernels other than {} will be cleared".format(trained_kernels))
+
+    for i in range(n_kernels):
+        if i not in trained_kernels:
+            w[:, :, :, i] = np.zeros_like(w[:, :, :, i])
+            b[i] = 0
+
+    model.layers[2].set_weights([w, b])
+
+
 if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
@@ -270,24 +294,28 @@ if __name__ == '__main__':
     plt.ion()
     keras_backend.set_image_dim_ordering('th')
     keras_backend.clear_session()
+    start_time = datetime.now()
 
     batch_size = 32
     num_epochs = 200
 
-    save_weights = False
+    save_weights = True
     prev_train_weights = None
 
-    target_kernel_idx_arr = [5, 10]
-    data_directory = './data/curved_contours/filt_matched_frag'
-    weights_store_file = './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights_2.hf'
-    prev_train_weights = './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
+    # target_kernel_idx_arr = [5, 10]
+    # data_directory = './data/curved_contours/filt_matched_frag'
+    # weights_store_file =
+    # './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights_2.hf'
+    # prev_train_weights =
+    # './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
 
-    # target_kernel_idx_arr = [22, 48, 66, 73, 78]
-    # data_directory = './data/curved_contours/orientation_matched'
-    # weights_store_file = \
-    #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights_2.hf'
-    # prev_train_weights = \
-    #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
+    # target_kernel_idx_arr = [5, 10, 19, 20, 21, 22]
+    target_kernel_idx_arr = [48, 49, 51, 59, 62, 64, 65, 66, 68, 72, 73, 74, 76, 77, 79, 80, 82, 85]
+    data_directory = './data/curved_contours/orientation_matched2'
+    weights_store_file = \
+        './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights_2.hf'
+    prev_train_weights = \
+        './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
 
     # -----------------------------------------------------------------------------------
     # Build
@@ -311,6 +339,8 @@ if __name__ == '__main__':
     fig, loss_vs_epoch_ax = plt.subplots()
 
     for target_kernel_idx in target_kernel_idx_arr:
+
+        kernel_training_start_time = datetime.now()
 
         if os.path.exists(TEMP_WEIGHT_STORE_FILE):
             os.remove(TEMP_WEIGHT_STORE_FILE)
@@ -436,3 +466,30 @@ if __name__ == '__main__':
         #
         #     fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
         #         target_kernel_idx, fragment_orientation))
+
+        print("Training kernel {0} took {1}".format(target_kernel_idx, datetime.now() - kernel_training_start_time))
+
+    # ----------------------------------------------------------------------------------------------
+    # At the end of training set all contour integration kernels that were not trained to zero
+    # ----------------------------------------------------------------------------------------------
+    train_sum_file = get_weights_training_summary_file(weights_store_file)
+
+    prev_trained_idxes = np.array(list(get_prev_learnt_kernels(train_sum_file)))
+    trained_kernel_idxes = np.concatenate((prev_trained_idxes, np.array(target_kernel_idx_arr)))
+    trained_kernel_idxes = set(trained_kernel_idxes)
+
+    clear_unlearnt_contour_integration_kernels(cont_int_model, trained_kernel_idxes)
+
+    # Verify Kernels are cleared properly
+    # ------------------------------------
+    plot_start_n_learnt_contour_integration_kernels(
+        cont_int_model,
+        target_kernel_idx_arr[0],
+    )
+
+    plot_start_n_learnt_contour_integration_kernels(
+        cont_int_model,
+        0,
+    )
+
+    print("Total Elapsed Time {}".format(datetime.now() - start_time))
