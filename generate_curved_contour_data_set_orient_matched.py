@@ -304,4 +304,7 @@ if __name__ == '__main__':
             datetime.datetime.now() - kernel_data_gen_start_time
         ))
 
+    # -----------------------------------------------------------------------------------
+    #  End
+    # -----------------------------------------------------------------------------------
     print("Total Time {}".format(datetime.datetime.now() - start_time))
