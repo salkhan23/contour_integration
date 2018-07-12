@@ -82,6 +82,9 @@ def generate_data_set(
         60: 0.61
     }
 
+    if type(frag_params) is not list:
+        frag_params = [frag_params]
+
     # Create the destination directory
     # --------------------------------------
     if not os.path.exists(base_dir):
@@ -96,7 +99,7 @@ def generate_data_set(
         else:
             ans = raw_input("Overwrite Existing Data for kernel at index {}?".format(tgt_filt_idx))
 
-            if 'y' not in ans.lower():
+            if 'y' in ans.lower():
                 shutil.rmtree(filt_dir)
             else:
                 return
@@ -138,7 +141,7 @@ def generate_data_set(
             beta_dict = {}
             for img_idx in range(img_arr.shape[0]):
                 filename = "c_len_{0}_beta_{1}_rot_{2}__{3}.png".format(
-                    c_len, beta, frag_params['theta_deg'], img_idx)
+                    c_len, beta, frag_params[0]['theta_deg'], img_idx)
 
                 plt.imsave(
                     os.path.join(abs_destination_dir, filename),
@@ -150,7 +153,7 @@ def generate_data_set(
 
             # Add this dictionary to the dictionary of dictionaries
             data_key_dict['c_len_{0}_beta_{1}_rot_{2}'.format(
-                c_len, beta, frag_params['theta_deg'])] = beta_dict
+                c_len, beta, frag_params[0]['theta_deg'])] = beta_dict
 
     # Store the dictionary of Dictionaries
     # Each entry in this dictionary is dictionary of image index and its absolute gain value
