@@ -9,6 +9,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import copy
 
 import keras.backend as K
 import keras
@@ -72,7 +73,7 @@ def _add_single_side_of_contour_constant_separation(
 
     # Orientation of the Gabor is wrt to y axis, change it so it is with respect to x-axis
     # as acc_angle (next location) is wrt to the x-axis.
-    acc_angle = frag_params["theta_deg"] - 90
+    acc_angle = frag_params[0]["theta_deg"] - 90
 
     tile_offset = np.zeros((2,), dtype=np.int)
     prev_tile_start = center_frag_start
@@ -93,13 +94,19 @@ def _add_single_side_of_contour_constant_separation(
         else:
             frag_direction = 1
 
-        acc_angle += beta * frag_direction
+        relative_rotation = beta * frag_direction
+        acc_angle += relative_rotation
         # acc_angle = np.mod(acc_angle, 360)
 
-        rotated_frag_params = frag_params.copy()
-        rotated_frag_params['theta_deg'] = (acc_angle + 90)
+        if type(frag_params) is not list:
+            frag_params = [frag_params]
 
-        rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params, frag.shape[0:2])
+        rotated_frag_params_list = copy.deepcopy(frag_params)
+
+        for c_params in rotated_frag_params_list:
+            c_params["theta_deg"] = c_params["theta_deg"] + relative_rotation
+
+        rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params_list, frag.shape[0:2])
 
         # Different from conventional (x, y) co-ordinates, the origin of the displayed
         # array starts in the top left corner. x increases in the vertically down
@@ -332,13 +339,19 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
     # Now add the background fragment tiles
     # -------------------------------------
-    rotated_frag_params = frag_params.copy()
+    if type(frag_params) is not list:
+        frag_params = [frag_params]
+    rotated_frag_params_list = copy.deepcopy(frag_params)
+
     num_possible_rotations = 360 // beta
 
     for start in bg_frag_starts:
 
-        rotated_frag_params['theta_deg'] = (np.random.randint(0, np.int(num_possible_rotations)) * beta)
-        rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params, frag.shape[0:2])
+        random_rotation = np.random.randint(0, np.int(num_possible_rotations)) * beta
+        for c_params in rotated_frag_params_list:
+            c_params['theta_deg'] = c_params['theta_deg'] + random_rotation
+
+        rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params_list, frag.shape[0:2])
 
         img = alex_net_utils.tile_image(
             img,
