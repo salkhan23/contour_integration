@@ -239,6 +239,8 @@ if __name__ == '__main__':
     for k_idx in gabor_params_dict.keys():
         print("Kernel {0}, max_activation {1}".format(k_idx, gabor_params_dict[k_idx]["max_act"]))
 
+    print("Parameter Search took {}".format(datetime.datetime.now() - start_time))
+
     # # ------------------------------------------------------------------------------
     # # Plot all Gabors found to maximally activate neurons
     # # ------------------------------------------------------------------------------
