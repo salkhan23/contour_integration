@@ -63,7 +63,7 @@ def gabor_2d((x, y), x0, y0, theta_deg, amp, sigma, lambda1, psi, gamma):
     return out.ravel()
 
 
-def get_gabor_fragment(params, spatial_size):
+def get_gabor_fragment(g_params, spatial_size):
     """
     Constructed a 2D Gabor fragment from the specified params of the specified size.
     A 3 channel fragment is always generated.
@@ -84,7 +84,7 @@ def get_gabor_fragment(params, spatial_size):
     If a single dictionary is specified all three channels have the same parameters, else if
     a list of size 3 is specified each channel has its own parameters.
 
-    :param params: is either a dictionary of a list of dictionaries
+    :param g_params: is either a dictionary of a list of dictionaries
     :param spatial_size:
     :return:
     """
@@ -96,21 +96,21 @@ def get_gabor_fragment(params, spatial_size):
 
     xx, yy = np.meshgrid(x, y)
 
-    if type(params) is list and len(params) not in (1, 3):
+    if type(g_params) is list and len(g_params) not in (1, 3):
         raise Exception("Only length 3 list of parameters can be specified")
 
-    if type(params) is not list:
+    if type(g_params) is not list:
 
         frag = gabor_2d(
             (xx, yy),
-            x0=params['x0'],
-            y0=params['y0'],
-            theta_deg=params['theta_deg'],
-            amp=params['amp'],
-            sigma=params['sigma'],
-            lambda1=params['lambda1'],
-            psi=params['psi'],
-            gamma=params['gamma']
+            x0=g_params['x0'],
+            y0=g_params['y0'],
+            theta_deg=g_params['theta_deg'],
+            amp=g_params['amp'],
+            sigma=g_params['sigma'],
+            lambda1=g_params['lambda1'],
+            psi=g_params['psi'],
+            gamma=g_params['gamma']
         )
 
         frag = frag.reshape((x.shape[0], y.shape[0]))
@@ -119,21 +119,21 @@ def get_gabor_fragment(params, spatial_size):
 
         frag = np.zeros((spatial_size[0], spatial_size[1], 3))
 
-        for idx, chan_params in enumerate(params):
+        for c_idx, c_params in enumerate(g_params):
             frag_chan = gabor_2d(
                 (xx, yy),
-                x0=chan_params['x0'],
-                y0=chan_params['y0'],
-                theta_deg=chan_params['theta_deg'],
-                amp=chan_params['amp'],
-                sigma=chan_params['sigma'],
-                lambda1=chan_params['lambda1'],
-                psi=chan_params['psi'],
-                gamma=chan_params['gamma']
+                x0=c_params['x0'],
+                y0=c_params['y0'],
+                theta_deg=c_params['theta_deg'],
+                amp=c_params['amp'],
+                sigma=c_params['sigma'],
+                lambda1=c_params['lambda1'],
+                psi=c_params['psi'],
+                gamma=c_params['gamma']
             )
 
             frag_chan = frag_chan.reshape((x.shape[0], y.shape[0]))
-            frag[:, :, idx] = frag_chan
+            frag[:, :, c_idx] = frag_chan
 
     # Normalize to range 0 - 255
     frag = (frag - frag.min()) / (frag.max() - frag.min()) * 255
@@ -167,43 +167,44 @@ def find_best_fit_2d_gabor(kernel, verbose=0):
 
     opt_params_list = []
 
-    for chan_idx in range(n_channels):
+    for c_idx in range(n_channels):
 
         opt_params_found = False
 
         theta = 0
 
         # gabor_2d(     x0,      y0, theta_deg,     amp, sigma, lambda1,       psi, gamma):
-        bounds = ([-half_x, -half_y, -160, -np.inf, 0.1, 0, 0, 0],
-                  [half_x, half_y, 180, np.inf, 4, np.inf, 2 * np.pi, 6])
+        bounds = ([-half_x, -half_y,      -160,     -20,   0.1,       0,   -half_x,     0],
+                  [ half_x,  half_y,       180,      20,     4,      20,    half_x,     6])
 
         while not opt_params_found:
 
-            p0 = [0, 0, theta, 1, 1, 2, 0, 1]
+            p0 = [0, 0, theta, 1, 2.5, 8, 0, 1]
 
             try:
                 popt, pcov = optimize.curve_fit(
-                    gabor_2d, (xx, yy), kernel[:, :, chan_idx].ravel(), p0=p0, bounds=bounds)
+                    gabor_2d, (xx, yy), kernel[:, :, c_idx].ravel(), p0=p0, bounds=bounds)
 
                 # 1 SD of error in estimate
                 one_sd_error = np.sqrt(np.diag(pcov))
 
                 # Check that error in the estimate is reasonable
-                if one_sd_error[2] <= 1.0:
+                if one_sd_error[2] <= 3.0:
 
                     opt_params_found = True
                     opt_params_list.append(popt)
 
                     if verbose > 0:
-                        print("[%d]: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, lambda=%0.2f, "
-                              "psi=%0.2f, gamma=%0.2f"
-                              % (chan_idx, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7]))
+                        print("chan {0}: (x0,y0)=({1:0.2f},{2:0.2f}), theta={3:0.2f}, A={4:0.2f}, sigma={5:0.2f}, "
+                              "lambda={6:0.2f}, psi={7:0.2f}, gamma={8:0.2f}".format(
+                               c_idx, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7]))
 
                     if verbose > 1:
-                        print("Err: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, "
-                              "lambda=%0.2f, psi=%0.2f, gamma=%0.2f"
-                              % (one_sd_error[0], one_sd_error[1], one_sd_error[2], one_sd_error[3], one_sd_error[4],
-                                 one_sd_error[5], one_sd_error[6], one_sd_error[7]))
+                        print("1SD Err : (x0,y0)=({0:0.2f},{1:0.2f}), theta={2:0.2f}, A={3:0.2f}, sigma={4:0.2f}, "
+                              "lambda={5:0.2f}, psi={6:0.2f}, gamma={7:0.2f}".format(
+                               one_sd_error[0], one_sd_error[1], one_sd_error[2], one_sd_error[3], one_sd_error[4],
+                               one_sd_error[5], one_sd_error[6], one_sd_error[7]))
+
                 else:
                     theta += 10
 
@@ -248,26 +249,26 @@ def plot_kernel_and_best_fit_gabors(kernel, kernel_idx, fitted_gabors_params):
     # Normalize the kernel to [0, 1] to display it properly
     display_kernel = (kernel - kernel.min()) / (kernel.max() - kernel.min())
 
-    for chan_idx in range(n_channels):
+    for c_idx in range(n_channels):
 
         # Plot the kernel
-        f.add_subplot(n_channels, 3, (chan_idx * 3) + 1)
-        plt.imshow(display_kernel[:, :, chan_idx], cmap='seismic')
-        plt.title(r"$Chan=%d $" % chan_idx)
+        f.add_subplot(n_channels, 3, (c_idx * 3) + 1)
+        plt.imshow(display_kernel[:, :, c_idx], cmap='seismic')
+        plt.title(r"$Chan=%d $" % c_idx)
 
-        if np.any(fitted_gabors_params[chan_idx]):  # if it is not none
+        if np.any(fitted_gabors_params[c_idx]):  # if it is not none
 
-            x0, y0, theta, amp, sigma, lambda1, psi, gamma = fitted_gabors_params[chan_idx]
+            x0, y0, theta, amp, sigma, lambda1, psi, gamma = fitted_gabors_params[c_idx]
 
             # Fitted gabor - same resolution (with which fit was done)
-            f.add_subplot(n_channels, 3, (chan_idx * 3) + 2)
+            f.add_subplot(n_channels, 3, (c_idx * 3) + 2)
             fitted_gabor = gabor_2d((xx, yy), x0, y0, theta, amp, sigma, lambda1, psi, gamma)
             fitted_gabor = fitted_gabor.reshape((x_arr.shape[0], y_arr.shape[0]))
             display_gabor = (fitted_gabor - fitted_gabor.min()) / (fitted_gabor.max() - fitted_gabor.min())
             plt.imshow(display_gabor, cmap='seismic')
 
             # # Fitted gabor - higher resolution
-            f.add_subplot(n_channels, 3, (chan_idx * 3) + 3)
+            f.add_subplot(n_channels, 3, (c_idx * 3) + 3)
             fitted_gabor = gabor_2d((xx2, yy2), x0, y0, theta, amp, sigma, lambda1, psi, gamma)
             fitted_gabor = fitted_gabor.reshape((x2_arr.shape[0], y2_arr.shape[0]))
             display_gabor = (fitted_gabor - fitted_gabor.min()) / (fitted_gabor.max() - fitted_gabor.min())
@@ -301,7 +302,7 @@ def get_l1_filter_orientation_and_offset(tgt_filt, tgt_filt_idx, show_plots=True
         plot_kernel_and_best_fit_gabors(tgt_filt, tgt_filt_idx, best_fit_params_list)
 
     # Remove all empty entries
-    best_fit_params_list = [params for params in best_fit_params_list if params is not None]
+    best_fit_params_list = [c_params for c_params in best_fit_params_list if c_params is not None]
     if not best_fit_params_list:
         # raise Exception("Optimal Params could not be found")
         return np.NaN, np.NaN
@@ -353,10 +354,10 @@ def get_filter_orientation(tgt_filt, o_type='average', display_params=True):
 
     if display_params:
         print("Gabor Filt Parameters:")
-        for chan_idx, p in enumerate(gabor_fit_params):
+        for c_idx, p in enumerate(gabor_fit_params):
             print("Chan {0}: (x0,y0)=({1:0.2f},{2:0.2f}), theta_deg={3:0.1f}, A={4:0.2f}, sigma={5:0.2f}, "
                   "lambda={6:0.2f}, psi={7:0.2f}, gamma={8:0.2f}".format(
-                   chan_idx, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]))
+                   c_idx, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]))
 
     o_type = o_type.lower()
     if o_type == 'average':
@@ -370,6 +371,47 @@ def get_filter_orientation(tgt_filt, o_type='average', display_params=True):
         raise Exception("Unknown o_type!")
 
     return orient
+
+
+def plot_fragment_rotations(frag, frag_params, delta_rot=15):
+    """
+    Plot all possible rotations (multiples of  delta_rot) of the specified fragment
+
+    :param frag:
+    :param frag_params:  Frag_params is either a dictionary or a list of dictionaries, one for each channel.
+                         Format of dictionary is specified above.
+    :param delta_rot:
+    :return: None
+    """
+
+    if type(frag_params) is not list:
+        list_of_frag_params = [frag_params]
+
+    else:
+        list_of_frag_params = frag_params
+
+    rotated_frag_params_list = list(list_of_frag_params)
+
+    rot_ang_arr = np.arange(0, 180, delta_rot)
+    n_rows = np.int(np.floor(np.sqrt(rot_ang_arr.shape[0])))
+    n_cols = np.int(np.ceil(rot_ang_arr.shape[0] / n_rows))
+
+    f, ax_arr = plt.subplots(n_rows, n_cols)
+    fig.suptitle("Rotations")
+
+    for idx, rot_ang in enumerate(rot_ang_arr):
+
+        for c_idx, rot_frag_params in enumerate(rotated_frag_params_list):
+            rot_frag_params["theta_deg"] = rot_ang + list_of_frag_params[c_idx]['theta_deg']
+
+            rot_frag = get_gabor_fragment(rotated_frag_params_list, frag.shape[0:2])
+
+            row_idx = np.int(idx / n_cols)
+            col_idx = idx - row_idx * n_cols
+            # print(row_idx, col_idx)
+
+            ax_arr[row_idx][col_idx].imshow(rot_frag)
+            ax_arr[row_idx][col_idx].set_title("Angle = {}".format(rot_ang))
 
 
 if __name__ == "__main__":
@@ -406,23 +448,54 @@ if __name__ == "__main__":
 
     plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, gabor_params)
 
-    # # -----------------------------------------------------------------------------------
-    # #  Gabor Fits all kernels
-    # # -----------------------------------------------------------------------------------
-    # n_filters = feat_extract_kernels.shape[-1]
-    # optimum_orientation_list = []
-    #
-    # for tgt_filter_idx in np.arange(n_filters):
-    #     tgt_filter = feat_extract_kernels[:, :, :, tgt_filter_idx]
-    #
-    #     optimal_params = find_best_fit_2d_gabor(tgt_filter)
-    #
-    #     plot_kernel_and_best_fit_gabors(tgt_filter_idx, tgt_filter_idx, optimal_params)
-    #     raw_input()
-    #
-    #     orientation, offset = get_l1_filter_orientation_and_offset(
-    #         tgt_filter, tgt_filter_idx, show_plots=False)
-    #
-    #     optimum_orientation_list.append(orientation)
-    #
-    #     print('kernel @ %d: %s' % (tgt_filter_idx, orientation))
+    # Construct a fragment from the gabor params
+    # ------------------------------------------
+    gabor_params_dict_list = []
+    for chan_idx, chan_params in enumerate(gabor_params):
+        params = {
+            'x0': chan_params[0],
+            'y0': chan_params[1],
+            'theta_deg': chan_params[2],
+            'amp': chan_params[3],
+            'sigma': chan_params[4],
+            'lambda1': chan_params[5],
+            'psi': chan_params[6],
+            'gamma': chan_params[7]
+        }
+
+        gabor_params_dict_list.append(params)
+
+    fragment = get_gabor_fragment(gabor_params_dict_list[0], (11, 11))
+
+    fig, ax_array = plt.subplots(1, 2)
+
+    disp_tgt_filter = (tgt_filter - tgt_filter.min()) / (tgt_filter.max() - tgt_filter.min())
+    ax_array[0].imshow(disp_tgt_filter)
+    ax_array[0].set_title("Filter @ index".format(tgt_filter_idx))
+    ax_array[1].imshow(fragment)
+    ax_array[1].set_title("Generated Fragment")
+
+    # Plot all rotations of the fragment
+    # ----------------------------------
+    plot_fragment_rotations(fragment, gabor_params_dict_list)
+
+    # -----------------------------------------------------------------------------------
+    #  Gabor Fits all kernels
+    # -----------------------------------------------------------------------------------
+    n_filters = feat_extract_kernels.shape[-1]
+    optimum_orientation_list = []
+
+    for tgt_filter_idx in np.arange(n_filters):
+        tgt_filter = feat_extract_kernels[:, :, :, tgt_filter_idx]
+
+        optimal_params = find_best_fit_2d_gabor(tgt_filter)
+
+        # plot_kernel_and_best_fit_gabors(tgt_filter_idx, tgt_filter_idx, optimal_params)
+        # raw_input()
+
+        orientation, offset = get_l1_filter_orientation_and_offset(
+            tgt_filter, tgt_filter_idx, show_plots=False)
+
+        optimum_orientation_list.append(orientation)
+
+        print('kernel @ %d: %s' % (tgt_filter_idx, orientation))
