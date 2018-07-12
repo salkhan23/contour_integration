@@ -397,7 +397,7 @@ def plot_fragment_rotations(frag, frag_params, delta_rot=15):
     n_cols = np.int(np.ceil(rot_ang_arr.shape[0] / n_rows))
 
     f, ax_arr = plt.subplots(n_rows, n_cols)
-    fig.suptitle("Rotations")
+    f.suptitle("Rotations")
 
     for idx, rot_ang in enumerate(rot_ang_arr):
 
