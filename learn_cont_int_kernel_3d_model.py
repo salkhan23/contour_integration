@@ -311,7 +311,8 @@ if __name__ == '__main__':
     # prev_train_weights =
     # './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
 
-    target_kernel_idx_arr = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 62, 64, 65, 66, 68, 72, 73, 74, 76, 77, 79, 80, 82, 85]
+    target_kernel_idx_arr = \
+        [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 62, 64, 65, 66, 68, 72, 73, 74, 76, 77, 79, 80, 82, 85]
     data_directory = './data/curved_contours/orientation_matched2'
     weights_store_file = \
         './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights_2.hf'
@@ -476,31 +477,17 @@ if __name__ == '__main__':
 
         print("Training kernel {0} took {1}".format(target_kernel_idx, datetime.now() - kernel_training_start_time))
 
-    # ----------------------------------------------------------------------------------------------
-    # At the end of training set all contour integration kernels that were not trained to zero
-    # ----------------------------------------------------------------------------------------------
-    train_sum_file = get_weights_training_summary_file(weights_store_file)
-
-    prev_trained_idxes = np.array(list(get_prev_learnt_kernels(train_sum_file)))
-    trained_kernel_idxes = np.concatenate((prev_trained_idxes, np.array(target_kernel_idx_arr)))
-    trained_kernel_idxes = set(trained_kernel_idxes)
-
-    clear_unlearnt_contour_integration_kernels(cont_int_model, trained_kernel_idxes)
-
-    # Verify Kernels are cleared properly
-    # ------------------------------------
-    plot_start_n_learnt_contour_integration_kernels(
-        cont_int_model,
-        target_kernel_idx_arr[0],
-    )
-
-    plot_start_n_learnt_contour_integration_kernels(
-        cont_int_model,
-        0,
-    )
-
     # -----------------------------------------------------------------------------------
     #  End
     # -----------------------------------------------------------------------------------
     print("Total Elapsed Time {}".format(datetime.now() - start_time))
     os.remove(TEMP_WEIGHT_STORE_FILE)
+
+    train_sum_file = get_weights_training_summary_file(weights_store_file)
+    prev_trained_idxes = np.array(list(get_prev_learnt_kernels(train_sum_file)))
+
+    trained_kernel_idxes = np.concatenate((prev_trained_idxes, np.array(target_kernel_idx_arr)))
+    trained_kernel_idxes = set(trained_kernel_idxes)
+
+    # At end of Training, clear all contour integration kernels that are not trained
+    clear_unlearnt_contour_integration_kernels(cont_int_model, trained_kernel_idxes)
