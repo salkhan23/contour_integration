@@ -39,11 +39,12 @@ DATA_DIRECTORY = "./data/curved_contours/orientation_matched2"
 
 def generate_data_set(
         base_dir, tgt_filt_idx, n_img_per_set, frag, frag_params, f_tile_size,
-        img_size=(227, 227, 3)):
+        img_size=(227, 227, 3), overwrite_existing_data=False):
     """
     Given a contour fragment and its gabor params, generate test and train images in
     the base directory
 
+    :param overwrite_existing_data:
     :param base_dir:
     :param tgt_filt_idx:
     :param n_img_per_set:
@@ -83,7 +84,22 @@ def generate_data_set(
 
     # Create the destination directory
     # --------------------------------------
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+
     filt_dir = os.path.join(base_dir, "filter_{0}".format(tgt_filt_idx))
+
+    if os.path.isdir(filt_dir):
+        if overwrite_existing_data:
+            print("Overwriting Existing Data for kernel at index {}".format(tgt_filt_idx))
+            shutil.rmtree(filt_dir)
+        else:
+            ans = raw_input("Overwrite Existing Data for kernel at index {}?".format(tgt_filt_idx))
+
+            if 'y' not in ans.lower():
+                shutil.rmtree(filt_dir)
+            else:
+                return
 
     # -----------------------------------------------------------------------------------
     #  Generate the Data
