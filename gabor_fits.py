@@ -10,12 +10,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize as optimize
 
-import keras.backend as K
+import keras.backend as keras_backend
 
-from contour_integration_models.alex_net import masked_models as cont_int_models
+import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
 import alex_net_utils
 
-reload(cont_int_models)
+reload(contour_integration_model_3d)
 reload(alex_net_utils)
 
 np.random.seed(7)  # Set the random seed for reproducibility
@@ -340,7 +340,7 @@ def get_filter_orientation(tgt_filt, o_type='average', display_params=True):
     :param o_type: ['average', 'max']
     :param display_params:
 
-    :return: orientation of the type specifed
+    :return: orientation of the type specified
     """
 
     gabor_fit_params = find_best_fit_2d_gabor(tgt_filt)
@@ -355,58 +355,69 @@ def get_filter_orientation(tgt_filt, o_type='average', display_params=True):
 
     o_type = o_type.lower()
     if o_type == 'average':
-        orientation_arr = gabor_fit_params[:, 2]
-        orientation = np.mean(orientation_arr)
+        orient_arr = gabor_fit_params[:, 2]
+        orient = np.mean(orient_arr)
     elif o_type == 'max':
         amp_arr = gabor_fit_params[:, 3]
         orientation_idx = np.argmax(abs(amp_arr))
-        orientation = gabor_fit_params[orientation_idx, 2]
+        orient = gabor_fit_params[orientation_idx, 2]
     else:
         raise Exception("Unknown o_type!")
 
-    return orientation
+    return orient
 
 
 if __name__ == "__main__":
+    # -----------------------------------------------------------------------------------
+    # Initialization
+    # -----------------------------------------------------------------------------------
     plt.ion()
-    K.clear_session()
+    keras_backend.clear_session()
+    keras_backend.set_image_dim_ordering('th')
 
-    # 1. Build the model
-    # ---------------------------------------------------------------------
-    K.set_image_dim_ordering('th')
+    # -----------------------------------------------------------------------------------
+    # Model
+    # -----------------------------------------------------------------------------------
     print("Building Contour Integration Model...")
 
-    # Multiplicative Model
-    contour_integration_model = cont_int_models.build_contour_integration_model(
-        "multiplicative",
-        "trained_models/AlexNet/alexnet_weights.h5",
-        n=25,
-        activation='relu'
+    cont_int_model = contour_integration_model_3d.build_contour_integration_model(
+        tgt_filt_idx=0,
+        rf_size=25,
+        inner_leaky_relu_alpha=0.7,
+        outer_leaky_relu_alpha=0.94,
+        l1_reg_loss_weight=0.01
     )
-    # contour_integration_model.summary()
+    # cont_int_model.summary()
 
-    l1_weights = K.eval(contour_integration_model.layers[1].weights[0])
+    feat_extract_kernels, _ = cont_int_model.layers[1].get_weights()
 
-    # 2. Select the target L1 filter to find the
-    # ---------------------------------------------------------------------
-    # # A. For a particular target filter
-    # tgt_feat_extract_kernel_idx = 2
+    # -----------------------------------------------------------------------------------
+    #  Single Kernel Gabor Fit
+    # -----------------------------------------------------------------------------------
+    tgt_filter_idx = 0
+    tgt_filter = feat_extract_kernels[:, :, :, tgt_filter_idx]
+
+    gabor_params = find_best_fit_2d_gabor(tgt_filter)
+
+    plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, gabor_params)
+
+    # # -----------------------------------------------------------------------------------
+    # #  Gabor Fits all kernels
+    # # -----------------------------------------------------------------------------------
+    # n_filters = feat_extract_kernels.shape[-1]
+    # optimum_orientation_list = []
     #
-    # tgt_filter_idx = feat_extract_kernels[:, :, :, tgt_feat_extract_kernel_idx]
-    # optimal_params = find_best_fit_2d_gabor(tgt_filter_idx)
-    # plot_kernel_and_best_fit_gabors(tgt_filter_idx, tgt_feat_extract_kernel_idx, optimal_params)
-
-    # B. For a range of target filters
-    optimum_orientation_list = []
-    for tgt_filter_idx in np.arange(96):
-        tgt_filter = l1_weights[:, :, :, tgt_filter_idx]
-
-        optimal_params = find_best_fit_2d_gabor(tgt_filter)
-        # plot_kernel_and_best_fit_gabors(tgt_filter_idx, tgt_feat_extract_kernel_idx, optimal_params)
-
-        theta, offset = get_l1_filter_orientation_and_offset(
-            tgt_filter, tgt_filter_idx, show_plots=False)
-
-        optimum_orientation_list.append(theta)
-
-        print('kernel @ %d: %s' % (tgt_filter_idx, theta))
+    # for tgt_filter_idx in np.arange(n_filters):
+    #     tgt_filter = feat_extract_kernels[:, :, :, tgt_filter_idx]
+    #
+    #     optimal_params = find_best_fit_2d_gabor(tgt_filter)
+    #
+    #     plot_kernel_and_best_fit_gabors(tgt_filter_idx, tgt_filter_idx, optimal_params)
+    #     raw_input()
+    #
+    #     orientation, offset = get_l1_filter_orientation_and_offset(
+    #         tgt_filter, tgt_filter_idx, show_plots=False)
+    #
+    #     optimum_orientation_list.append(orientation)
+    #
+    #     print('kernel @ %d: %s' % (tgt_filter_idx, orientation))
