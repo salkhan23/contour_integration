@@ -82,7 +82,7 @@ if __name__ == '__main__':
     # plt.title("Contour")
 
     # Plot rotations of the fragment
-    image_generator_curve.plot_fragment_rotations(fragment, fragment_gabor_params)
+    gabor_fits.plot_fragment_rotations(fragment, fragment_gabor_params)
 
     # ----------------------------------------------------------------------------------
     #  Background Fragments
