@@ -436,39 +436,6 @@ def generate_contour_images(
     return images
 
 
-def plot_fragment_rotations(frag, frag_params, delta_rot=15):
-    """
-    Plot all possible rotations (multiples of  delta_rot) of the specified fragment
-
-    :param frag:
-    :param frag_params
-    :param delta_rot:
-    :return: None
-    """
-    rot_ang_arr = np.arange(0, 180, delta_rot)
-
-    n_rows = np.int(np.floor(np.sqrt(rot_ang_arr.shape[0])))
-    n_cols = np.int(np.ceil(rot_ang_arr.shape[0] / n_rows))
-
-    fig, ax_arr = plt.subplots(n_rows, n_cols)
-    fig.suptitle("Rotations")
-
-    rot_frag_params = frag_params.copy()
-
-    for idx, rot_ang in enumerate(rot_ang_arr):
-
-        rot_frag_params["theta_deg"] = rot_ang + frag_params['theta_deg']
-
-        rot_frag = gabor_fits.get_gabor_fragment(rot_frag_params, frag.shape[0:2])
-
-        row_idx = np.int(idx / n_cols)
-        col_idx = idx - row_idx * n_cols
-        # print(row_idx, col_idx)
-
-        ax_arr[row_idx][col_idx].imshow(rot_frag)
-        ax_arr[row_idx][col_idx].set_title("Angle = {}".format(rot_ang))
-
-
 def get_gabor_params_from_target_filter(tgt_filt, match=None):
     """
     Get best fit 2D gabor parameters from feature extracting kernel
@@ -665,7 +632,7 @@ if __name__ == '__main__':
     plt.title("Contour Fragment")
 
     # # Plot rotations of the fragment
-    # plot_fragment_rotations(fragment, fragment_gabor_params, delta_rot=15)
+    # gabor_fits.plot_fragment_rotations(fragment, fragment_gabor_params, delta_rot=15)
 
     # -----------------------------------------------------------------------------------
     #  Initializations

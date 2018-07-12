@@ -249,7 +249,7 @@ if __name__ == '__main__':
     #         (11, 11)
     #     )
     #
-    #     image_generator_curve.plot_fragment_rotations(fragment, gabor_params_dict[k_idx]["gabor_params"])
+    #     gabor_fits.plot_fragment_rotations(fragment, gabor_params_dict[k_idx]["gabor_params"])
     #     plt.suptitle("Max active Kernel @ index {0}. Act Value {1}".format(
     #         k_idx,
     #         gabor_params_dict[k_idx]["max_act"]
