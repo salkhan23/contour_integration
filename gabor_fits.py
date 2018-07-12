@@ -120,7 +120,6 @@ def get_gabor_fragment(params, spatial_size):
         frag = np.zeros((spatial_size[0], spatial_size[1], 3))
 
         for idx, chan_params in enumerate(params):
-
             frag_chan = gabor_2d(
                 (xx, yy),
                 x0=chan_params['x0'],
@@ -144,11 +143,15 @@ def get_gabor_fragment(params, spatial_size):
     return frag
 
 
-def find_best_fit_2d_gabor(kernel):
+def find_best_fit_2d_gabor(kernel, verbose=0):
     """
     Find the best fit parameters of a 2D gabor for each input channel of kernel.
 
     :param kernel: Alexnet l1 kernel
+    :param verbose: Controls verbosity of prints (
+        0=Nothing is printed[Default],
+        1=print optimal params,
+        2=print goodness of fits)
 
     :return: list of best fit parameters for each channel of kernel. Format: [x, y, chan]
     """
@@ -171,8 +174,8 @@ def find_best_fit_2d_gabor(kernel):
         theta = 0
 
         # gabor_2d(     x0,      y0, theta_deg,     amp, sigma, lambda1,       psi, gamma):
-        bounds = ([-half_x, -half_y,      -160, -np.inf,   0.1,       0,         0,     0],
-                  [ half_x,  half_y,       180,  np.inf,     4,  np.inf, 2 * np.pi,     6])
+        bounds = ([-half_x, -half_y, -160, -np.inf, 0.1, 0, 0, 0],
+                  [half_x, half_y, 180, np.inf, 4, np.inf, 2 * np.pi, 6])
 
         while not opt_params_found:
 
@@ -191,14 +194,16 @@ def find_best_fit_2d_gabor(kernel):
                     opt_params_found = True
                     opt_params_list.append(popt)
 
-                    # print( "[%d]: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, lambda=%0.2f, "
-                    #        "psi=%0.2f, gamma=%0.2f"
-                    #        % (chan_idx, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7]))
+                    if verbose > 0:
+                        print("[%d]: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, lambda=%0.2f, "
+                              "psi=%0.2f, gamma=%0.2f"
+                              % (chan_idx, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7]))
 
-                    # print("Err: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, "
-                    #       "lambda=%0.2f, psi=%0.2f, gamma=%0.2f"
-                    #       % (one_sd_error[0], one_sd_error[1], one_sd_error[2], one_sd_error[3], one_sd_error[4],
-                    #          one_sd_error[5], one_sd_error[6], one_sd_error[7]))
+                    if verbose > 1:
+                        print("Err: (x0,y0)=(%0.2f, %0.2f), theta=%0.2f, A=%0.2f, sigma=%0.2f, "
+                              "lambda=%0.2f, psi=%0.2f, gamma=%0.2f"
+                              % (one_sd_error[0], one_sd_error[1], one_sd_error[2], one_sd_error[3], one_sd_error[4],
+                                 one_sd_error[5], one_sd_error[6], one_sd_error[7]))
                 else:
                     theta += 10
 
@@ -351,7 +356,7 @@ def get_filter_orientation(tgt_filt, o_type='average', display_params=True):
         for chan_idx, p in enumerate(gabor_fit_params):
             print("Chan {0}: (x0,y0)=({1:0.2f},{2:0.2f}), theta_deg={3:0.1f}, A={4:0.2f}, sigma={5:0.2f}, "
                   "lambda={6:0.2f}, psi={7:0.2f}, gamma={8:0.2f}".format(
-                    chan_idx, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]))
+                   chan_idx, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]))
 
     o_type = o_type.lower()
     if o_type == 'average':
@@ -397,7 +402,7 @@ if __name__ == "__main__":
     tgt_filter_idx = 0
     tgt_filter = feat_extract_kernels[:, :, :, tgt_filter_idx]
 
-    gabor_params = find_best_fit_2d_gabor(tgt_filter)
+    gabor_params = find_best_fit_2d_gabor(tgt_filter, verbose=1)
 
     plot_kernel_and_best_fit_gabors(tgt_filter, tgt_filter_idx, gabor_params)
 
