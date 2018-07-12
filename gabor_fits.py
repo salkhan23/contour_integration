@@ -386,7 +386,6 @@ def plot_fragment_rotations(frag, frag_params, delta_rot=15):
 
     if type(frag_params) is not list:
         list_of_frag_params = [frag_params]
-
     else:
         list_of_frag_params = frag_params
 
