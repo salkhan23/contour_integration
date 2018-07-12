@@ -9,6 +9,7 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize as optimize
+import copy
 
 import keras.backend as keras_backend
 
@@ -383,13 +384,10 @@ def plot_fragment_rotations(frag, frag_params, delta_rot=15):
     :param delta_rot:
     :return: None
     """
-
     if type(frag_params) is not list:
-        list_of_frag_params = [frag_params]
-    else:
-        list_of_frag_params = frag_params
+        frag_params = [frag_params]
 
-    rotated_frag_params_list = list(list_of_frag_params)
+    rotated_frag_params_list = copy.deepcopy(frag_params)
 
     rot_ang_arr = np.arange(0, 180, delta_rot)
     n_rows = np.int(np.floor(np.sqrt(rot_ang_arr.shape[0])))
@@ -401,7 +399,7 @@ def plot_fragment_rotations(frag, frag_params, delta_rot=15):
     for idx, rot_ang in enumerate(rot_ang_arr):
 
         for c_idx, rot_frag_params in enumerate(rotated_frag_params_list):
-            rot_frag_params["theta_deg"] = rot_ang + list_of_frag_params[c_idx]['theta_deg']
+            rot_frag_params["theta_deg"] = rot_ang + frag_params[c_idx]['theta_deg']
 
             rot_frag = get_gabor_fragment(rotated_frag_params_list, frag.shape[0:2])
 
