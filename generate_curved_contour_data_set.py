@@ -8,6 +8,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import datetime
 
 import keras.backend as keras_backend
 
@@ -28,14 +29,15 @@ if __name__ == '__main__':
     plt.ion()
     keras_backend.clear_session()
     keras_backend.set_image_dim_ordering('th')
+    start_time = datetime.datetime.now()
 
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
-    tgt_filter_idx = 2
+    tgt_filter_idx = 0
 
-    n_train_images = 50
-    n_test_images = 10
+    n_train_images = 500
+    n_test_images = 100
 
     image_size = np.array((227, 227, 3))
 
@@ -104,6 +106,8 @@ if __name__ == '__main__':
         f_tile_size=full_tile_size,
         img_size=(227, 227, 3)
     )
+
+    print("Total Time {}".format(datetime.datetime.now() - start_time))
 
     # # -----------------------------------------------------------------------------------
     # #  Debug
