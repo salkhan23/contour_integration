@@ -136,6 +136,10 @@ def get_gabor_fragment(g_params, spatial_size):
             frag_chan = frag_chan.reshape((x.shape[0], y.shape[0]))
             frag[:, :, c_idx] = frag_chan
 
+        if len(g_params) == 1:  # if length 1, set all channels the same
+            frag[:, :, 1] = frag_chan
+            frag[:, :, 2] = frag_chan
+
     # Normalize to range 0 - 255
     frag = (frag - frag.min()) / (frag.max() - frag.min()) * 255
 
