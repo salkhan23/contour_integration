@@ -257,7 +257,7 @@ def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w
         )
         ax_arr[1].set_title("Initial Contour Int")
 
-    feat_extract_w, _ = cont_int_model.layers[1].get_weights()
+    feat_extract_w, _ = model.layers[1].get_weights()
     tgt_feat_extract_w = feat_extract_w[:, :, :, tgt_filt_idx]
 
     normalized_tgt_feat_extract_w = (tgt_feat_extract_w - tgt_feat_extract_w.min()) / \
