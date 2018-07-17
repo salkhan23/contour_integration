@@ -306,10 +306,10 @@ if __name__ == '__main__':
 
     # target_kernel_idx_arr = [5, 10]
     # data_directory = './data/curved_contours/filt_matched_frag'
-    # weights_store_file =
-    # './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights_2.hf'
-    # prev_train_weights =
-    # './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
+    # weights_store_file = \
+    #     './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights_2.hf'
+    # prev_train_weights =\
+    #     './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
 
     target_kernel_idx_arr = \
         [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 62, 64, 65, 66, 68, 72, 73, 74, 76, 77, 79, 80, 82, 85]
@@ -394,6 +394,9 @@ if __name__ == '__main__':
         # Cleanup
         del checkpoint, tensorboard, callbacks
 
+        print("Training kernel {0} took {1}".format(
+            target_kernel_idx, datetime.now() - kernel_training_start_time))
+
         # -------------------------------------------------------------------------------
         # Plot Learnt Kernels
         # -------------------------------------------------------------------------------
@@ -421,6 +424,7 @@ if __name__ == '__main__':
         # # -------------------------------------------------------------------------------
         # #  Fields - 1993 - Experiment 1 - Curvature vs Gain
         # # -------------------------------------------------------------------------------
+        # print("Checking gain vs curvature performance ...")
         # for fragment_orientation in fragment_orientation_arr:
         #     fig, ax = plt.subplots()
         #
@@ -448,6 +452,7 @@ if __name__ == '__main__':
         # # -------------------------------------------------------------------------------
         # # Enhancement gain vs contour length
         # # -------------------------------------------------------------------------------
+        # print("Checking gain vs contour length performance ...")
         # for fragment_orientation in fragment_orientation_arr:
         #
         #     fig, ax = plt.subplots()
@@ -474,8 +479,6 @@ if __name__ == '__main__':
         #
         #     fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
         #         target_kernel_idx, fragment_orientation))
-
-        print("Training kernel {0} took {1}".format(target_kernel_idx, datetime.now() - kernel_training_start_time))
 
     # -----------------------------------------------------------------------------------
     #  End
