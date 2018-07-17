@@ -71,6 +71,9 @@ def _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size, direction,
         random_frag_direction=False):
 
+    if type(frag_params) is not list:
+        frag_params = [frag_params]
+
     # Orientation of the Gabor is wrt to y axis, change it so it is with respect to x-axis
     # as acc_angle (next location) is wrt to the x-axis.
     acc_angle = frag_params[0]["theta_deg"] - 90
