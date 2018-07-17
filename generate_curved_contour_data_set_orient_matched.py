@@ -12,13 +12,13 @@
 # Author: Salman Khan
 # Date  : 21/04/18
 # -------------------------------------------------------------------------------------------------
-
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import shutil
 import pickle
 import datetime
+import itertools
 
 import keras.backend as keras_backend
 
@@ -170,6 +170,64 @@ def generate_data_set(
         pickle.dump(data_key_dict, handle)
 
 
+def search_black_n_white_search_space(
+        model_feat_extract_cb, lambda1_arr, psi_arr, sigma_arr, theta_arr, th=3.0):
+    """
+
+    :param model_feat_extract_cb:
+    :param lambda1_arr:
+    :param psi_arr:
+    :param sigma_arr:
+    :param theta_arr:
+    :param th:
+
+    :return: Dictionary of contour integration kernels along with the best fit parameters.
+    Dictionary keys are kernel indexes, the value is another dictionary that contains 2 keys:
+    gabor_params and max value
+    """
+    best_fit_params_dict = {}
+
+    for theta, sigma, lambda1, psi in itertools.product(theta_arr, sigma_arr, lambda1_arr, psi_arr):
+
+        # print("theta {0}, sigma {1} lambda1 {2}, psi {3}".format(
+        #     theta, sigma, lambda1, psi))
+
+        g_params = {
+            'x0': 0,
+            'y0': 0,
+            'theta_deg': theta,
+            'amp': 1,
+            'sigma': sigma,
+            'lambda1': lambda1,
+            'psi': psi,
+            'gamma': 1
+        }
+
+        frag = gabor_fits.get_gabor_fragment(g_params, (11, 11))
+
+        k_idx, act_value = alex_net_utils.find_most_active_l1_kernel_index(
+            frag,
+            model_feat_extract_cb,
+            plot=False
+        )
+
+        if act_value > th:
+            if k_idx not in best_fit_params_dict:
+                print("Adding Kernel {} to dictionary".format(k_idx))
+
+                best_fit_params_dict[k_idx] = {
+                    "gabor_params": g_params,
+                    "max_act": act_value,
+                }
+            else:
+                if act_value > best_fit_params_dict[k_idx]["max_act"]:
+                    best_fit_params_dict[k_idx] = {
+                        "gabor_params": g_params,
+                        "max_act": act_value,
+                    }
+    return best_fit_params_dict
+
+
 if __name__ == '__main__':
 
     # -----------------------------------------------------------------------------------
@@ -192,71 +250,33 @@ if __name__ == '__main__':
     #  extracting neuron
     # -----------------------------------------------------------------------------------
     print("Searching Gabor Parameter Ranges")
-    lambda1_arr = np.arange(15, 2, -0.5)
-    psi_arr = np.concatenate((np.arange(0, 8, 0.25), np.arange(-0.5, -7, -0.25)))
 
-    # Any larger does not fit within the 11x11 fragment size.
-    sigma_arr = [2.5, 2.60, 2.70, 2.80]
+    # Full Range
+    # -----------
+    lambda1_array = np.arange(15, 2, -0.5)
+    psi_array = np.concatenate((np.arange(0, 8, 0.25), np.arange(-0.5, -7, -0.25)))
+    sigma_array = [2.5, 2.60, 2.70, 2.80]  # Any larger does not fit within the 11x11 fragment size.
+    theta_array = -90 + np.arange(0, 180, 15)  # Gabor angles are wrt y axis (0 = vertical). To get wrt to x-axis -90
 
-    # Gabor angles are wrt y axis (0 = vertical). We want fragments wrt to x axis. Hence -90
-    theta_arr = -90 + np.arange(0, 180, 15)
+    # # Short Range [test functionality]
+    # # ---------------------------------
+    # lambda1_array = np.arange(15, 2, -1)
+    # psi_array = [0]
+    # theta_array = -90 + np.arange(0, 180, 30)
+    # sigma_array = [2.5, 2.7]
 
-    x0_arr = np.arange(0, 3)
-    y0_arr = np.arange(0, 3)
+    gabor_params_dict = search_black_n_white_search_space(
+        feat_extract_act_cb,
+        lambda1_arr=lambda1_array,
+        psi_arr=psi_array,
+        sigma_arr=sigma_array,
+        theta_arr=theta_array
+    )
 
-    gabor_params_dict = {}
-
-    for lambda1 in lambda1_arr:
-        for psi in psi_arr:
-            for sigma in sigma_arr:
-                for theta in theta_arr:
-                    # for x0 in x0_arr:
-                    #     for y0 in y0_arr:
-
-                            gabor_params = {
-                                'x0': 0,
-                                'y0': 0,
-                                'theta_deg': theta,
-                                'amp': 1,
-                                'sigma': sigma,
-                                'lambda1': lambda1,
-                                'psi': psi,
-                                'gamma': 1
-                            }
-
-                            fragment = gabor_fits.get_gabor_fragment(
-                                gabor_params,
-                                (11, 11)
-                            )
-
-                            kernel_idx, act_value = alex_net_utils.find_most_active_l1_kernel_index(
-                                fragment,
-                                feat_extract_act_cb,
-                                plot=False
-                            )
-
-                            if act_value > 3.0:
-                                # prev_trainable_kernel_set_len = len(trainable_kernel_set)
-                                # trainable_kernel_set.add(kernel_idx)
-                                # data_sets_included += 1
-                                # if len(trainable_kernel_set) > prev_trainable_kernel_set_len:
-                                #     list_of_gabor_params.append(gabor_params)
-
-                                if kernel_idx not in gabor_params_dict:
-                                    gabor_params_dict[kernel_idx] = {
-                                        "gabor_params": gabor_params,
-                                        "max_act": act_value
-                                    }
-                                else:
-                                    if act_value > gabor_params_dict[kernel_idx]["max_act"]:
-                                        gabor_params_dict[kernel_idx] = {
-                                            "gabor_params": gabor_params,
-                                            "max_act": act_value
-                                        }
-
+    print('*' * 20)
     print("Number of trainable kernels {0}".format(len(gabor_params_dict)))
-    for k_idx in gabor_params_dict.keys():
-        print("Kernel {0}, max_activation {1}".format(k_idx, gabor_params_dict[k_idx]["max_act"]))
+    for kernel_idx in gabor_params_dict.keys():
+        print("Kernel {0}, max_activation {1}".format(kernel_idx, gabor_params_dict[kernel_idx]["max_act"]))
 
     print("Parameter Search took {}".format(datetime.datetime.now() - start_time))
 
