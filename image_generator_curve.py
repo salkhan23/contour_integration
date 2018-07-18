@@ -74,10 +74,6 @@ def _add_single_side_of_contour_constant_separation(
     if type(frag_params) is not list:
         frag_params = [frag_params]
 
-    # Orientation of the Gabor is wrt to y axis, change it so it is with respect to x-axis
-    # as acc_angle (next location) is wrt to the x-axis.
-    acc_angle = frag_params[0]["theta_deg"] - 90
-
     tile_offset = np.zeros((2,), dtype=np.int)
     prev_tile_start = center_frag_start
 
@@ -90,6 +86,8 @@ def _add_single_side_of_contour_constant_separation(
     else:
         raise Exception("Invalid Direction")
 
+    acc_angle = frag_params[0]["theta_deg"]
+
     for i in range(c_len // 2):
 
         if random_frag_direction:
@@ -97,26 +95,26 @@ def _add_single_side_of_contour_constant_separation(
         else:
             frag_direction = 1
 
-        relative_rotation = beta * frag_direction
-        acc_angle += relative_rotation
+        acc_angle += beta * frag_direction
         # acc_angle = np.mod(acc_angle, 360)
-
-        if type(frag_params) is not list:
-            frag_params = [frag_params]
+        # print("fragment idx {} acc_angle {}".format(i, acc_angle))
 
         rotated_frag_params_list = copy.deepcopy(frag_params)
 
         for c_params in rotated_frag_params_list:
-            c_params["theta_deg"] = c_params["theta_deg"] + relative_rotation
+            c_params["theta_deg"] = c_params["theta_deg"] + (acc_angle - frag_params[0]["theta_deg"])
 
         rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params_list, frag.shape[0:2])
 
         # Different from conventional (x, y) co-ordinates, the origin of the displayed
-        # array starts in the top left corner. x increases in the vertically down
+        # array starts in the to p left corner. x increases in the vertically down
         # direction while y increases in the horizontally right direction.
 
-        tile_offset[0] = d * np.sin(acc_angle / 180.0 * np.pi)
-        tile_offset[1] = -d * np.cos(acc_angle / 180.0 * np.pi)
+        # In Addition, Gabor angles are specified with respect to y-axis (0 orientation) is vertical
+        # for position we need the angles to be relative to the x-axis. Hence add -90
+
+        tile_offset[0] = d * np.sin((acc_angle - 90) / 180.0 * np.pi)
+        tile_offset[1] = -d * np.cos((acc_angle - 90) / 180.0 * np.pi)
 
         curr_tile_start = prev_tile_start + tile_offset
         # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
@@ -134,8 +132,8 @@ def _add_single_side_of_contour_constant_separation(
             print("Next Tile @ {0} overlaps with tile at location {1}".format(
                 curr_tile_start, prev_tile_start))
 
-            tile_offset[0] += d_delta * np.sin(acc_angle / 180.0 * np.pi)
-            tile_offset[1] -= d_delta * np.cos(acc_angle / 180.0 * np.pi)
+            tile_offset[0] += d_delta * np.sin((acc_angle - 90) / 180.0 * np.pi)
+            tile_offset[1] -= d_delta * np.cos((acc_angle - 90) / 180.0 * np.pi)
 
             curr_tile_start = prev_tile_start + tile_offset
             # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
@@ -151,6 +149,10 @@ def _add_single_side_of_contour_constant_separation(
 
         prev_tile_start = curr_tile_start
         tile_starts.append(curr_tile_start)
+
+        # plt.figure()
+        # plt.imshow(img)
+        # raw_input()
 
     return img, tile_starts
 
@@ -412,8 +414,8 @@ def generate_contour_images(
             img, frag, frag_params, c_len, beta, f_tile_size[0],
             rand_inter_frag_direction_change=rand_inter_frag_direction_change)
 
-        img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
-            img, frag, c_frag_starts, f_tile_size, 15, frag_params, bg_frag_relocate)
+        # img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
+        #     img, frag, c_frag_starts, f_tile_size, 15, frag_params, bg_frag_relocate)
 
         images[img_idx, ] = img
 
