@@ -391,7 +391,7 @@ def generate_contour_images(
 
     if center_frag_start is None:
         img_center = img_size[0:2] // 2
-        frag_size = frag.shape[0:2]
+        frag_size = np.array(frag.shape[0:2])
         center_frag_start = img_center - (frag_size // 2)
 
     print("Generating {0} images for fragment [ contour length {1}, inter fragment rotation {2}]".format(
