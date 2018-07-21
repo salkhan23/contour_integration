@@ -412,16 +412,16 @@ def generate_contour_images(
         images[img_idx, ] = img
 
         # # Highlight Contour tiles
-        # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], c_frag_starts)
+        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], c_frag_starts)
         #
         # # Highlight Background Fragment tiles
-        # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], bg_frag_starts, edge_color=(0, 255, 0))
+        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], bg_frag_starts, edge_color=(0, 255, 0))
         #
         # # Highlight Removed tiles
-        # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], removed_tiles, edge_color=(0, 0, 255))
+        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], removed_tiles, edge_color=(0, 0, 255))
         #
         # # Highlight Relocated tiles
-        # img = alex_net_utils.highlight_tiles(img, fragment.shape[0:2], relocated_tiles, edge_color=(0, 255, 255))
+        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], relocated_tiles, edge_color=(0, 255, 255))
         #
         # # highlight full tiles
         # f_tile_starts = alex_net_utils.get_background_tiles_locations(
@@ -432,16 +432,10 @@ def generate_contour_images(
         #     tgt_n_visual_rf_start=img_size[0] // 2 - (f_tile_size[0] // 2)
         # )
         #
-        # img = alex_net_utils.highlight_tiles(
-        #     img, f_tile_size, f_tile_starts, edge_color=(255, 255, 0))
-
-        # # ------------------------------------------------------------
-        # filename = "orient_{0}_clen_{1}_beta_{2}__{3}.png".format(
-        #     frag_params["theta_deg"], c_len, beta, img_idx)
+        # img = alex_net_utils.highlight_tiles(img, f_tile_size, f_tile_starts, edge_color=(255, 255, 0))
         #
-        # plt.imsave(os.path.join(destination, filename), img, format=image_format)
-        #
-        # files_generated.append((os.path.join(destination, filename)))
+        # plt.figure()
+        # plt.imshow(img)
 
     return images
 
