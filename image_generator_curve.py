@@ -150,7 +150,7 @@ def _add_single_side_of_contour_constant_separation(
 
 
 def add_contour_path_constant_separation(
-        img, frag, frag_params, c_len, beta, d, rand_inter_frag_direction_change=True):
+        img, frag, frag_params, c_len, beta, d, center_frag_start=None, rand_inter_frag_direction_change=True):
     """
     Add curved contours to the test image as added in the ref. a constant separation (d)
     is projected from the previous tile to find the location of the next tile.
@@ -163,14 +163,16 @@ def add_contour_path_constant_separation(
     :param c_len:
     :param beta:
     :param d:
+    :param center_frag_start:
     :param rand_inter_frag_direction_change:
     :return:
     """
-    img_size = np.array(img.shape[0:2])
-    img_center = img_size // 2
-
     frag_size = np.array(frag.shape[0:2])
-    center_frag_start = img_center - (frag_size // 2)
+
+    if center_frag_start is None:
+        img_size = np.array(img.shape[0:2])
+        img_center = img_size // 2
+        center_frag_start = img_center - (frag_size // 2)
 
     d_delta = d // 4
 
@@ -363,7 +365,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
 def generate_contour_images(
         n_images, frag, frag_params, c_len, beta, f_tile_size, img_size=None, bg_frag_relocate=True,
-        rand_inter_frag_direction_change=True):
+        rand_inter_frag_direction_change=True, center_frag_start=None):
     """
     Generate n_images with the specified fragment parameters.
 
@@ -387,6 +389,11 @@ def generate_contour_images(
     if img_size is None:
         img_size = np.array([227, 227, 3])
 
+    if center_frag_start is None:
+        img_center = img_size[0:2] // 2
+        frag_size = frag.shape[0:2]
+        center_frag_start = img_center - (frag_size // 2)
+
     print("Generating {0} images for fragment [ contour length {1}, inter fragment rotation {2}]".format(
         n_images, c_len, beta))
 
@@ -404,6 +411,7 @@ def generate_contour_images(
 
         img, c_frag_starts = add_contour_path_constant_separation(
             img, frag, frag_params, c_len, beta, f_tile_size[0],
+            center_frag_start=center_frag_start,
             rand_inter_frag_direction_change=rand_inter_frag_direction_change)
 
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
@@ -411,8 +419,8 @@ def generate_contour_images(
 
         images[img_idx, ] = img
 
-        # # Highlight Contour tiles
-        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], c_frag_starts)
+        # Highlight Contour tiles
+        img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], c_frag_starts)
         #
         # # Highlight Background Fragment tiles
         # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], bg_frag_starts, edge_color=(0, 255, 0))
@@ -434,8 +442,8 @@ def generate_contour_images(
         #
         # img = alex_net_utils.highlight_tiles(img, f_tile_size, f_tile_starts, edge_color=(255, 255, 0))
         #
-        # plt.figure()
-        # plt.imshow(img)
+        plt.figure()
+        plt.imshow(img)
 
     return images
 
