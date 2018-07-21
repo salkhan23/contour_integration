@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import os
 import copy
 
-import keras.backend as K
+import keras.backend as keras_backend
 import keras
 from keras.preprocessing.image import load_img
 
@@ -68,7 +68,7 @@ def do_tiles_overlap(l1, r1, l2, r2):
 
 
 def _add_single_side_of_contour_constant_separation(
-        img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size, direction,
+        img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size,
         random_frag_direction=False):
 
     if type(frag_params) is not list:
@@ -78,13 +78,6 @@ def _add_single_side_of_contour_constant_separation(
     prev_tile_start = center_frag_start
 
     tile_starts = []
-
-    if direction == 'rhs':
-        d = d
-    elif direction == 'lhs':
-        d = -d
-    else:
-        raise Exception("Invalid Direction")
 
     acc_angle = frag_params[0]["theta_deg"]
 
@@ -107,14 +100,13 @@ def _add_single_side_of_contour_constant_separation(
         rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params_list, frag.shape[0:2])
 
         # Different from conventional (x, y) co-ordinates, the origin of the displayed
-        # array starts in the to p left corner. x increases in the vertically down
+        # array starts in the top left corner. x increases in the vertically down
         # direction while y increases in the horizontally right direction.
 
         # In Addition, Gabor angles are specified with respect to y-axis (0 orientation) is vertical
-        # for position we need the angles to be relative to the x-axis. Hence add -90
-
-        tile_offset[0] = d * np.sin((acc_angle - 90) / 180.0 * np.pi)
-        tile_offset[1] = -d * np.cos((acc_angle - 90) / 180.0 * np.pi)
+        # for position we need the angles to be relative to the x-axis.
+        tile_offset[0] = d * np.cos(acc_angle / 180.0 * np.pi)
+        tile_offset[1] = d * np.sin(acc_angle / 180.0 * np.pi)
 
         curr_tile_start = prev_tile_start + tile_offset
         # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
@@ -132,8 +124,8 @@ def _add_single_side_of_contour_constant_separation(
             print("Next Tile @ {0} overlaps with tile at location {1}".format(
                 curr_tile_start, prev_tile_start))
 
-            tile_offset[0] += d_delta * np.sin((acc_angle - 90) / 180.0 * np.pi)
-            tile_offset[1] -= d_delta * np.cos((acc_angle - 90) / 180.0 * np.pi)
+            tile_offset[0] += d_delta * np.cos(acc_angle / 180.0 * np.pi)
+            tile_offset[1] += d_delta * np.sin(acc_angle / 180.0 * np.pi)
 
             curr_tile_start = prev_tile_start + tile_offset
             # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
@@ -192,12 +184,12 @@ def add_contour_path_constant_separation(
     c_tile_starts = [center_frag_start]
 
     img, tiles = _add_single_side_of_contour_constant_separation(
-        img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size, 'rhs',
+        img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size,
         random_frag_direction=rand_inter_frag_direction_change)
     c_tile_starts.extend(tiles)
 
     img, tiles = _add_single_side_of_contour_constant_separation(
-        img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size, 'lhs',
+        img, center_frag_start, frag, frag_params, c_len, beta, -d, d_delta, frag_size,
         random_frag_direction=rand_inter_frag_direction_change)
     c_tile_starts.extend(tiles)
 
@@ -414,8 +406,8 @@ def generate_contour_images(
             img, frag, frag_params, c_len, beta, f_tile_size[0],
             rand_inter_frag_direction_change=rand_inter_frag_direction_change)
 
-        # img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
-        #     img, frag, c_frag_starts, f_tile_size, 15, frag_params, bg_frag_relocate)
+        img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
+            img, frag, c_frag_starts, f_tile_size, 15, frag_params, bg_frag_relocate)
 
         images[img_idx, ] = img
 
@@ -616,8 +608,8 @@ class DataGenerator(keras.utils.Sequence):
 
 if __name__ == '__main__':
     plt.ion()
-    K.clear_session()
-    K.set_image_dim_ordering('th')
+    keras_backend.clear_session()
+    keras_backend.set_image_dim_ordering('th')
 
     # -----------------------------------------------------------------------------------
     #  Target Feature and its orientation
