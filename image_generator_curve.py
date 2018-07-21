@@ -380,11 +380,12 @@ def generate_contour_images(
     :param beta:
     :param f_tile_size
     :param img_size: [Default = (227, 227, 3)]
+        :param center_frag_start:
     :param bg_frag_relocate: If True, for a full tile that contains a background fragment, try to
              relocate bg fragment within the full tile to see if it can fit.
     :param rand_inter_frag_direction_change:
 
-    :return: list of file names generated
+    :return: array of generated images [n_images, r, c, ch]
     """
     if img_size is None:
         img_size = np.array([227, 227, 3])
@@ -420,7 +421,7 @@ def generate_contour_images(
         images[img_idx, ] = img
 
         # Highlight Contour tiles
-        img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], c_frag_starts)
+        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], c_frag_starts)
         #
         # # Highlight Background Fragment tiles
         # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], bg_frag_starts, edge_color=(0, 255, 0))
@@ -442,8 +443,8 @@ def generate_contour_images(
         #
         # img = alex_net_utils.highlight_tiles(img, f_tile_size, f_tile_starts, edge_color=(255, 255, 0))
         #
-        plt.figure()
-        plt.imshow(img)
+        # plt.figure()
+        # plt.imshow(img)
 
     return images
 
