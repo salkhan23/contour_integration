@@ -19,8 +19,6 @@ import alex_net_utils
 reload(contour_integration_model_3d)
 reload(alex_net_utils)
 
-np.random.seed(7)  # Set the random seed for reproducibility
-
 
 def gabor_2d((x, y), x0, y0, theta_deg, amp, sigma, lambda1, psi, gamma):
     """
