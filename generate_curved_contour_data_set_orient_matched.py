@@ -34,7 +34,7 @@ reload(alex_net_utils)
 reload(image_generator_curve)
 
 
-DATA_DIRECTORY = "./data/curved_contours/orientation_matched2"
+DATA_DIRECTORY = "./data/curved_contours/orientation_matched3"
 
 
 def generate_data_set(
@@ -345,7 +345,6 @@ def search_colored_parameter_space(
 
 
 if __name__ == '__main__':
-
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
@@ -357,8 +356,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Contour Integration Model
     # -----------------------------------------------------------------------------------
-    cont_int_model = contour_integration_model_3d.build_contour_integration_model(5)  # Index not important
-
+    cont_int_model = contour_integration_model_3d.build_contour_integration_model(5)
     feat_extract_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
 
     # -----------------------------------------------------------------------------------
@@ -369,20 +367,21 @@ if __name__ == '__main__':
 
     # Full Range
     # -----------
-    # lambda1_array = np.arange(15, 2, -0.5)
-    # psi_array = np.concatenate((np.arange(0, 8, 0.25), np.arange(-0.5, -7, -0.25)))
-    # sigma_array = [2.5, 2.60, 2.70, 2.80]  # Any larger does not fit within the 11x11 fragment size.
-    # theta_array = -90 + np.arange(0, 180, 15)  # Gabor angles are wrt y axis (0 = vertical). To get wrt to x-axis -90
+    lambda1_array = np.arange(15, 2, -0.5)
+    psi_array = np.concatenate((np.arange(0, 8, 0.25), np.arange(-0.5, -7, -0.25)))
+    sigma_array = [2.5, 2.60, 2.70, 2.80]  # Any larger does not fit within the 11x11 fragment size.
+    # Gabor angles are wrt y axis (0 = vertical). To get wrt to x-axis -90
+    theta_array = -90 + np.arange(0, 180, 15)
 
-    # Short Range [test functionality]
-    # ---------------------------------
-    lambda1_array = np.arange(15, 2, -1)
-    psi_array = [0]
-    theta_array = -90 + np.arange(0, 180, 30)
-    sigma_array = [2.5, 2.7]
+    # # Short Range [test functionality]
+    # # ---------------------------------
+    # lambda1_array = np.arange(15, 2, -1)
+    # psi_array = [0]
+    # theta_array = -90 + np.arange(0, 180, 30)
+    # sigma_array = [2.5, 2.7]
 
-    # gabor_params_dict = search_black_n_white_search_space(
-    gabor_params_dict = search_colored_parameter_space(
+    gabor_params_dict = search_black_n_white_search_space(
+    # gabor_params_dict = search_colored_parameter_space(
         feat_extract_act_cb,
         lambda1_arr=lambda1_array,
         psi_arr=psi_array,
@@ -390,12 +389,25 @@ if __name__ == '__main__':
         theta_arr=theta_array
     )
 
-    print('*' * 20)
-    print("Number of trainable kernels {0}".format(len(gabor_params_dict)))
+    print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*'*80, len(gabor_params_dict)))
     for kernel_idx in gabor_params_dict.keys():
-        print("Kernel {0}, max_activation {1}".format(kernel_idx, gabor_params_dict[kernel_idx]["max_act"]))
+        print("Kernel {0}, max_activation {1}".format(
+            kernel_idx, gabor_params_dict[kernel_idx]["max_act"]))
 
     print("Parameter Search took {}".format(datetime.datetime.now() - start_time))
+
+    # Store the best fit params
+    if not os.path.exists(DATA_DIRECTORY):
+        os.mkdir(DATA_DIRECTORY)
+
+    best_fit_params_store_file = os.path.join(DATA_DIRECTORY, 'best_fit_params.pickle')
+    with open(best_fit_params_store_file, 'wb') as handle:
+        pickle.dump(gabor_params_dict, handle)
+
+    # # Load the pickle file to make sure it its written correctly
+    # with open(best_fit_params_store_file, 'rb') as handle:
+    #     reloaded_params = pickle.load(handle)
+    #     print("length of reloaded kernels {}".format(len(reloaded_params)))
 
     # # ------------------------------------------------------------------------------
     # # Plot all Gabors found to maximally activate neurons
