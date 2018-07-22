@@ -69,10 +69,30 @@ def do_tiles_overlap(l1, r1, l2, r2):
 
 def _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size,
-        random_frag_direction=False):
+        random_frag_direction=False, base_contour='sigmoid'):
+    """
 
+    :param img:
+    :param center_frag_start:
+    :param frag:
+    :param frag_params:
+    :param c_len:
+    :param beta:
+    :param d:
+    :param d_delta:
+    :param frag_size:
+    :param random_frag_direction: [False]
+    :param base_contour: this determines the shape of the base contour. If set to sigmoid (default), the
+        generated contour (2 calls to this function with d and -d) are symmetric about the origin, if set to
+        circle, they are mirror symmetric about the vertical axis. This is for the case random_frag_direction
+        is set to false.
+    :return:
+    """
     if type(frag_params) is not list:
         frag_params = [frag_params]
+
+    if base_contour.lower() not in ['sigmoid', 'circle']:
+        raise Exception("Invalid base contour. Should be [sigmoid or circle]")
 
     tile_offset = np.zeros((2,), dtype=np.int)
     prev_tile_start = center_frag_start
@@ -95,7 +115,10 @@ def _add_single_side_of_contour_constant_separation(
         rotated_frag_params_list = copy.deepcopy(frag_params)
 
         for c_params in rotated_frag_params_list:
-            c_params["theta_deg"] = c_params["theta_deg"] + (acc_angle - frag_params[0]["theta_deg"])
+            if base_contour == 'circle' and d > 0:
+                c_params["theta_deg"] = c_params["theta_deg"] + (-acc_angle - frag_params[0]["theta_deg"])
+            else:  # sigmoid
+                c_params["theta_deg"] = c_params["theta_deg"] + (acc_angle - frag_params[0]["theta_deg"])
 
         rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params_list, frag.shape[0:2])
 
@@ -105,7 +128,10 @@ def _add_single_side_of_contour_constant_separation(
 
         # In Addition, Gabor angles are specified with respect to y-axis (0 orientation) is vertical
         # for position we need the angles to be relative to the x-axis.
-        tile_offset[0] = d * np.cos(acc_angle / 180.0 * np.pi)
+        if base_contour == 'circle' and d > 0:
+            tile_offset[0] = -d * np.cos(acc_angle / 180.0 * np.pi)
+        else:  # sigmoid
+            tile_offset[0] = d * np.cos(acc_angle / 180.0 * np.pi)
         tile_offset[1] = d * np.sin(acc_angle / 180.0 * np.pi)
 
         curr_tile_start = prev_tile_start + tile_offset
@@ -150,7 +176,8 @@ def _add_single_side_of_contour_constant_separation(
 
 
 def add_contour_path_constant_separation(
-        img, frag, frag_params, c_len, beta, d, center_frag_start=None, rand_inter_frag_direction_change=True):
+        img, frag, frag_params, c_len, beta, d, center_frag_start=None,
+        rand_inter_frag_direction_change=True, base_contour='sigmoid'):
     """
     Add curved contours to the test image as added in the ref. a constant separation (d)
     is projected from the previous tile to find the location of the next tile.
@@ -165,6 +192,7 @@ def add_contour_path_constant_separation(
     :param d:
     :param center_frag_start:
     :param rand_inter_frag_direction_change:
+    :param base_contour:
     :return:
     """
     frag_size = np.array(frag.shape[0:2])
@@ -187,12 +215,12 @@ def add_contour_path_constant_separation(
 
     img, tiles = _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size,
-        random_frag_direction=rand_inter_frag_direction_change)
+        random_frag_direction=rand_inter_frag_direction_change, base_contour=base_contour)
     c_tile_starts.extend(tiles)
 
     img, tiles = _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, -d, d_delta, frag_size,
-        random_frag_direction=rand_inter_frag_direction_change)
+        random_frag_direction=rand_inter_frag_direction_change, base_contour=base_contour)
     c_tile_starts.extend(tiles)
 
     # ---------------------------
@@ -365,13 +393,12 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
 def generate_contour_images(
         n_images, frag, frag_params, c_len, beta, f_tile_size, img_size=None, bg_frag_relocate=True,
-        rand_inter_frag_direction_change=True, center_frag_start=None):
+        rand_inter_frag_direction_change=True, center_frag_start=None, base_contour='sigmoid'):
     """
     Generate n_images with the specified fragment parameters.
 
     In the Ref, a visible stimulus of a small size is placed inside a large tile
     Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
-
 
     :param n_images:
     :param frag:
@@ -384,6 +411,7 @@ def generate_contour_images(
     :param bg_frag_relocate: If True, for a full tile that contains a background fragment, try to
              relocate bg fragment within the full tile to see if it can fit.
     :param rand_inter_frag_direction_change:
+    :param base_contour:
 
     :return: array of generated images [n_images, r, c, ch]
     """
@@ -413,7 +441,9 @@ def generate_contour_images(
         img, c_frag_starts = add_contour_path_constant_separation(
             img, frag, frag_params, c_len, beta, f_tile_size[0],
             center_frag_start=center_frag_start,
-            rand_inter_frag_direction_change=rand_inter_frag_direction_change)
+            rand_inter_frag_direction_change=rand_inter_frag_direction_change,
+            base_contour=base_contour
+        )
 
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
             img, frag, c_frag_starts, f_tile_size, 15, frag_params, bg_frag_relocate)
