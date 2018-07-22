@@ -6,11 +6,8 @@
 # -------------------------------------------------------------------------------------------------
 import numpy as np
 import matplotlib.pyplot as plt
-import os
 
-import keras.backend as K
-import keras
-from keras.preprocessing import image as image_preprocessing
+import keras.backend as keras_backend
 
 import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
 import learn_cont_int_kernel_3d_model
@@ -28,181 +25,187 @@ reload(image_generator_curve)
 reload(gabor_fits)
 reload(alex_net_utils)
 
-DATA_DIR = './data/curved_contours/orientation_matched'
-MODEL_STORE_DIR = './trained_models/ContourIntegrationModel3d/orientation_matched'
 
-LEARNT_WEIGHTS = os.path.join(MODEL_STORE_DIR, "contour_integration_weights.hf")
-LEARNT_SUMMARY = os.path.join(MODEL_STORE_DIR, "summary.txt")
+def plot_max_contour_enhancement(img, feat_extract_cb, cont_int_cb):
+    """
+    Plot the maximum contour enhancement (Across all feature maps) @ each position
+    :param img:
+    :param feat_extract_cb:
+    :param cont_int_cb:
+    :return:
+    """
+    l1_act, l2_act = alex_net_utils.get_l1_and_l2_activations(
+        img,
+        feat_extract_cb,
+        cont_int_cb
+    )
+
+    diff = l2_act - l1_act
+    max_diff = np.max(diff, axis=1)
+
+    plt.figure()
+    plt.imshow(max_diff[0, ], cmap='seismic')
+    plt.colorbar(orientation='horizontal')
+    plt.title("Maximum contour enhancement @ each (x,y) ")
+
+
+def plot_contour_enhancement_individual_kernels(img, feat_extract_cb, cont_int_cb, filt_idx_arr):
+    """
+
+    :param img:
+    :param feat_extract_cb:
+    :param cont_int_cb:
+    :param filt_idx_arr:
+    :return:
+    """
+    for f_idx in filt_idx_arr:
+        alex_net_utils.plot_l1_and_l2_activations(
+            img,
+            feat_extract_cb,
+            cont_int_cb,
+            f_idx
+        )
+        plt.suptitle("Kernel {}".format(f_idx))
+
 
 if __name__ == '__main__':
-
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
     plt.ion()
-    K.clear_session()
-    K.set_image_dim_ordering('th')
+    keras_backend.clear_session()
+    keras_backend.set_image_dim_ordering('th')
+
+    # learnt_weights_file = \
+    #     "./trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf"
+
+    learnt_weights_file = \
+        "./trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf"
 
     # -----------------------------------------------------------------------------------
     # Build Contour Integration Model
     # -----------------------------------------------------------------------------------
-    tgt_kernel_idx = 5;
-    cont_int_model = contour_integration_model_3d.build_contour_integration_model(tgt_kernel_idx)
-    cont_int_model.summary()
+    cont_int_model = contour_integration_model_3d.build_contour_integration_model(5)
+    # cont_int_model.summary()
 
     # load pretrained weights
-    cont_int_model.load_weights(LEARNT_WEIGHTS, by_name=True)
+    cont_int_model.load_weights(learnt_weights_file, by_name=True)
 
-    # Print the list of kernels the model has been trained with
-    with open(LEARNT_SUMMARY, 'r') as fid:
-        read_in = fid.read()
-        # print("previously trained Kernels @ indexes")
-        # print(read_in)
+    training_summary = learn_cont_int_kernel_3d_model.get_weights_training_summary_file(learnt_weights_file)
+    trained_kernels = learn_cont_int_kernel_3d_model.get_prev_learnt_kernels(training_summary)
+    print("Previously learnt kernels \n {}".format(trained_kernels))
 
-    prev_learnt_kernels = set(read_in.split())
-    prev_learnt_kernels = [int(idx) for idx in prev_learnt_kernels]
-    print prev_learnt_kernels
+    # Callbacks
+    feat_extract_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
+    cont_int_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 2)
 
-    # -----------------------------------------------------------------------------------
-    # Verify kernels have actually been learnt
-    # -----------------------------------------------------------------------------------
-    learnt_weights, _ = cont_int_model.layers[2].get_weights()
-
-    # # Verify the Kernels are learnt, by displaying them
-    # for learnt_kernel_idx in prev_learnt_kernels:
+    # # -----------------------------------------------------------------------------------
+    # #  Plot All learnt kernels
+    # # -----------------------------------------------------------------------------------
+    # learnt_weights, _ = cont_int_model.layers[2].get_weights()
     #
-    #     linear_contour_training.plot_contour_integration_weights_in_channels(
-    #         learnt_weights, learnt_kernel_idx)
-    #
-    #     plt.title("Weights for Contour Integration kernel at index {}".format(learnt_kernel_idx))
-
-    # -----------------------------------------------------------------------------------
-    # Sample Image output
-    # -----------------------------------------------------------------------------------
-    # c_len = 9
-    # beta = 15
-    # img_idx = 15
-    # filt_idx = 22
-    # frag_orient = '75'
-    #
-    # sample_file = os.path.join(
-    #     DATA_DIR, 'test', 'filter_{}'.format(filt_idx), 'c_len_{}'.format(c_len), 'beta_{}'.format(beta),
-    #     "c_len_{0}_beta_{1}_rot_{2}__{3}.png".format(c_len, beta, frag_orient, img_idx)
-    # )
-    #
-    # for filt_idx in prev_learnt_kernels:
-    #     field_1993_routines.plot_activations(
+    # for kernels_idx in trained_kernels:
+    #     learn_cont_int_kernel_3d_model.plot_start_n_learnt_contour_integration_kernels(
     #         cont_int_model,
-    #         sample_file,
-    #         filt_idx)
-    #     plt.suptitle("Kernel {}".format(filt_idx))
+    #         kernels_idx
+    #     )
 
-    # Base parameters of contour Fragment
+    # -----------------------------------------------------------------------------------
+    #  Base Gabor Fragment
+    # -----------------------------------------------------------------------------------
+    frag_orient = 90
     gabor_params = {
         'x0': 0,
         'y0': 0,
-        'theta_deg': 0,
+        'theta_deg': frag_orient,
         'amp': 1,
-        'sigma': 2.5,
-        'lambda1': 8,
+        'sigma': 2.8,
+        'lambda1': 12,
         'psi': 0,
         'gamma': 1
     }
+    fragment = gabor_fits.get_gabor_fragment(gabor_params, (11, 11))
 
-    fragment = gabor_fits.get_gabor_fragment(gabor_params, np.array((11, 11)))
+    # plt.figure()
+    # plt.imshow(fragment)
+    # plt.title("Contour Fragment")
+
+    # ----------------------------------------------------------------------------------
+    # Curved Contour @ center position
+    # ----------------------------------------------------------------------------------
+    c_len = 9
+    beta = 0
 
     img_arr = image_generator_curve.generate_contour_images(
         n_images=1,
         frag=fragment,
         frag_params=gabor_params,
-        c_len=12,
-        beta=30,
+        c_len=c_len,
+        beta=beta,
         f_tile_size=np.array((17, 17)),
-        # inter_frag_rand_rot_direction=False
+        rand_inter_frag_direction_change=False
     )
 
-    image = img_arr[0, ]
+    test_image = img_arr[0, ] / 255.0
+    plt.imshow(test_image)
+    plt.title("Curved Contour @ Center")
 
-    # Callbacks to get activations of feature extract and contour integration layers
-    feat_extract_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
-    cont_int_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 2)
+    plot_max_contour_enhancement(test_image, feat_extract_act_cb, cont_int_act_cb)
+    # plot_contour_enhancement_individual_kernels(
+    #     test_image, feat_extract_act_cb, cont_int_act_cb, trained_kernels)
 
-    # PLot individual Filters
-    # --------------------------------------------------
-    # for filt_idx in prev_learnt_kernels:
-    #     alex_net_utils.plot_l1_and_l2_activations(
-    #         image / 255.0, feat_extract_act_cb, cont_int_act_cb, filt_idx)
-    #     plt.suptitle("Kernel {}".format(filt_idx))
+    # ----------------------------------------------------------------------------------
+    # Curved Contour @ different position
+    # ----------------------------------------------------------------------------------
+    c_len = 12
+    beta = 0
 
-    # # Plot the maximum at each location
-    # # ---------------------------------
-    # l1_act, l2_act = alex_net_utils.get_l1_and_l2_activations(
-    #     image / 255.0,
-    #     feat_extract_act_cb,
-    #     cont_int_act_cb)
-    #
-    # diff = l2_act - l1_act
-    #
-    # z = np.max(diff, axis=1)
-    #
-    # plt.figure()
-    # plt.imshow(image/255.0)
-    #
-    # plt.figure()
-    # plt.imshow(z[0, ], cmap='seismic')
-    # plt.colorbar(orientation='horizontal')
-    # plt.title("max across combined")
+    img_arr = image_generator_curve.generate_contour_images(
+        n_images=1,
+        frag=fragment,
+        frag_params=gabor_params,
+        c_len=c_len,
+        beta=beta,
+        f_tile_size=np.array((17, 17)),
+        center_frag_start=np.array([180, 120]),
+        rand_inter_frag_direction_change=True
+    )
 
-    # ---------------------------------------
-    square_image = os.path.join('./data/sample_images/', 'square.png')
-    square_image = os.path.join('./data/sample_images/', 'irregular_shape.jpg')
+    test_image = img_arr[0, ] / 255.0
+    plt.imshow(test_image)
+    plt.title("Curved Contour at Random Location")
 
-    img = image_preprocessing.load_img(square_image, target_size=(227, 227))
+    plot_max_contour_enhancement(test_image, feat_extract_act_cb, cont_int_act_cb)
+    # plot_contour_enhancement_individual_kernels(
+    #     test_image, feat_extract_act_cb, cont_int_act_cb, trained_kernels)
 
-    in_x = image_preprocessing.img_to_array(img)
+    # ----------------------------------------------------------------------------------
+    # Circle @ different position
+    # ----------------------------------------------------------------------------------
+    c_len = 21
+    beta = 15
 
-    plt.figure()
-    plt.imshow(img)
+    img_arr = image_generator_curve.generate_contour_images(
+        n_images=1,
+        frag=fragment,
+        frag_params=gabor_params,
+        c_len=c_len,
+        beta=beta,
+        f_tile_size=np.array((17, 17)),
+        center_frag_start=np.array([10, 75]),
+        rand_inter_frag_direction_change=False,
+        base_contour='circle'
+    )
 
-    in_x = np.transpose(in_x, axes=(1, 2, 0))
+    test_image = img_arr[0, ] / 255.0
+    plt.imshow(test_image)
+    plt.title("Curved Contour at Random Location")
 
-    l1_act, l2_act = alex_net_utils.get_l1_and_l2_activations(
-        in_x / 255.0,
-        feat_extract_act_cb,
-        cont_int_act_cb)
+    plot_max_contour_enhancement(test_image, feat_extract_act_cb, cont_int_act_cb)
+    # plot_contour_enhancement_individual_kernels(
+    #     test_image, feat_extract_act_cb, cont_int_act_cb, trained_kernels)
 
-    diff = l2_act - l1_act
-
-    diff_1 = diff[:, (22,48,66,73,78), :, :]
-
-    z = np.max(diff, axis=1)
-
-    plt.figure()
-    plt.imshow(image/255.0)
-
-    plt.figure()
-    plt.imshow(z[0, ], cmap='seismic')
-    plt.colorbar(orientation='horizontal')
-    plt.title("max across combined")
-
-    l2_max = l2_act.max()
-
-    f, ax_arr = plt.subplots(1, 2)
-    ax_arr[0].imshow(np.max(l1_act, axis=1)[0, :], vmin=-l2_max, vmax=l2_max)
-    ax_arr[0].set_title('Feature extract (max across channels)')
-
-    ax_arr[1].imshow(np.max(l2_act, axis=1)[0, :], vmin=-l2_max, vmax=l2_max)
-    ax_arr[1].set_title('Contour Integration')
-
-
-
-
-
-
-
-
-
-
-
-
-
+    # ----------------------------------------------------------------------------------
+    # TODO: Add linear contours Generated the old way
+    # ----------------------------------------------------------------------------------
+    raw_input("Press any key to exit.")
