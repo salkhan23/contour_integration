@@ -70,7 +70,7 @@ def get_l1_and_l2_activations(img, l1_act_cb, l2_act_cb):
     return l1_act, l2_act
 
 
-def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx):
+def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx, show_img=True):
     """
     Plot 2 figures:
     [1] the test image,
@@ -80,12 +80,14 @@ def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx):
     :param l1_act_cb:
     :param l2_act_cb:
     :param tgt_filt_idx:
+    :param show_img:
 
     :return: Handles of the two images created
     """
-
-    f1 = plt.figure()
-    plt.imshow(img)
+    f1 = None
+    if show_img:
+        f1 = plt.figure()
+        plt.imshow(img)
 
     l1_act, l2_act = get_l1_and_l2_activations(img, l1_act_cb, l2_act_cb)
 

@@ -63,7 +63,8 @@ def plot_contour_enhancement_individual_kernels(img, feat_extract_cb, cont_int_c
             img,
             feat_extract_cb,
             cont_int_cb,
-            f_idx
+            f_idx,
+            show_img=False,
         )
         plt.suptitle("Kernel {}".format(f_idx))
 
@@ -76,11 +77,11 @@ if __name__ == '__main__':
     keras_backend.clear_session()
     keras_backend.set_image_dim_ordering('th')
 
-    # learnt_weights_file = \
-    #     "./trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf"
-
     learnt_weights_file = \
-        "./trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf"
+        "./trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf"
+
+    # learnt_weights_file = \
+    #     "./trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf"
 
     # -----------------------------------------------------------------------------------
     # Build Contour Integration Model
@@ -113,7 +114,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Base Gabor Fragment
     # -----------------------------------------------------------------------------------
-    frag_orient = 90
+    frag_orient = 0
     gabor_params = {
         'x0': 0,
         'y0': 0,
@@ -151,8 +152,8 @@ if __name__ == '__main__':
     plt.title("Curved Contour @ Center")
 
     plot_max_contour_enhancement(test_image, feat_extract_act_cb, cont_int_act_cb)
-    # plot_contour_enhancement_individual_kernels(
-    #     test_image, feat_extract_act_cb, cont_int_act_cb, trained_kernels)
+    plot_contour_enhancement_individual_kernels(
+        test_image, feat_extract_act_cb, cont_int_act_cb, trained_kernels)
 
     # ----------------------------------------------------------------------------------
     # Curved Contour @ different position
