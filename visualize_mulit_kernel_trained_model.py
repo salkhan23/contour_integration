@@ -148,6 +148,7 @@ if __name__ == '__main__':
     )
 
     test_image = img_arr[0, ] / 255.0
+    plt.figure()
     plt.imshow(test_image)
     plt.title("Curved Contour @ Center")
 
@@ -173,6 +174,7 @@ if __name__ == '__main__':
     )
 
     test_image = img_arr[0, ] / 255.0
+    plt.figure()
     plt.imshow(test_image)
     plt.title("Curved Contour at Random Location")
 
@@ -199,6 +201,7 @@ if __name__ == '__main__':
     )
 
     test_image = img_arr[0, ] / 255.0
+    plt.figure()
     plt.imshow(test_image)
     plt.title("Curved Contour at Random Location")
 
