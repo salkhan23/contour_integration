@@ -185,7 +185,7 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, n_runs=100, 
     if beta not in [0, 15, 30, 45, 60]:
         raise Exception("Invalid inter-fragment rotation {}. Allowed [0, 15, 30, 45, 60]".format(beta))
 
-    print("Model Contour Gain vs contour length"
+    print("Model Contour Gain vs contour length "
           "for inter-fragment rotation {0}, frag orientation {1}".format(beta, frag_orient))
 
     # --------------------------------------
