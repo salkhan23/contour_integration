@@ -300,7 +300,7 @@ if __name__ == '__main__':
     start_time = datetime.now()
 
     batch_size = 32
-    num_epochs = 200
+    num_epochs = 20
 
     save_weights = True
     prev_train_weights = None
@@ -509,14 +509,10 @@ if __name__ == '__main__':
         test_image = load_img(os.path.join(test_image_dir, image_file))
         test_image = np.array(test_image) / 255.0
 
-        plt.figure()
-        plt.imshow(test_image)
-        plt.title("Sample Test image")
-
         alex_net_utils.plot_l1_and_l2_activations(
             test_image,
             feat_extract_callback,
-            cont_int_model,
+            cont_int_callback,
             target_kernel_idx
         )
         plt.suptitle("Contour Integration kernel @ index {}".format(target_kernel_idx))
