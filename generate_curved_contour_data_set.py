@@ -25,7 +25,7 @@ reload(generate_contour_images)
 reload(contour_integration_model_3d)
 reload(alex_net_utils)
 
-DATA_DIRECTORY = "./data/curved_contours/filt_matched_frag"
+DATA_DIRECTORY = "./data/curved_contours/test"
 
 
 if __name__ == '__main__':
@@ -102,7 +102,8 @@ if __name__ == '__main__':
     print("Most active Kernel @ {}, Activation Value {}".format(
         max_active_kernel, max_act_value))
 
-    raw_input("Continue?")
+    # raw_input("Continue?")
+
     # ------------------------------------------------------------------------------------
     # Generate Images
     # ------------------------------------------------------------------------------------
