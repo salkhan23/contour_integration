@@ -80,8 +80,8 @@ def save_learnt_weights(model, tgt_filt_idx, w_store_file):
     # print("Saving Learnt Weights @ {}".format(w_store_file))
 
     basedir = os.path.dirname(w_store_file)
-    if not os.path.exists(os.path.dirname(basedir)):
-        os.makedirs(os.path.dirname(basedir))
+    if not os.path.exists(basedir):
+        os.makedirs(basedir)
 
     model.save_weights(w_store_file)
 
@@ -419,79 +419,79 @@ if __name__ == '__main__':
             start_weights,
         )
 
-        # # -------------------------------------------------------------------------------
-        # # Todo: Should be moved to another File
-        # train_data_dict_of_dicts, test_data_dict_of_dicts = _get_train_n_test_dictionary_of_dictionaries(
-        #     target_kernel_idx,
-        #     data_directory,
-        # )
-        # # get list of considered orientations
-        # list_of_data_sets = train_data_dict_of_dicts.keys()
-        #
-        # if 'rot' in list_of_data_sets[0]:
-        #     fragment_orientation_arr = [np.int(item.split("rot_")[1]) for item in list_of_data_sets]
-        #     fragment_orientation_arr = set(fragment_orientation_arr)
-        # else:
-        #     fragment_orientation_arr = [None]
-        #
-        # # -------------------------------------------------------------------------------
-        # #  Fields - 1993 - Experiment 1 - Curvature vs Gain
-        # # -------------------------------------------------------------------------------
-        # print("Checking gain vs curvature performance ...")
-        # for fragment_orientation in fragment_orientation_arr:
-        #     fig, ax = plt.subplots()
-        #
-        #     field_1993_routines.contour_gain_vs_inter_fragment_rotation(
-        #         cont_int_model,
-        #         test_data_dict_of_dicts,
-        #         c_len=9,
-        #         frag_orient=fragment_orientation,
-        #         n_runs=100,
-        #         axis=ax
-        #     )
-        #
-        #     field_1993_routines.contour_gain_vs_inter_fragment_rotation(
-        #         cont_int_model,
-        #         test_data_dict_of_dicts,
-        #         c_len=7,
-        #         frag_orient=fragment_orientation,
-        #         n_runs=100,
-        #         axis=ax
-        #     )
-        #
-        #     fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
-        #         target_kernel_idx, fragment_orientation))
-        #
-        # # -------------------------------------------------------------------------------
-        # # Enhancement gain vs contour length
-        # # -------------------------------------------------------------------------------
-        # print("Checking gain vs contour length performance ...")
-        # for fragment_orientation in fragment_orientation_arr:
-        #
-        #     fig, ax = plt.subplots()
-        #
-        #     # Linear contours
-        #     field_1993_routines.contour_gain_vs_length(
-        #         cont_int_model,
-        #         test_data_dict_of_dicts,
-        #         beta=0,
-        #         frag_orient=fragment_orientation,
-        #         n_runs=100,
-        #         axis=ax
-        #     )
-        #
-        #     # For inter-fragment rotation of 15 degrees
-        #     field_1993_routines.contour_gain_vs_length(
-        #         cont_int_model,
-        #         test_data_dict_of_dicts,
-        #         beta=15,
-        #         frag_orient=fragment_orientation,
-        #         n_runs=100,
-        #         axis=ax
-        #     )
-        #
-        #     fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
-        #         target_kernel_idx, fragment_orientation))
+        # -------------------------------------------------------------------------------
+        # Todo: Should be moved to another File
+        train_data_dict_of_dicts, test_data_dict_of_dicts = _get_train_n_test_dictionary_of_dictionaries(
+            target_kernel_idx,
+            data_directory,
+        )
+        # get list of considered orientations
+        list_of_data_sets = train_data_dict_of_dicts.keys()
+
+        if 'rot' in list_of_data_sets[0]:
+            fragment_orientation_arr = [np.int(item.split("rot_")[1]) for item in list_of_data_sets]
+            fragment_orientation_arr = set(fragment_orientation_arr)
+        else:
+            fragment_orientation_arr = [None]
+
+        # -------------------------------------------------------------------------------
+        #  Fields - 1993 - Experiment 1 - Curvature vs Gain
+        # -------------------------------------------------------------------------------
+        print("Checking gain vs curvature performance ...")
+        for fragment_orientation in fragment_orientation_arr:
+            fig, ax = plt.subplots()
+
+            field_1993_routines.contour_gain_vs_inter_fragment_rotation(
+                cont_int_model,
+                test_data_dict_of_dicts,
+                c_len=9,
+                frag_orient=fragment_orientation,
+                n_runs=100,
+                axis=ax
+            )
+
+            field_1993_routines.contour_gain_vs_inter_fragment_rotation(
+                cont_int_model,
+                test_data_dict_of_dicts,
+                c_len=7,
+                frag_orient=fragment_orientation,
+                n_runs=100,
+                axis=ax
+            )
+
+            fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
+                target_kernel_idx, fragment_orientation))
+
+        # -------------------------------------------------------------------------------
+        # Enhancement gain vs contour length
+        # -------------------------------------------------------------------------------
+        print("Checking gain vs contour length performance ...")
+        for fragment_orientation in fragment_orientation_arr:
+
+            fig, ax = plt.subplots()
+
+            # Linear contours
+            field_1993_routines.contour_gain_vs_length(
+                cont_int_model,
+                test_data_dict_of_dicts,
+                beta=0,
+                frag_orient=fragment_orientation,
+                n_runs=100,
+                axis=ax
+            )
+
+            # For inter-fragment rotation of 15 degrees
+            field_1993_routines.contour_gain_vs_length(
+                cont_int_model,
+                test_data_dict_of_dicts,
+                beta=15,
+                frag_orient=fragment_orientation,
+                n_runs=100,
+                axis=ax
+            )
+
+            fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
+                target_kernel_idx, fragment_orientation))
 
         # -------------------------------------------------------------------------------
         # Debug - Plot the performance on a test image
