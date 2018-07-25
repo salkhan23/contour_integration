@@ -171,6 +171,11 @@ def train_contour_integration_kernel(
     print("Building data generators...")
 
     train_data_dict, test_data_dict = get_train_n_test_data_keys(tgt_filt_idx, data_dir)
+
+    if b_size > len(train_data_dict):
+        print("WARN: Specified batch size is > than number of actual data")
+        b_size = len(train_data_dict)
+
     train_image_generator = image_generator_curve.DataGenerator(
         test_data_dict,
         batch_size=b_size,
@@ -322,7 +327,8 @@ if __name__ == '__main__':
 
     target_kernel_idx_arr = \
         [5]
-    data_directory = './data/curved_contours/orientation_matched2'
+    # data_directory = './data/curved_contours/orientation_matched2'
+    data_directory = './data/curved_contours/test'
     weights_store_file = \
         './trained_models/ContourIntegrationModel3d/filt_matched_frag_new/contour_integration_weights_2.hf'
     prev_train_weights = \
