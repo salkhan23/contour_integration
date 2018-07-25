@@ -496,13 +496,13 @@ if __name__ == '__main__':
         # -------------------------------------------------------------------------------
         # Debug - Plot the performance on a test image
         # -------------------------------------------------------------------------------
-        image_idx = 0,
-        c_len = 9
-        beta = 15
+        image_idx = 0
+        contour_len = 9
+        contour_rotation = 15
 
         test_image_dir = os.path.join(
             data_directory,
-            'test/filter_{0}/c_len_{1}/beta_{2}'.format(target_kernel_idx, c_len, beta)
+            'test/filter_{0}/c_len_{1}/beta_{2}'.format(target_kernel_idx, contour_len, contour_rotation)
         )
 
         image_file = os.listdir(test_image_dir)[image_idx]
@@ -535,4 +535,3 @@ if __name__ == '__main__':
 
     # At end of Training, clear all contour integration kernels that are not trained
     clear_unlearnt_contour_integration_kernels(cont_int_model, trained_kernel_idxes)
-
