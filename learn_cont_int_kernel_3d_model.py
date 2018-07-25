@@ -15,6 +15,7 @@ from datetime import datetime
 
 import keras.backend as keras_backend
 from keras.callbacks import TensorBoard, ModelCheckpoint
+from keras.preprocessing.image import load_img
 
 import alex_net_utils
 import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
@@ -198,7 +199,7 @@ def train_contour_integration_kernel(
         generator=train_image_generator,
         epochs=n_epochs,
         steps_per_epoch=steps_per_epoch,
-        verbose=0,
+        verbose=1,
         validation_data=(test_images, test_labels),
         validation_steps=1,
         # max_q_size=1,
@@ -311,13 +312,21 @@ if __name__ == '__main__':
     # prev_train_weights =\
     #     './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
 
+    # target_kernel_idx_arr = \
+    #     [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 62, 64, 65, 66, 68, 72, 73, 74, 76, 77, 79, 80, 82, 85]
+    # data_directory = './data/curved_contours/orientation_matched2'
+    # weights_store_file = \
+    #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights_2.hf'
+    # prev_train_weights = \
+    #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
+
     target_kernel_idx_arr = \
-        [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 62, 64, 65, 66, 68, 72, 73, 74, 76, 77, 79, 80, 82, 85]
+        [5]
     data_directory = './data/curved_contours/orientation_matched2'
     weights_store_file = \
-        './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights_2.hf'
+        './trained_models/ContourIntegrationModel3d/filt_matched_frag_new/contour_integration_weights_2.hf'
     prev_train_weights = \
-        './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
+        './trained_models/ContourIntegrationModel3d/filt_matched_frag_new/contour_integration_weights.hf'
 
     # -----------------------------------------------------------------------------------
     # Build
@@ -335,6 +344,10 @@ if __name__ == '__main__':
         prev_trained_kernel_idx_arr = load_pretrained_weights(cont_int_model, prev_train_weights)
 
     start_weights, _ = cont_int_model.layers[2].get_weights()
+
+    # Callbacks
+    feat_extract_callback = alex_net_utils.get_activation_cb(cont_int_model, 1)
+    cont_int_callback = alex_net_utils.get_activation_cb(cont_int_model, 2)
 
     # -------------------------------------------------------------------------------
     # Train
@@ -480,6 +493,34 @@ if __name__ == '__main__':
         #     fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
         #         target_kernel_idx, fragment_orientation))
 
+        # -------------------------------------------------------------------------------
+        # Debug - Plot the performance on a test image
+        # -------------------------------------------------------------------------------
+        image_idx = 0,
+        c_len = 9
+        beta = 15
+
+        test_image_dir = os.path.join(
+            data_directory,
+            'test/filter_{0}/c_len_{1}/beta_{2}'.format(target_kernel_idx, c_len, beta)
+        )
+
+        image_file = os.listdir(test_image_dir)[image_idx]
+        test_image = load_img(os.path.join(test_image_dir, image_file))
+        test_image = np.array(test_image) / 255.0
+
+        plt.figure()
+        plt.imshow(test_image)
+        plt.title("Sample Test image")
+
+        alex_net_utils.plot_l1_and_l2_activations(
+            test_image,
+            feat_extract_callback,
+            cont_int_model,
+            target_kernel_idx
+        )
+        plt.suptitle("Contour Integration kernel @ index {}".format(target_kernel_idx))
+
     # -----------------------------------------------------------------------------------
     #  End
     # -----------------------------------------------------------------------------------
@@ -494,3 +535,4 @@ if __name__ == '__main__':
 
     # At end of Training, clear all contour integration kernels that are not trained
     clear_unlearnt_contour_integration_kernels(cont_int_model, trained_kernel_idxes)
+
