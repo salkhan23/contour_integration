@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import datetime
+import pickle
 
 import keras.backend as keras_backend
 
@@ -25,8 +26,7 @@ reload(generate_contour_images)
 reload(contour_integration_model_3d)
 reload(alex_net_utils)
 
-DATA_DIRECTORY = "./data/curved_contours/test"
-
+DATA_DIRECTORY = "./data/curved_contours/filter_matched"
 
 if __name__ == '__main__':
     plt.ion()
@@ -101,6 +101,18 @@ if __name__ == '__main__':
         fragment, feat_extract_callback)
     print("Most active Kernel @ {}, Activation Value {}".format(
         max_active_kernel, max_act_value))
+
+    # Store the best fit Params
+    best_fit_params_store_file = os.path.join(DATA_DIRECTORY, 'best_fit_params.pickle')
+    if os.path.exists(best_fit_params_store_file):
+        with open(best_fit_params_store_file, 'rb') as f_id:
+            best_fit_params_dict = pickle.load(f_id)
+    else:
+        best_fit_params_dict = {}
+
+    with open(best_fit_params_store_file, 'wb') as f_id:
+        best_fit_params_dict[tgt_filter_idx] = gabor_params_dict_list
+        pickle.dump(best_fit_params_dict, f_id)
 
     # raw_input("Continue?")
 
