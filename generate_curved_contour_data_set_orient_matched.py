@@ -401,8 +401,8 @@ if __name__ == '__main__':
         os.mkdir(DATA_DIRECTORY)
 
     best_fit_params_store_file = os.path.join(DATA_DIRECTORY, 'best_fit_params.pickle')
-    with open(best_fit_params_store_file, 'wb') as handle:
-        pickle.dump(gabor_params_dict, handle)
+    with open(best_fit_params_store_file, 'wb') as f_id:
+        pickle.dump(gabor_params_dict, f_id)
 
     # # Load the pickle file to make sure it its written correctly
     # with open(best_fit_params_store_file, 'rb') as handle:
