@@ -8,7 +8,6 @@
 # -------------------------------------------------------------------------------------------------
 import numpy as np
 import matplotlib.pyplot as plt
-import os
 import copy
 
 import keras.backend as keras_backend
@@ -359,7 +358,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
     removed_bg_frag_starts = np.array(removed_bg_frag_starts)
 
-    if removed_bg_frag_starts is not None:
+    if removed_bg_frag_starts.size > 0:
         removed_bg_frag_starts = np.squeeze(removed_bg_frag_starts, axis=1)
 
     relocate_bg_frag_starts = np.array(relocate_bg_frag_starts)
@@ -438,12 +437,16 @@ def generate_contour_images(
 
         img = np.ones(img_size, dtype=np.uint8) * bg
 
-        img, c_frag_starts = add_contour_path_constant_separation(
-            img, frag, frag_params, c_len, beta, f_tile_size[0],
-            center_frag_start=center_frag_start,
-            rand_inter_frag_direction_change=rand_inter_frag_direction_change,
-            base_contour=base_contour
-        )
+        c_frag_starts = np.array([])
+        if (c_len > 1) or (c_len == 1 and beta == 0):
+            img, c_frag_starts = add_contour_path_constant_separation(
+                img, frag, frag_params, c_len, beta, f_tile_size[0],
+                center_frag_start=center_frag_start,
+                rand_inter_frag_direction_change=rand_inter_frag_direction_change,
+                base_contour=base_contour
+            )
+        # If c_len == 1 and beta != 0, only background fragments are added. In this case the enhancement gain
+        # should be 1 (no enhancement) and serves as example when not to enhance the fragment
 
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
             img, frag, c_frag_starts, f_tile_size, 15, frag_params, bg_frag_relocate)
