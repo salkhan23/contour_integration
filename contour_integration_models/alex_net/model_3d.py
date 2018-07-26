@@ -57,7 +57,7 @@ class ContourGainCalculatorLayer(Layer):
         center_neuron_loc = (r >> 1, c >> 1)
 
         gain = contour_act[:, self.tgt_filt_idx, center_neuron_loc[0], center_neuron_loc[1]] / \
-            (feature_act[:, self.tgt_filt_idx, center_neuron_loc[0], center_neuron_loc[1]] + 1e-8)
+            (feature_act[:, self.tgt_filt_idx, center_neuron_loc[0], center_neuron_loc[1]] + 1e-4)
 
         return K.expand_dims(gain, axis=-1)
 
