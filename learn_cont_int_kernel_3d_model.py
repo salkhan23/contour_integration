@@ -305,7 +305,7 @@ if __name__ == '__main__':
     start_time = datetime.now()
 
     batch_size = 32
-    num_epochs = 20
+    num_epochs = 200
 
     save_weights = True
     prev_train_weights = None
@@ -327,12 +327,11 @@ if __name__ == '__main__':
 
     target_kernel_idx_arr = \
         [5]
-    # data_directory = './data/curved_contours/orientation_matched2'
-    data_directory = './data/curved_contours/test'
+    data_directory = './data/curved_contours/filter_matched'
     weights_store_file = \
-        './trained_models/ContourIntegrationModel3d/filt_matched_frag_new/contour_integration_weights_2.hf'
+        './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights_2.hf'
     prev_train_weights = \
-        './trained_models/ContourIntegrationModel3d/filt_matched_frag_new/contour_integration_weights.hf'
+        './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
 
     # -----------------------------------------------------------------------------------
     # Build
