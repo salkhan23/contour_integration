@@ -521,7 +521,7 @@ def find_most_active_l1_kernel_index(frag, l1_act_cb, plot=True):
         f = plt.figure()
         f.add_subplot(1, 2, 1)
 
-        plt.imshow(test_image)
+        plt.imshow(frag)
         plt.title('Input')
         f.add_subplot(1, 2, 2)
         plt.plot(tgt_l1_act)
