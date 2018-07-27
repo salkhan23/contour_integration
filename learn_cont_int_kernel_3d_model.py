@@ -506,7 +506,6 @@ if __name__ == '__main__':
         contour_len = 9
         contour_rotation = 15
 
-        data_directory = "./data/curved_contours/no_shift_cLen0_extended_data"
         test_image_dir = os.path.join(
             data_directory,
             'test/filter_{0}/c_len_{1}/beta_{2}'.format(target_kernel_idx, contour_len, contour_rotation)
