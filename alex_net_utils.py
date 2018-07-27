@@ -470,7 +470,7 @@ def highlight_tiles(in_img, tile_shape, insert_loc_arr, edge_color=(255, 0, 0)):
     return out_img
 
 
-def find_most_active_l1_kernel_index(frag, l1_act_cb, plot=True):
+def find_most_active_l1_kernel_index(frag, l1_act_cb, plot=True, tgt_filt=None):
     """
     Find the index of L1 conv layer kernel that is most responsive to the given fragment
 
@@ -480,6 +480,7 @@ def find_most_active_l1_kernel_index(frag, l1_act_cb, plot=True):
     :param frag: Input fragment
     :param l1_act_cb:
     :param plot: A plot of all activation to the given fragment. [Default=True]
+    :param tgt_filt=None
 
     :return: index of most responsive kernel
     """
@@ -518,16 +519,28 @@ def find_most_active_l1_kernel_index(frag, l1_act_cb, plot=True):
     # print(title)
 
     if plot:
-        f = plt.figure()
-        f.add_subplot(1, 2, 1)
+        plt.figure()
+        ax = plt.subplot2grid((2, 2), (0, 0))
+        if tgt_filt is not None:
+            disp_filt = (tgt_filt - tgt_filt.min()) / (tgt_filt.max()- tgt_filt.min())
+            ax.imshow(disp_filt)
+            ax.set_title("Target Filter")
 
-        plt.imshow(frag)
-        plt.title('Input')
-        f.add_subplot(1, 2, 2)
-        plt.plot(tgt_l1_act)
-        plt.xlabel('Kernel Index')
-        plt.ylabel('Activation')
-        plt.title(title)
+        ax2 = plt.subplot2grid((2, 2), (0, 1), rowspan=2)
+        ax2.plot(tgt_l1_act)
+        ax2.set_xlabel("Kernel Idx")
+        ax2.set_ylabel("Activation")
+        ax2.set_title("Max active kernels")
+        ax2.set_xticks(list(ax2.get_xticks()) + [max_active_filt])
+        ax2.set_xlim(0, l1_act.shape[1])
+        for xtick_handle, xtick_value in zip(ax2.get_xticklabels(), ax2.get_xticks()):
+            if xtick_value == max_active_filt:
+                xtick_handle.set_color('r')
+                xtick_handle.set_fontsize(20)
+
+        ax3 = plt.subplot2grid((2, 2), (1, 0))
+        ax3.imshow(frag)
+        ax3.set_title("Fragment")
 
     return max_active_filt, max_active_value
 
