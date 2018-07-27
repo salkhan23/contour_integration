@@ -16,6 +16,7 @@ from datetime import datetime
 import keras.backend as keras_backend
 from keras.callbacks import TensorBoard, ModelCheckpoint
 from keras.preprocessing.image import load_img
+from keras import losses
 
 import alex_net_utils
 import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
@@ -163,7 +164,7 @@ def train_contour_integration_kernel(
 
     # Modify the contour integration training model to train the target kernel
     contour_integration_model_3d.update_contour_integration_kernel(model, tgt_filt_idx)
-    model.compile(optimizer='Adam', loss='mse')
+    model.compile(optimizer='Adam', loss=losses.mean_squared_error)
 
     # -----------------------------------------------------------------------------------
     # Build the Data Generators
@@ -326,12 +327,14 @@ if __name__ == '__main__':
     #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
 
     target_kernel_idx_arr = \
-        [5]
+        [10]
     data_directory = './data/curved_contours/filter_matched'
+    data_directory = './data/curved_contours/filter_matched_extended_data'
+    # data_directory = "./data/curved_contours/no_shift_cLen0_extended_data"
     weights_store_file = \
-        './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights_2.hf'
-    prev_train_weights = \
-        './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
+        './trained_models/ContourIntegrationModel3d/filter_matched/test/contour_integration_weights_filt_10_extended.hf'
+    # prev_train_weights = \
+    #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights_2.hf'
 
     # -----------------------------------------------------------------------------------
     # Build
@@ -341,7 +344,7 @@ if __name__ == '__main__':
         rf_size=25,
         inner_leaky_relu_alpha=0.7,
         outer_leaky_relu_alpha=0.94,
-        l1_reg_loss_weight=0.01
+        l1_reg_loss_weight=0.001
     )
 
     prev_trained_kernel_idx_arr = []
@@ -505,6 +508,7 @@ if __name__ == '__main__':
         contour_len = 9
         contour_rotation = 15
 
+        data_directory = "./data/curved_contours/no_shift_cLen0_extended_data"
         test_image_dir = os.path.join(
             data_directory,
             'test/filter_{0}/c_len_{1}/beta_{2}'.format(target_kernel_idx, contour_len, contour_rotation)
