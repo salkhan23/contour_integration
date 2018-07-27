@@ -327,14 +327,12 @@ if __name__ == '__main__':
     #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
 
     target_kernel_idx_arr = \
-        [10]
+        [5]
     data_directory = './data/curved_contours/filter_matched'
-    data_directory = './data/curved_contours/filter_matched_extended_data'
-    # data_directory = "./data/curved_contours/no_shift_cLen0_extended_data"
     weights_store_file = \
-        './trained_models/ContourIntegrationModel3d/filter_matched/test/contour_integration_weights_filt_10_extended.hf'
-    # prev_train_weights = \
-    #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights_2.hf'
+        './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights_2.hf'
+    prev_train_weights = \
+        './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
 
     # -----------------------------------------------------------------------------------
     # Build
