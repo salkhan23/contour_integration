@@ -93,31 +93,40 @@ def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx, show_img
 
     l1_act = l1_act[0, tgt_filt_idx, :, :]
     l2_act = l2_act[0, tgt_filt_idx, :, :]
-    diff = l2_act - l1_act
+    # diff = l2_act - l1_act
 
     min_l2_act = l1_act.min()
     max_l2_act = l2_act.max()
-    max_diff = np.max(abs(diff))
+    # max_diff = np.max(abs(diff))
+
+    gain = l2_act / (l1_act + 1e-4)
+    max_gain = np.max(abs(gain))
 
     f2 = plt.figure()
-    f2.add_subplot(1, 3, 1)
+    f2.add_subplot(2, 2, 1)
     plt.imshow(l1_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
     plt.title('L1 Conv Layer Activation @ idx %d' % tgt_filt_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
-    f2.add_subplot(1, 3, 2)
+    f2.add_subplot(2, 2, 2)
     plt.imshow(l2_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
     plt.title('L2 Contour Integration Layer Activation @ idx %d' % tgt_filt_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
-    f2.add_subplot(1, 3, 3)
-    plt.imshow(diff, vmin=-max_diff, vmax=max_diff, cmap='seismic')
+    f2.add_subplot(2, 2, 3)
+    plt.imshow(gain, vmin=-1, vmax=3, cmap='seismic')
     plt.colorbar(orientation='horizontal')
-    plt.title("Difference")
+    plt.title("Enhancement gain")
     plt.grid()
 
+    diff = (l2_act - l1_act)
+    max_diff = diff.max()
+    f2.add_subplot(2, 2, 4)
+    plt.imshow(diff, cmap='seismic', vmin=-max_diff, vmax=max_diff)
+    plt.title("Difference (L2 - L1)")
+    plt.colorbar(orientation='horizontal')
     return f1, f2
 
 
