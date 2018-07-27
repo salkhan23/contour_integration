@@ -28,6 +28,7 @@ reload(alex_net_utils)
 
 DATA_DIRECTORY = "./data/curved_contours/filter_matched"
 
+
 if __name__ == '__main__':
     plt.ion()
     keras_backend.clear_session()
@@ -37,10 +38,10 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
-    cont_int_kernel_arr = [19, 10, 20, 21, 48, 49, 51, 59, 62, 64, 65, 68]
+    cont_int_kernel_arr = np.arange(96)
 
-    n_train_images = 1000
-    n_test_images = 100
+    n_train_images = 10
+    n_test_images = 10
 
     image_size = np.array((227, 227, 3))
 
@@ -64,16 +65,20 @@ if __name__ == '__main__':
     feat_extract_callback = alex_net_utils.get_activation_cb(cont_int_model, 1)
     feat_extract_kernels, _ = cont_int_model.layers[1].get_weights()
 
-    # -----------------------------------------------------------------------------------
-    # Contour Fragment
-    # -----------------------------------------------------------------------------------
     for tgt_filter_idx in cont_int_kernel_arr:
 
+        print("Processing kernel {}".format(tgt_filter_idx))
+        # -------------------------------------------------------------------------------
+        # Best Fit Gabor
+        # -------------------------------------------------------------------------------
         tgt_filter = feat_extract_kernels[:, :, :, tgt_filter_idx]
-        print("Generating Data for Contour Integration kernel @ {0}".format(tgt_filter_idx))
         data_gen_start_time = datetime.datetime.now()
 
         best_fit_params_list = gabor_fits.find_best_fit_2d_gabor(tgt_filter)
+
+        if any(x is None for x in best_fit_params_list):
+            print("Gabor Params for kernel {} not found".format(tgt_filter_idx))
+            continue
 
         # Create list of dictionaries of gabor params
         gabor_params_dict_list = []
@@ -93,14 +98,28 @@ if __name__ == '__main__':
 
         fragment = gabor_fits.get_gabor_fragment(gabor_params_dict_list, frag_tile_size)
 
-        # Plot rotations of the fragment
-        gabor_fits.plot_fragment_rotations(fragment, gabor_params_dict_list[0], delta_rot=15)
-
         # Get most responsive kernel and activation value
         max_active_kernel, max_act_value = alex_net_utils.find_most_active_l1_kernel_index(
-            fragment, feat_extract_callback)
-        print("Most active Kernel @ {}, Activation Value {}".format(
-            max_active_kernel, max_act_value))
+            fragment, feat_extract_callback, plot=False, tgt_filt=tgt_filter)
+        # plt.suptitle("Target_kernel_index {}".format(tgt_filter_idx))
+
+        if max_active_kernel != tgt_filter_idx:
+            print("Gabor Fragment for kernel {} not found. Most active kernel {} is not target kernel".format(
+                tgt_filter_idx, max_active_kernel))
+            continue
+        else:
+            print("Fragment for filter @ {} found. Max. activation {}".format(
+                max_active_kernel, max_act_value))
+
+        # Do not generate data for fragments with a high spatial frequency. These suffer from aliasing
+        # when rotated and do not form good contours
+        spatial_wavelengths = [chan_params['lambda1'] for chan_params in gabor_params_dict_list]
+        if any(chan_wavelength < 2 for chan_wavelength in spatial_wavelengths):
+            print("Skipping Kernel @ {}, spatial frequency too high".format(tgt_filter_idx))
+
+        # # Plot rotations of the fragment
+        # gabor_fits.plot_fragment_rotations(fragment, gabor_params_dict_list, delta_rot=15)
+        # plt.suptitle("Rotation of fragment constructed from feature extract kernel @ {}".format(tgt_filter_idx))
 
         # raw_input("Continue?")
 
