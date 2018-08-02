@@ -40,8 +40,8 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     cont_int_kernel_arr = np.arange(96)
 
-    n_train_images = 10
-    n_test_images = 10
+    n_train_images = 500
+    n_test_images = 100
 
     image_size = np.array((227, 227, 3))
 
@@ -67,7 +67,12 @@ if __name__ == '__main__':
 
     for tgt_filter_idx in cont_int_kernel_arr:
 
-        print("Processing kernel {}".format(tgt_filter_idx))
+        # Do not generate data if already exists
+        tgt_dir = os.path.join(DATA_DIRECTORY, 'train/filter_{}'.format(tgt_filter_idx))
+        if os.path.exists(tgt_dir) and len(os.listdir(tgt_dir)) != 0:
+            print("Data from filter {} already exists. Skipping Data generation".format(tgt_filter_idx))
+            continue
+
         # -------------------------------------------------------------------------------
         # Best Fit Gabor
         # -------------------------------------------------------------------------------
