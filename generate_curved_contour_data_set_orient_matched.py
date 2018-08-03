@@ -58,35 +58,15 @@ def generate_data_set(
     # Initialization
     # -----------------------------------------------------------------------------------
     c_len_arr = np.array([1, 3, 5, 7, 9])
-    beta_rot_arr = np.array([0, 15, 30, 45, 60])
-    # TODO: Add different spacing
-
-    # Neurophysiological data
-    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
-        li_2006_data = pickle.load(handle)
-
-    absolute_gain_linear = {
-        1: li_2006_data['contour_len_avg_gain'][0],
-        3: li_2006_data['contour_len_avg_gain'][1],
-        5: li_2006_data['contour_len_avg_gain'][2],
-        7: li_2006_data['contour_len_avg_gain'][3],
-        9: li_2006_data['contour_len_avg_gain'][4],
-    }
-
-    # TODO: Put data in Pickle Format
-    relative_gain_curvature = {
-        0: 1.00,
-        15: 0.98,
-        30: 0.87,
-        45: 0.85,
-        60: 0.61
-    }
+    beta_rot_arr = np.array([0, 15, 30, 45, 60])  # main contour rotation
+    alpha_rot_arr = np.array([0, 15, 30])   # fragment rotation wrt to contour direction
 
     if type(frag_params) is not list:
         frag_params = [frag_params]
 
+    # -----------------------------------------------------------------------------------
     # Create the destination directory
-    # --------------------------------------
+    # -----------------------------------------------------------------------------------
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
 
@@ -105,6 +85,34 @@ def generate_data_set(
                 return
 
     # -----------------------------------------------------------------------------------
+    # Neurophysiological data
+    # -----------------------------------------------------------------------------------
+    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
+        li_2006_data = pickle.load(handle)
+
+    absolute_gain_linear = {
+        1: li_2006_data['contour_len_avg_gain'][0],
+        3: li_2006_data['contour_len_avg_gain'][1],
+        5: li_2006_data['contour_len_avg_gain'][2],
+        7: li_2006_data['contour_len_avg_gain'][3],
+        9: li_2006_data['contour_len_avg_gain'][4],
+    }
+
+    with open('.//data//neuro_data//fields_1993_exp_1_beta.pickle', 'rb') as handle:
+        fields_1993_exp_1_beta = pickle.load(handle)
+    # Use averaged data
+    beta_rot_detectability = fields_1993_exp_1_beta['ah_djf_avg_1s_proportion_correct']
+
+    with open('.//data//neuro_data//fields_1993_exp_3_alpha.pickle', 'rb') as handle:
+        fields_1993_exp_3_alpha = pickle.load(handle)
+    # Use averaged data
+    alpha_rot_detectability = {
+        0: fields_1993_exp_3_alpha['ah_djf_avg_alpha_0_proportion_correct'],
+        15: fields_1993_exp_3_alpha['ah_djf_avg_alpha_15_proportion_correct'],
+        30: fields_1993_exp_3_alpha['ah_djf_avg_alpha_30_proportion_correct']
+    }
+
+    # -----------------------------------------------------------------------------------
     #  Generate the Data
     # -----------------------------------------------------------------------------------
     data_key_dict = {}
@@ -117,43 +125,54 @@ def generate_data_set(
 
             beta_n_clen_dir = os.path.join(c_len_dir, 'beta_{0}'.format(beta))
 
-            abs_destination_dir = os.path.join(filt_dir, beta_n_clen_dir)
-            if not os.path.exists(abs_destination_dir):
-                os.makedirs(abs_destination_dir)
+            for a_idx, alpha in enumerate(alpha_rot_arr):
 
-            img_arr = image_generator_curve.generate_contour_images(
-                n_images=n_img_per_set,
-                frag=frag,
-                frag_params=frag_params,
-                c_len=c_len,
-                beta=beta,
-                f_tile_size=f_tile_size,
-                img_size=img_size
-            )
+                alpha_n_beta_n_clen_dir = os.path.join(beta_n_clen_dir, 'alpha_{0}'.format(alpha))
 
-            # Save the images to file & create a dictionary key of (Image, Expected gain)
-            # that can be used by a python generator / keras sequence object
+                abs_destination_dir = os.path.join(filt_dir, alpha_n_beta_n_clen_dir)
+                if not os.path.exists(abs_destination_dir):
+                    os.makedirs(abs_destination_dir)
 
-            #  Relative gain curvature is actually detectability.
-            #  at 100% detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
-            abs_gain = 1 + 2 * (relative_gain_curvature[beta] - 0.5) * (absolute_gain_linear[c_len] - 1)
+                combined_detectability = beta_rot_detectability[beta] * alpha_rot_detectability[alpha][beta]
 
-            beta_dict = {}
-            for img_idx in range(img_arr.shape[0]):
-                filename = "c_len_{0}_beta_{1}_rot_{2}__{3}.png".format(
-                    c_len, beta, frag_params[0]['theta_deg'], img_idx)
+                abs_gain = 1 + 2 * max((combined_detectability - 0.5), 0) * (absolute_gain_linear[c_len] - 1)
+                print("Generating {0} images for [contour length {1}, beta {2}, alpha {3}]. Expected Gain {4}".format(
+                    n_img_per_set, c_len, beta, alpha, abs_gain))
 
-                plt.imsave(
-                    os.path.join(abs_destination_dir, filename),
-                    img_arr[img_idx, ],
-                    format='PNG'
+                img_arr = image_generator_curve.generate_contour_images(
+                    n_images=n_img_per_set,
+                    frag=frag,
+                    frag_params=frag_params,
+                    c_len=c_len,
+                    beta=beta,
+                    alpha=alpha,
+                    f_tile_size=f_tile_size,
+                    img_size=img_size
                 )
 
-                beta_dict[os.path.join(abs_destination_dir, filename)] = abs_gain
+                # Save the images to file & create a dictionary key of (Image, Expected gain)
+                # that can be used by a python generator / keras sequence object
+                # --------------------------------------------------------------
+                data_dict = {}
+                for img_idx in range(img_arr.shape[0]):
+                    filename = "c_len_{0}_beta_{1}_alpha_{2}_forient_{3}__{4}.png".format(
+                        c_len, beta, alpha, frag_params[0]['theta_deg'], img_idx)
 
-            # Add this dictionary to the dictionary of dictionaries
-            data_key_dict['c_len_{0}_beta_{1}_rot_{2}'.format(
-                c_len, beta, frag_params[0]['theta_deg'])] = beta_dict
+                    plt.imsave(
+                        os.path.join(abs_destination_dir, filename),
+                        img_arr[img_idx, ],
+                        format='PNG'
+                    )
+
+                    data_dict[os.path.join(abs_destination_dir, filename)] = abs_gain
+
+                # Add this dictionary to the dictionary of dictionaries
+                data_key_dict['c_len_{0}_beta_{1}_alpha_{2}_forient_{3}'.format(
+                    c_len, beta, alpha, frag_params[0]['theta_deg'])] = data_dict
+
+    # print("Generated Data Dictionaries")
+    # for key in data_key_dict.keys():
+    #     print(key)
 
     # Store the dictionary of Dictionaries
     # Each entry in this dictionary is dictionary of image index and its absolute gain value

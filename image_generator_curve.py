@@ -67,7 +67,7 @@ def do_tiles_overlap(l1, r1, l2, r2):
 
 
 def _add_single_side_of_contour_constant_separation(
-        img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size,
+        img, center_frag_start, frag, frag_params, c_len, beta, alpha, d, d_delta, frag_size,
         random_frag_direction=False, base_contour='sigmoid'):
     """
 
@@ -77,6 +77,7 @@ def _add_single_side_of_contour_constant_separation(
     :param frag_params:
     :param c_len:
     :param beta:
+    :param alpha:
     :param d:
     :param d_delta:
     :param frag_size:
@@ -112,12 +113,15 @@ def _add_single_side_of_contour_constant_separation(
         # print("fragment idx {} acc_angle {}".format(i, acc_angle))
 
         rotated_frag_params_list = copy.deepcopy(frag_params)
+        frag_from_contour_rot = np.random.choice((-alpha, alpha), size=1)
 
         for c_params in rotated_frag_params_list:
             if base_contour == 'circle' and d > 0:
-                c_params["theta_deg"] = c_params["theta_deg"] + (-acc_angle - frag_params[0]["theta_deg"])
+                c_params["theta_deg"] = c_params["theta_deg"] + (-acc_angle - frag_params[0]["theta_deg"]) + \
+                    frag_from_contour_rot
             else:  # sigmoid
-                c_params["theta_deg"] = c_params["theta_deg"] + (acc_angle - frag_params[0]["theta_deg"])
+                c_params["theta_deg"] = c_params["theta_deg"] + (acc_angle - frag_params[0]["theta_deg"]) + \
+                    frag_from_contour_rot
 
         rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params_list, frag.shape[0:2])
 
@@ -175,7 +179,7 @@ def _add_single_side_of_contour_constant_separation(
 
 
 def add_contour_path_constant_separation(
-        img, frag, frag_params, c_len, beta, d, center_frag_start=None,
+        img, frag, frag_params, c_len, beta, alpha, d, center_frag_start=None,
         rand_inter_frag_direction_change=True, base_contour='sigmoid'):
     """
     Add curved contours to the test image as added in the ref. a constant separation (d)
@@ -188,6 +192,7 @@ def add_contour_path_constant_separation(
     :param frag_params:
     :param c_len:
     :param beta:
+    :param alpha:
     :param d:
     :param center_frag_start:
     :param rand_inter_frag_direction_change:
@@ -213,12 +218,12 @@ def add_contour_path_constant_separation(
     c_tile_starts = [center_frag_start]
 
     img, tiles = _add_single_side_of_contour_constant_separation(
-        img, center_frag_start, frag, frag_params, c_len, beta, d, d_delta, frag_size,
+        img, center_frag_start, frag, frag_params, c_len, beta, alpha, d, d_delta, frag_size,
         random_frag_direction=rand_inter_frag_direction_change, base_contour=base_contour)
     c_tile_starts.extend(tiles)
 
     img, tiles = _add_single_side_of_contour_constant_separation(
-        img, center_frag_start, frag, frag_params, c_len, beta, -d, d_delta, frag_size,
+        img, center_frag_start, frag, frag_params, c_len, beta, alpha, -d, d_delta, frag_size,
         random_frag_direction=rand_inter_frag_direction_change, base_contour=base_contour)
     c_tile_starts.extend(tiles)
 
@@ -391,7 +396,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
 
 def generate_contour_images(
-        n_images, frag, frag_params, c_len, beta, f_tile_size, img_size=None, bg_frag_relocate=True,
+        n_images, frag, frag_params, c_len, beta, alpha, f_tile_size, img_size=None, bg_frag_relocate=True,
         rand_inter_frag_direction_change=True, center_frag_start=None, base_contour='sigmoid'):
     """
     Generate n_images with the specified fragment parameters.
@@ -404,6 +409,7 @@ def generate_contour_images(
     :param frag_params:
     :param c_len:
     :param beta:
+    :param alpha:
     :param f_tile_size
     :param img_size: [Default = (227, 227, 3)]
         :param center_frag_start:
@@ -422,8 +428,8 @@ def generate_contour_images(
         frag_size = np.array(frag.shape[0:2])
         center_frag_start = img_center - (frag_size // 2)
 
-    print("Generating {0} images for fragment [ contour length {1}, inter fragment rotation {2}]".format(
-        n_images, c_len, beta))
+    # print("Generating {0} images for fragment [ contour length {1}, inter fragment rotation {2}]".format(
+    #     n_images, c_len, beta))
 
     # bg = np.mean(fragment, axis=(0, 1))
     # bg = [np.uint8(chan) for chan in bg_value]
@@ -440,7 +446,7 @@ def generate_contour_images(
         c_frag_starts = np.array([])
         if (c_len > 1) or (c_len == 1 and beta == 0):
             img, c_frag_starts = add_contour_path_constant_separation(
-                img, frag, frag_params, c_len, beta, f_tile_size[0],
+                img, frag, frag_params, c_len, beta, alpha, f_tile_size[0],
                 center_frag_start=center_frag_start,
                 rand_inter_frag_direction_change=rand_inter_frag_direction_change,
                 base_contour=base_contour
