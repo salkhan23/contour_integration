@@ -178,7 +178,7 @@ def train_contour_integration_kernel(
         b_size = len(train_data_dict)
 
     train_image_generator = image_generator_curve.DataGenerator(
-        test_data_dict,
+        train_data_dict,
         batch_size=b_size,
         shuffle=True,
     )
