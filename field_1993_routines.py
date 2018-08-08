@@ -10,6 +10,7 @@ import pickle
 
 import image_generator_curve
 import alex_net_utils
+import learn_cont_int_kernel_3d_model
 
 from keras.preprocessing.image import load_img
 
@@ -18,7 +19,7 @@ reload(alex_net_utils)
 
 
 def contour_gain_vs_inter_fragment_rotation(
-        model, data_key, c_len, frag_orient=None, n_runs=100, axis=None):
+        model, data_key, c_len, frag_orient=None, alpha=0, n_runs=100, axis=None):
     """
     Compare model performance with Fields-1993 Experiment 1 - Contour enhancement gain as a
     function of inter-fragment rotation.
@@ -73,14 +74,9 @@ def contour_gain_vs_inter_fragment_rotation(
 
     }
 
-    # TODO: Retrieve this from a pickle object.
-    relative_gain_curvature = {
-        0: 1.00,
-        15: 0.98,
-        30: 0.87,
-        45: 0.85,
-        60: 0.61
-    }
+    with open('.//data//neuro_data//fields_1993_exp_1_beta.pickle', 'rb') as handle:
+        fields_1993_exp_1_beta = pickle.load(handle)
+    beta_rot_detectability = fields_1993_exp_1_beta['ah_djf_avg_1s_proportion_correct']
 
     inter_frag_rotation_arr = np.array([0, 15, 30, 45, 60])
 
@@ -92,7 +88,7 @@ def contour_gain_vs_inter_fragment_rotation(
     # Relative gain curvature is actually detectability.
     # at 100% detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
     absolute_gains = [
-        1 + 2 * (relative_gain_curvature[beta] - 0.5) * (absolute_gain_linear[c_len] - 1)
+        1 + 2 * (beta_rot_detectability[beta] - 0.5) * (absolute_gain_linear[c_len] - 1)
         for beta in inter_frag_rotation_arr
     ]
 
@@ -109,14 +105,20 @@ def contour_gain_vs_inter_fragment_rotation(
 
         print("Processing c_len = {}, beta = {}".format(c_len, beta))
 
-        # Image Retriever
-        if frag_orient is None:
-            active_train_set = data_key["c_len_{0}_beta_{1}".format(c_len, beta, frag_orient)]
-        else:
-            active_train_set = data_key["c_len_{0}_beta_{1}_rot_{2}".format(c_len, beta, frag_orient)]
+        # filter the data keys
+        use_set = data_key
+        use_set = [x for x in use_set if 'c_len_{}'.format(c_len) in x]
+        use_set = [x for x in use_set if 'beta_{}'.format(beta) in x]
+        use_set = [x for x in use_set if 'alpha_{}'.format(alpha) in x]
+        if frag_orient is not None:
+            use_set = [x for x in use_set if 'forient_{}'.format(frag_orient) in x]
+
+        active_test_set = {}
+        for set_id in use_set:
+            active_test_set.update(data_key[set_id])
 
         image_generator = image_generator_curve.DataGenerator(
-            active_train_set,
+            active_test_set,
             batch_size=1,
             shuffle=True,
         )
