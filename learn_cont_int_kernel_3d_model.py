@@ -97,6 +97,12 @@ def save_learnt_weights(model, tgt_filt_idx, w_store_file):
 
 
 def _get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir):
+    """
+
+    :param tgt_filt_idx:
+    :param data_dir:
+    :return:
+    """
     train_data_key_loc = os.path.join(
         data_dir, "train/filter_{}".format(tgt_filt_idx), "data_key.pickle")
 
@@ -112,7 +118,7 @@ def _get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir):
     return train_data_list_of_dict, test_data_list_of_dict
 
 
-def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, frag_orient=None):
+def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, alpha=None, frag_orient=None):
     """
     A data key is a dictionary of file location:expected gain tuples.
     Two Dictionaries are returned: one for testing and one for testing model performance
@@ -121,25 +127,47 @@ def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, fr
     :param data_dir:
     :param c_len:
     :param beta:
+    :param alpha:
     :param frag_orient:
     :return:
     """
+    valid_c_len = [1, 3, 5, 7, 9]
+    valid_beta = [0, 15, 30, 45, 60]
+    valid_alpha = [0, 15, 30]
+
     train_data_dict_of_dict, test_data_dict_of_dict =\
         _get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir)
 
-    train_set = train_data_dict_of_dict.keys()
+    # All data sets
+    use_set = train_data_dict_of_dict.keys()
+
+    # Filter out everything that is not specified
     if c_len is not None:
-        train_set = [x for x in train_set if 'c_len_{}'.format(c_len) in x]
+        if c_len not in valid_c_len:
+            raise Exception("Invalid c_len {} should be in {}".format(c_len, valid_c_len))
+
+        use_set = [x for x in use_set if 'c_len_{}'.format(c_len) in x]
+
     if beta is not None:
-        train_set = [x for x in train_set if 'beta_{}'.format(beta) in x]
+        if beta not in valid_beta:
+            raise Exception("Invalid beta {} should be in {}".format(beta, valid_beta))
+
+        use_set = [x for x in use_set if 'beta_{}'.format(beta) in x]
+
+    if alpha is not None:
+        if alpha not in valid_alpha:
+            raise Exception("Invalid alpha {} should be in {}".format(alpha, valid_alpha))
+
+        use_set = [x for x in use_set if 'alpha_{}'.format(alpha) in x]
+
     if frag_orient is not None:
-        train_set = [x for x in train_set if 'rot_{}'.format(frag_orient) in x]
+        use_set = [x for x in use_set if 'forient_{}'.format(frag_orient) in x]
 
     # Single dictionary containing (image file location, expected gain)
     active_train_set = {}
     active_test_set = {}
 
-    for set_id in train_set:
+    for set_id in use_set:
         active_train_set.update(train_data_dict_of_dict[set_id])
         active_test_set.update(test_data_dict_of_dict[set_id])
 
@@ -147,7 +175,8 @@ def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, fr
 
 
 def train_contour_integration_kernel(
-        model, tgt_filt_idx, data_dir, b_size=32, n_epochs=200, training_cb=None, steps_per_epoch=10, axis=None):
+        model, tgt_filt_idx, data_dir, b_size=32, n_epochs=200, training_cb=None, steps_per_epoch=10,
+        c_len=None, beta=None, alpha=None, axis=None):
     """
 
     :param model:
@@ -156,6 +185,9 @@ def train_contour_integration_kernel(
     :param b_size:
     :param n_epochs:
     :param steps_per_epoch:
+    :param c_len:
+    :param beta:
+    :param alpha:
     :param training_cb:
     :param axis:
     :return:
@@ -171,7 +203,8 @@ def train_contour_integration_kernel(
     # -----------------------------------------------------------------------------------
     print("Building data generators...")
 
-    train_data_dict, test_data_dict = get_train_n_test_data_keys(tgt_filt_idx, data_dir)
+    train_data_dict, test_data_dict = get_train_n_test_data_keys(
+        tgt_filt_idx, data_dir, c_len=c_len, beta=beta, alpha=alpha)
 
     if b_size > len(train_data_dict):
         print("WARN: Specified batch size is > than number of actual data")
@@ -306,7 +339,7 @@ if __name__ == '__main__':
     start_time = datetime.now()
 
     batch_size = 32
-    num_epochs = 200
+    num_epochs = 50
 
     save_weights = True
     prev_train_weights = None
@@ -328,11 +361,11 @@ if __name__ == '__main__':
 
     target_kernel_idx_arr = \
         [5]
-    data_directory = './data/curved_contours/filter_matched'
+    data_directory = "./data/curved_contours/with_alpha_rotations"
     weights_store_file = \
-        './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights_2.hf'
-    prev_train_weights = \
-        './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
+        './trained_models/ContourIntegrationModel3d/with_alpha_rotations.hf'
+    # prev_train_weights = \
+    #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
 
     # -----------------------------------------------------------------------------------
     # Build
@@ -342,7 +375,7 @@ if __name__ == '__main__':
         rf_size=25,
         inner_leaky_relu_alpha=0.7,
         outer_leaky_relu_alpha=0.94,
-        l1_reg_loss_weight=0.001
+        l1_reg_loss_weight=0.01
     )
 
     prev_trained_kernel_idx_arr = []
@@ -400,7 +433,8 @@ if __name__ == '__main__':
             n_epochs=num_epochs,
             training_cb=callbacks,
             steps_per_epoch=10,
-            axis=loss_vs_epoch_ax
+            axis=loss_vs_epoch_ax,
+            # alpha=0
         )
 
         # load best weights
@@ -424,104 +458,104 @@ if __name__ == '__main__':
             target_kernel_idx,
             start_weights,
         )
-
-        # -------------------------------------------------------------------------------
-        # Todo: Should be moved to another File
-        train_data_dict_of_dicts, test_data_dict_of_dicts = _get_train_n_test_dictionary_of_dictionaries(
-            target_kernel_idx,
-            data_directory,
-        )
-        # get list of considered orientations
-        list_of_data_sets = train_data_dict_of_dicts.keys()
-
-        if 'rot' in list_of_data_sets[0]:
-            fragment_orientation_arr = [np.int(item.split("rot_")[1]) for item in list_of_data_sets]
-            fragment_orientation_arr = set(fragment_orientation_arr)
-        else:
-            fragment_orientation_arr = [None]
-
-        # -------------------------------------------------------------------------------
-        #  Fields - 1993 - Experiment 1 - Curvature vs Gain
-        # -------------------------------------------------------------------------------
-        print("Checking gain vs curvature performance ...")
-        for fragment_orientation in fragment_orientation_arr:
-            fig, ax = plt.subplots()
-
-            field_1993_routines.contour_gain_vs_inter_fragment_rotation(
-                cont_int_model,
-                test_data_dict_of_dicts,
-                c_len=9,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-                axis=ax
-            )
-
-            field_1993_routines.contour_gain_vs_inter_fragment_rotation(
-                cont_int_model,
-                test_data_dict_of_dicts,
-                c_len=7,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-                axis=ax
-            )
-
-            fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
-                target_kernel_idx, fragment_orientation))
-
-        # -------------------------------------------------------------------------------
-        # Enhancement gain vs contour length
-        # -------------------------------------------------------------------------------
-        print("Checking gain vs contour length performance ...")
-        for fragment_orientation in fragment_orientation_arr:
-
-            fig, ax = plt.subplots()
-
-            # Linear contours
-            field_1993_routines.contour_gain_vs_length(
-                cont_int_model,
-                test_data_dict_of_dicts,
-                beta=0,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-                axis=ax
-            )
-
-            # For inter-fragment rotation of 15 degrees
-            field_1993_routines.contour_gain_vs_length(
-                cont_int_model,
-                test_data_dict_of_dicts,
-                beta=15,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-                axis=ax
-            )
-
-            fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
-                target_kernel_idx, fragment_orientation))
-
-        # -------------------------------------------------------------------------------
-        # Debug - Plot the performance on a test image
-        # -------------------------------------------------------------------------------
-        image_idx = 0
-        contour_len = 9
-        contour_rotation = 15
-
-        test_image_dir = os.path.join(
-            data_directory,
-            'test/filter_{0}/c_len_{1}/beta_{2}'.format(target_kernel_idx, contour_len, contour_rotation)
-        )
-
-        image_file = os.listdir(test_image_dir)[image_idx]
-        test_image = load_img(os.path.join(test_image_dir, image_file))
-        test_image = np.array(test_image) / 255.0
-
-        alex_net_utils.plot_l1_and_l2_activations(
-            test_image,
-            feat_extract_callback,
-            cont_int_callback,
-            target_kernel_idx
-        )
-        plt.suptitle("Contour Integration kernel @ index {}".format(target_kernel_idx))
+        #
+        # # -------------------------------------------------------------------------------
+        # # Todo: Should be moved to another File
+        # train_data_dict_of_dicts, test_data_dict_of_dicts = _get_train_n_test_dictionary_of_dictionaries(
+        #     target_kernel_idx,
+        #     data_directory,
+        # )
+        # # get list of considered orientations
+        # list_of_data_sets = train_data_dict_of_dicts.keys()
+        #
+        # if 'rot' in list_of_data_sets[0]:
+        #     fragment_orientation_arr = [np.int(item.split("rot_")[1]) for item in list_of_data_sets]
+        #     fragment_orientation_arr = set(fragment_orientation_arr)
+        # else:
+        #     fragment_orientation_arr = [None]
+        #
+        # # -------------------------------------------------------------------------------
+        # #  Fields - 1993 - Experiment 1 - Curvature vs Gain
+        # # -------------------------------------------------------------------------------
+        # print("Checking gain vs curvature performance ...")
+        # for fragment_orientation in fragment_orientation_arr:
+        #     fig, ax = plt.subplots()
+        #
+        #     field_1993_routines.contour_gain_vs_inter_fragment_rotation(
+        #         cont_int_model,
+        #         test_data_dict_of_dicts,
+        #         c_len=9,
+        #         frag_orient=fragment_orientation,
+        #         n_runs=100,
+        #         axis=ax
+        #     )
+        #
+        #     field_1993_routines.contour_gain_vs_inter_fragment_rotation(
+        #         cont_int_model,
+        #         test_data_dict_of_dicts,
+        #         c_len=7,
+        #         frag_orient=fragment_orientation,
+        #         n_runs=100,
+        #         axis=ax
+        #     )
+        #
+        #     fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
+        #         target_kernel_idx, fragment_orientation))
+        #
+        # # -------------------------------------------------------------------------------
+        # # Enhancement gain vs contour length
+        # # -------------------------------------------------------------------------------
+        # print("Checking gain vs contour length performance ...")
+        # for fragment_orientation in fragment_orientation_arr:
+        #
+        #     fig, ax = plt.subplots()
+        #
+        #     # Linear contours
+        #     field_1993_routines.contour_gain_vs_length(
+        #         cont_int_model,
+        #         test_data_dict_of_dicts,
+        #         beta=0,
+        #         frag_orient=fragment_orientation,
+        #         n_runs=100,
+        #         axis=ax
+        #     )
+        #
+        #     # For inter-fragment rotation of 15 degrees
+        #     field_1993_routines.contour_gain_vs_length(
+        #         cont_int_model,
+        #         test_data_dict_of_dicts,
+        #         beta=15,
+        #         frag_orient=fragment_orientation,
+        #         n_runs=100,
+        #         axis=ax
+        #     )
+        #
+        #     fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
+        #         target_kernel_idx, fragment_orientation))
+        #
+        # # -------------------------------------------------------------------------------
+        # # Debug - Plot the performance on a test image
+        # # -------------------------------------------------------------------------------
+        # image_idx = 0
+        # contour_len = 9
+        # contour_rotation = 15
+        #
+        # test_image_dir = os.path.join(
+        #     data_directory,
+        #     'test/filter_{0}/c_len_{1}/beta_{2}'.format(target_kernel_idx, contour_len, contour_rotation)
+        # )
+        #
+        # image_file = os.listdir(test_image_dir)[image_idx]
+        # test_image = load_img(os.path.join(test_image_dir, image_file))
+        # test_image = np.array(test_image) / 255.0
+        #
+        # alex_net_utils.plot_l1_and_l2_activations(
+        #     test_image,
+        #     feat_extract_callback,
+        #     cont_int_callback,
+        #     target_kernel_idx
+        # )
+        # plt.suptitle("Contour Integration kernel @ index {}".format(target_kernel_idx))
 
     # -----------------------------------------------------------------------------------
     #  End
