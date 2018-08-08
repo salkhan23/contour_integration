@@ -10,7 +10,6 @@ import pickle
 
 import image_generator_curve
 import alex_net_utils
-import learn_cont_int_kernel_3d_model
 
 from keras.preprocessing.image import load_img
 
@@ -40,6 +39,7 @@ def contour_gain_vs_inter_fragment_rotation(
     TODO: are too small for the base spacing considered in Fields-1993.
     TODO: Need to properly account for these.
 
+    :param alpha:
     :param model: Contour Integration Model.
         (Should be training model with last layer = enhancement gain calculating layer)
     :param data_key: data key (dictionary of dictionaries) that describes the data
@@ -131,7 +131,7 @@ def contour_gain_vs_inter_fragment_rotation(
 
             x_in, y = gen_out.next()
 
-            # TODO: look into using activations callbacks. Than this routine can be used by
+            # TODO: look into using activations callbacks. Then this routine can be used by
             # TODO: the full contour integration model, which does not have a gain calculating layer.
             y_hat = model.predict(x_in, batch_size=1)
             y_hat_arr.append(y_hat)
@@ -150,7 +150,7 @@ def contour_gain_vs_inter_fragment_rotation(
     axis.set_title("Enhancement gain vs inter-fragment rotation - Fields -1993 (Exp 1)")
 
 
-def contour_gain_vs_length(model, data_key, beta, frag_orient=None, n_runs=100, axis=None):
+def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_runs=100, axis=None):
     """
     Model contour enhancement gain as a function of contour length. This is similar
     to an experiment from Li-2006 except that additionally contour curvature is considered.
@@ -175,6 +175,7 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, n_runs=100, 
         (Should be training model with last layer = enhancement gain calculating layer)
     :param data_key: data key (dictionary of dictionaries) that describes the data
     :param beta: Consider contours with inter-fragment rotations of this amount
+    :param alpha:
     :param frag_orient: Default orientation of contour fragment. [-90 = horizontal, 0 = vertical]
     :param n_runs: number of runs to average results over for each point
     :param axis: [Default None]
@@ -196,21 +197,16 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, n_runs=100, 
     with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
         li_2006_data = pickle.load(handle)
 
-    # TODO: Retrieve this from a pickle object.
-    relative_gain_curvature = {
-        0: 1.00,
-        15: 0.98,
-        30: 0.87,
-        45: 0.85,
-        60: 0.61
-    }
+    with open('.//data//neuro_data//fields_1993_exp_1_beta.pickle', 'rb') as handle:
+        fields_1993_exp_1_beta = pickle.load(handle)
+    beta_rot_detectability = fields_1993_exp_1_beta['ah_djf_avg_1s_proportion_correct']
 
     c_len_arr = np.array([1, 3, 5, 7, 9])
 
     # Relative gain curvature is actually detectability.
     # at 100% detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
     absolute_gains = 1 + (li_2006_data['contour_len_avg_gain'] - 1) \
-        * 2 * (relative_gain_curvature[beta] - 0.5)
+        * 2 * (beta_rot_detectability[beta] - 0.5)
 
     # Plot Neurophysiological data
     # --------------------------------------
@@ -227,17 +223,20 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, n_runs=100, 
 
         print("Processing c_len = {}, beta = {}".format(c_len, beta))
 
-        # if c_len == 1 and beta != 0:
-        #     continue
+        # filter the data keys
+        use_set = data_key
+        use_set = [x for x in use_set if 'c_len_{}'.format(c_len) in x]
+        use_set = [x for x in use_set if 'beta_{}'.format(beta) in x]
+        use_set = [x for x in use_set if 'alpha_{}'.format(alpha) in x]
+        if frag_orient is not None:
+            use_set = [x for x in use_set if 'forient_{}'.format(frag_orient) in x]
 
-        # Image Retriever
-        if frag_orient is None:
-            active_train_set = data_key["c_len_{0}_beta_{1}".format(c_len, beta, frag_orient)]
-        else:
-            active_train_set = data_key["c_len_{0}_beta_{1}_rot_{2}".format(c_len, beta, frag_orient)]
+        active_test_set = {}
+        for set_id in use_set:
+            active_test_set.update(data_key[set_id])
 
         image_generator = image_generator_curve.DataGenerator(
-            active_train_set,
+            active_test_set,
             batch_size=1,
             shuffle=True,
         )
@@ -249,7 +248,7 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, n_runs=100, 
         for r_idx in range(n_runs):
             x_in, y = gen_out.next()
 
-            # TODO: look into using activations callbacks. Than this routine can be used by
+            # TODO: look into using activations callbacks. Then this routine can be used by
             # TODO: the full contour integration model, which does not have a gain calculating layer.
             y_hat = model.predict(x_in, batch_size=1)
             y_hat_arr.append(y_hat)

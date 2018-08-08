@@ -434,7 +434,7 @@ if __name__ == '__main__':
             training_cb=callbacks,
             steps_per_epoch=10,
             axis=loss_vs_epoch_ax,
-            alpha=0
+            # alpha=0
         )
 
         # load best weights
@@ -502,60 +502,62 @@ if __name__ == '__main__':
             fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
                 target_kernel_idx, fragment_orientation))
 
-        # # -------------------------------------------------------------------------------
-        # # Enhancement gain vs contour length
-        # # -------------------------------------------------------------------------------
-        # print("Checking gain vs contour length performance ...")
-        # for fragment_orientation in fragment_orientation_arr:
-        #
-        #     fig, ax = plt.subplots()
-        #
-        #     # Linear contours
-        #     field_1993_routines.contour_gain_vs_length(
-        #         cont_int_model,
-        #         test_data_dict_of_dicts,
-        #         beta=0,
-        #         frag_orient=fragment_orientation,
-        #         n_runs=100,
-        #         axis=ax
-        #     )
-        #
-        #     # For inter-fragment rotation of 15 degrees
-        #     field_1993_routines.contour_gain_vs_length(
-        #         cont_int_model,
-        #         test_data_dict_of_dicts,
-        #         beta=15,
-        #         frag_orient=fragment_orientation,
-        #         n_runs=100,
-        #         axis=ax
-        #     )
-        #
-        #     fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
-        #         target_kernel_idx, fragment_orientation))
-        #
-        # # -------------------------------------------------------------------------------
-        # # Debug - Plot the performance on a test image
-        # # -------------------------------------------------------------------------------
-        # image_idx = 0
-        # contour_len = 9
-        # contour_rotation = 15
-        #
-        # test_image_dir = os.path.join(
-        #     data_directory,
-        #     'test/filter_{0}/c_len_{1}/beta_{2}'.format(target_kernel_idx, contour_len, contour_rotation)
-        # )
-        #
-        # image_file = os.listdir(test_image_dir)[image_idx]
-        # test_image = load_img(os.path.join(test_image_dir, image_file))
-        # test_image = np.array(test_image) / 255.0
-        #
-        # alex_net_utils.plot_l1_and_l2_activations(
-        #     test_image,
-        #     feat_extract_callback,
-        #     cont_int_callback,
-        #     target_kernel_idx
-        # )
-        # plt.suptitle("Contour Integration kernel @ index {}".format(target_kernel_idx))
+        # -------------------------------------------------------------------------------
+        # Enhancement gain vs contour length
+        # -------------------------------------------------------------------------------
+        print("Checking gain vs contour length performance ...")
+        for fragment_orientation in fragment_orientation_arr:
+
+            fig, ax = plt.subplots()
+
+            # Linear contours
+            field_1993_routines.contour_gain_vs_length(
+                cont_int_model,
+                test_data_dict_of_dicts,
+                beta=0,
+                frag_orient=fragment_orientation,
+                n_runs=100,
+                axis=ax
+            )
+
+            # For inter-fragment rotation of 15 degrees
+            field_1993_routines.contour_gain_vs_length(
+                cont_int_model,
+                test_data_dict_of_dicts,
+                beta=15,
+                frag_orient=fragment_orientation,
+                n_runs=100,
+                axis=ax
+            )
+
+            fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
+                target_kernel_idx, fragment_orientation))
+
+        # -------------------------------------------------------------------------------
+        # Debug - Plot the performance on a test image
+        # -------------------------------------------------------------------------------
+        image_idx = 0
+        contour_len = 9
+        beta = 15
+        alpha = 0
+
+        test_image_dir = os.path.join(
+            data_directory,
+            'test/filter_{0}/c_len_{1}/beta_{2}/alpha_{3}'.format(
+                target_kernel_idx, contour_len, beta, alpha)
+        )
+
+        image_file = os.listdir(test_image_dir)[image_idx]
+        test_image = load_img(os.path.join(test_image_dir, image_file))
+        test_image = np.array(test_image) / 255.0
+
+        alex_net_utils.plot_l1_and_l2_activations(
+            test_image,
+            feat_extract_callback,
+            cont_int_callback,
+            target_kernel_idx
+        )
+        plt.suptitle("Contour Integration kernel @ index {}".format(target_kernel_idx))
 
     # -----------------------------------------------------------------------------------
     #  End
