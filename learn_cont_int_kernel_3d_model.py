@@ -434,7 +434,7 @@ if __name__ == '__main__':
             training_cb=callbacks,
             steps_per_epoch=10,
             axis=loss_vs_epoch_ax,
-            # alpha=0
+            alpha=0
         )
 
         # load best weights
@@ -538,13 +538,13 @@ if __name__ == '__main__':
         # -------------------------------------------------------------------------------
         image_idx = 0
         contour_len = 9
-        beta = 15
-        alpha = 0
+        beta_rot = 15
+        alpha_rot = 0
 
         test_image_dir = os.path.join(
             data_directory,
             'test/filter_{0}/c_len_{1}/beta_{2}/alpha_{3}'.format(
-                target_kernel_idx, contour_len, beta, alpha)
+                target_kernel_idx, contour_len, beta_rot, alpha_rot)
         )
 
         image_file = os.listdir(test_image_dir)[image_idx]
