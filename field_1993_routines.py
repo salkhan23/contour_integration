@@ -12,9 +12,11 @@ import image_generator_curve
 import alex_net_utils
 
 from keras.preprocessing.image import load_img
+from generate_curved_contour_data_set_orient_matched import get_neurophysiological_data
 
 reload(image_generator_curve)
 reload(alex_net_utils)
+reload(get_neurophysiological_data)
 
 
 def contour_gain_vs_inter_fragment_rotation(
@@ -53,42 +55,37 @@ def contour_gain_vs_inter_fragment_rotation(
     # --------------------------------------
     # Validation
     # --------------------------------------
-    if c_len not in [1, 3, 5, 7, 9]:
-        raise Exception("Invalid contour length {0} specified. Allowed = [1, 3, 5, 7, 9]")
+    valid_c_len = [1, 3, 5, 7, 9]
+    if c_len not in valid_c_len:
+        raise Exception("Invalid contour length {0} specified. Allowed = {1}".format(c_len, valid_c_len))
+
+    valid_alpha = [0, 15, 30]
+    if alpha not in valid_alpha:
+        raise Exception("Invalid alpha {0} specified. Allowed {1}".format(alpha, valid_alpha))
 
     print("Model Contour Gain vs inter-fragment rotation "
-          "for contour length {0}, frag orientation {1}".format(c_len, frag_orient))
+          "for contour length {0}, frag orientation {1}, alpha = {2}".format(c_len, frag_orient, alpha))
 
     # --------------------------------------
     # Get Neurophysiological Data
     # --------------------------------------
-    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
-        li_2006_data = pickle.load(handle)
-
-    absolute_gain_linear = {
-        1: li_2006_data['contour_len_avg_gain'][0],
-        3: li_2006_data['contour_len_avg_gain'][1],
-        5: li_2006_data['contour_len_avg_gain'][2],
-        7: li_2006_data['contour_len_avg_gain'][3],
-        9: li_2006_data['contour_len_avg_gain'][4],
-
-    }
-
-    with open('.//data//neuro_data//fields_1993_exp_1_beta.pickle', 'rb') as handle:
-        fields_1993_exp_1_beta = pickle.load(handle)
-    beta_rot_detectability = fields_1993_exp_1_beta['ah_djf_avg_1s_proportion_correct']
+    abs_linear_gain_c_len, rel_beta_detectability, rel_alpha_detectability = \
+        get_neurophysiological_data()
 
     inter_frag_rotation_arr = np.array([0, 15, 30, 45, 60])
 
     # Plot Neurophysiological data
     # --------------------------------------
     if axis is None:
-        f, axis = plt.subplot()
+        f, axis = plt.subplots()
 
     # Relative gain curvature is actually detectability.
     # at 100% detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
+    combined_detectability = {beta: rel_beta_detectability[beta] * rel_alpha_detectability[alpha][beta]
+                              for beta in inter_frag_rotation_arr}
+
     absolute_gains = [
-        1 + 2 * (beta_rot_detectability[beta] - 0.5) * (absolute_gain_linear[c_len] - 1)
+        1 + 2 * max((combined_detectability[beta] - 0.5), 0) * (abs_linear_gain_c_len[c_len] - 1)
         for beta in inter_frag_rotation_arr
     ]
 
@@ -185,11 +182,16 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_r
     # --------------------------------------
     # Validation
     # --------------------------------------
-    if beta not in [0, 15, 30, 45, 60]:
-        raise Exception("Invalid inter-fragment rotation {}. Allowed [0, 15, 30, 45, 60]".format(beta))
+    valid_beta = [0, 15, 30, 45, 60]
+    if beta not in valid_beta:
+        raise Exception("Invalid inter-fragment rotation {0}. Allowed {1}".format(beta, valid_beta))
+
+    valid_alpha = [0, 15, 30]
+    if alpha not in valid_alpha:
+        raise Exception("Invalid alpha {0} specified. Allowed {1}".format(alpha, valid_alpha))
 
     print("Model Contour Gain vs contour length "
-          "for inter-fragment rotation {0}, frag orientation {1}".format(beta, frag_orient))
+          "for inter-fragment rotation {0}, frag orientation {1}, alpha={2}".format(beta, frag_orient, alpha))
 
     # --------------------------------------
     # Get Neurophysiological Data
@@ -201,12 +203,22 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_r
         fields_1993_exp_1_beta = pickle.load(handle)
     beta_rot_detectability = fields_1993_exp_1_beta['ah_djf_avg_1s_proportion_correct']
 
+    with open('.//data//neuro_data//fields_1993_exp_3_alpha.pickle', 'rb') as handle:
+        fields_1993_exp_3_alpha = pickle.load(handle)
+    # Use averaged data
+    alpha_rot_detectability = {
+        0: fields_1993_exp_3_alpha['ah_djf_avg_alpha_0_proportion_correct'],
+        15: fields_1993_exp_3_alpha['ah_djf_avg_alpha_15_proportion_correct'],
+        30: fields_1993_exp_3_alpha['ah_djf_avg_alpha_30_proportion_correct']
+    }
+
     c_len_arr = np.array([1, 3, 5, 7, 9])
 
     # Relative gain curvature is actually detectability.
     # at 100% detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
-    absolute_gains = 1 + (li_2006_data['contour_len_avg_gain'] - 1) \
-        * 2 * (beta_rot_detectability[beta] - 0.5)
+    combined_detectability = beta_rot_detectability[beta] * alpha_rot_detectability[alpha][beta]
+
+    absolute_gains = 1 + 2 * max((combined_detectability - 0.5), 0) * (li_2006_data['contour_len_avg_gain'] - 1)
 
     # Plot Neurophysiological data
     # --------------------------------------
