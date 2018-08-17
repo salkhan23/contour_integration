@@ -37,7 +37,7 @@ reload(image_generator_curve)
 DATA_DIRECTORY = "./data/curved_contours/orientation_matched3"
 
 
-def get_neurophysiological_data():
+def get_neurophysiological_data_raw():
     """
     Retrieve neurophysiological data from pickle files.
 
@@ -75,6 +75,50 @@ def get_neurophysiological_data():
 
     return abs_linear_gain_c_len, rel_beta_rot_detectability, rel_alpha_rot_detectability
 
+
+def get_neurophysiological_data():
+    """
+    Returns a nested dictionary of absolute results
+
+    The way to reference the results is results[c_len][alpha][beta]
+
+    :return:
+    """
+
+    abs_linear_gain_c_len, rel_beta_detectability, rel_alpha_detectability = \
+        get_neurophysiological_data_raw()
+
+    c_len_arr = [1, 3, 5, 7, 9]
+    alpha_rot_arr = [0, 15, 30]
+    beta_rot_arr = [0, 15, 30, 45, 60]
+
+    c_len_dict = {}
+    for c_len in c_len_arr:
+
+        alpha_dict = {}
+        for alpha in alpha_rot_arr:
+
+            # Get Detectability Results
+            if alpha == 0:
+                detectability_dict = {beta: rel_beta_detectability[beta] for beta in beta_rot_arr}
+            else:
+                detectability_dict = {beta: rel_alpha_detectability[alpha][beta] for beta in beta_rot_arr}
+
+            # Change to absolute gain values
+            # Relative gain curvature is actually detectability.
+            # at 100% detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
+            c_len_alpha_beta_dict = \
+                {beta: 1 + 2 * (detectability_dict[beta] - 0.5) * (abs_linear_gain_c_len[c_len] - 1)
+                 for beta in beta_rot_arr}
+
+            alpha_dict[alpha] = c_len_alpha_beta_dict
+
+        c_len_dict[c_len] = alpha_dict
+
+    return c_len_dict
+
+
+# abs_gain = 1 + 2 * max((combined_detectability - 0.5), 0) * (abs_linear_gain_c_len[c_len] - 1)
 
 def generate_data_set(
         base_dir, tgt_filt_idx, n_img_per_set, frag, frag_params, f_tile_size,
@@ -126,8 +170,7 @@ def generate_data_set(
     # -----------------------------------------------------------------------------------
     # Neurophysiological data
     # -----------------------------------------------------------------------------------
-    abs_linear_gain_c_len, rel_beta_detectability, rel_alpha_detectability = \
-        get_neurophysiological_data()
+    abs_gains_arr = get_neurophysiological_data()
 
     # -----------------------------------------------------------------------------------
     #  Generate the Data
@@ -150,8 +193,7 @@ def generate_data_set(
                 if not os.path.exists(abs_destination_dir):
                     os.makedirs(abs_destination_dir)
 
-                combined_detectability = rel_beta_detectability[beta] * rel_alpha_detectability[alpha][beta]
-                abs_gain = 1 + 2 * max((combined_detectability - 0.5), 0) * (abs_linear_gain_c_len[c_len] - 1)
+                abs_gain = abs_gains_arr[c_len][alpha][beta]
 
                 print("Generating {0} images for [contour length {1}, beta {2}, alpha {3}]. Expected Gain {4}".format(
                     n_img_per_set, c_len, beta, alpha, abs_gain))
