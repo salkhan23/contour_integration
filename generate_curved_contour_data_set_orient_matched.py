@@ -37,6 +37,45 @@ reload(image_generator_curve)
 DATA_DIRECTORY = "./data/curved_contours/orientation_matched3"
 
 
+def get_neurophysiological_data():
+    """
+    Retrieve neurophysiological data from pickle files.
+
+    Three dictionaries are returned
+    [1] absolute linear gain, indexed by c_len
+    [2] beta rotation detectability indexed by beta
+    [3] alpha rotation detectability indexed by alpha then beta
+
+    :return:
+    """
+    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
+        li_2006_data = pickle.load(handle)
+
+    abs_linear_gain_c_len = {
+        1: li_2006_data['contour_len_avg_gain'][0],
+        3: li_2006_data['contour_len_avg_gain'][1],
+        5: li_2006_data['contour_len_avg_gain'][2],
+        7: li_2006_data['contour_len_avg_gain'][3],
+        9: li_2006_data['contour_len_avg_gain'][4],
+    }
+
+    with open('.//data//neuro_data//fields_1993_exp_1_beta.pickle', 'rb') as handle:
+        fields_1993_exp_1_beta = pickle.load(handle)
+    # Use averaged data
+    rel_beta_rot_detectability = fields_1993_exp_1_beta['ah_djf_avg_1s_proportion_correct']
+
+    with open('.//data//neuro_data//fields_1993_exp_3_alpha.pickle', 'rb') as handle:
+        fields_1993_exp_3_alpha = pickle.load(handle)
+    # Use averaged data
+    rel_alpha_rot_detectability = {
+        0: fields_1993_exp_3_alpha['ah_djf_avg_alpha_0_proportion_correct'],
+        15: fields_1993_exp_3_alpha['ah_djf_avg_alpha_15_proportion_correct'],
+        30: fields_1993_exp_3_alpha['ah_djf_avg_alpha_30_proportion_correct']
+    }
+
+    return abs_linear_gain_c_len, rel_beta_rot_detectability, rel_alpha_rot_detectability
+
+
 def generate_data_set(
         base_dir, tgt_filt_idx, n_img_per_set, frag, frag_params, f_tile_size,
         img_size=(227, 227, 3), overwrite_existing_data=False):
@@ -87,30 +126,8 @@ def generate_data_set(
     # -----------------------------------------------------------------------------------
     # Neurophysiological data
     # -----------------------------------------------------------------------------------
-    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
-        li_2006_data = pickle.load(handle)
-
-    absolute_gain_linear = {
-        1: li_2006_data['contour_len_avg_gain'][0],
-        3: li_2006_data['contour_len_avg_gain'][1],
-        5: li_2006_data['contour_len_avg_gain'][2],
-        7: li_2006_data['contour_len_avg_gain'][3],
-        9: li_2006_data['contour_len_avg_gain'][4],
-    }
-
-    with open('.//data//neuro_data//fields_1993_exp_1_beta.pickle', 'rb') as handle:
-        fields_1993_exp_1_beta = pickle.load(handle)
-    # Use averaged data
-    beta_rot_detectability = fields_1993_exp_1_beta['ah_djf_avg_1s_proportion_correct']
-
-    with open('.//data//neuro_data//fields_1993_exp_3_alpha.pickle', 'rb') as handle:
-        fields_1993_exp_3_alpha = pickle.load(handle)
-    # Use averaged data
-    alpha_rot_detectability = {
-        0: fields_1993_exp_3_alpha['ah_djf_avg_alpha_0_proportion_correct'],
-        15: fields_1993_exp_3_alpha['ah_djf_avg_alpha_15_proportion_correct'],
-        30: fields_1993_exp_3_alpha['ah_djf_avg_alpha_30_proportion_correct']
-    }
+    abs_linear_gain_c_len, rel_beta_detectability, rel_alpha_detectability = \
+        get_neurophysiological_data()
 
     # -----------------------------------------------------------------------------------
     #  Generate the Data
@@ -123,19 +140,19 @@ def generate_data_set(
 
         for b_idx, beta in enumerate(beta_rot_arr):
 
-            beta_n_clen_dir = os.path.join(c_len_dir, 'beta_{0}'.format(beta))
+            beta_n_c_len_dir = os.path.join(c_len_dir, 'beta_{0}'.format(beta))
 
             for a_idx, alpha in enumerate(alpha_rot_arr):
 
-                alpha_n_beta_n_clen_dir = os.path.join(beta_n_clen_dir, 'alpha_{0}'.format(alpha))
+                alpha_n_beta_n_c_len_dir = os.path.join(beta_n_c_len_dir, 'alpha_{0}'.format(alpha))
 
-                abs_destination_dir = os.path.join(filt_dir, alpha_n_beta_n_clen_dir)
+                abs_destination_dir = os.path.join(filt_dir, alpha_n_beta_n_c_len_dir)
                 if not os.path.exists(abs_destination_dir):
                     os.makedirs(abs_destination_dir)
 
-                combined_detectability = beta_rot_detectability[beta] * alpha_rot_detectability[alpha][beta]
+                combined_detectability = rel_beta_detectability[beta] * rel_alpha_detectability[alpha][beta]
+                abs_gain = 1 + 2 * max((combined_detectability - 0.5), 0) * (abs_linear_gain_c_len[c_len] - 1)
 
-                abs_gain = 1 + 2 * max((combined_detectability - 0.5), 0) * (absolute_gain_linear[c_len] - 1)
                 print("Generating {0} images for [contour length {1}, beta {2}, alpha {3}]. Expected Gain {4}".format(
                     n_img_per_set, c_len, beta, alpha, abs_gain))
 
