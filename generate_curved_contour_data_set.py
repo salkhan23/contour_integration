@@ -70,7 +70,7 @@ if __name__ == '__main__':
         # Do not generate data if already exists
         tgt_dir = os.path.join(DATA_DIRECTORY, 'train/filter_{}'.format(tgt_filter_idx))
         if os.path.exists(tgt_dir) and len(os.listdir(tgt_dir)) != 0:
-            print("Data from filter {} already exists. Skipping Data generation".format(tgt_filter_idx))
+            print("Data for filter {} already exists. Skipping Data generation".format(tgt_filter_idx))
             continue
 
         # -------------------------------------------------------------------------------
@@ -117,7 +117,7 @@ if __name__ == '__main__':
                 max_active_kernel, max_act_value))
 
         # Do not generate data for fragments with a high spatial frequency. These suffer from aliasing
-        # when rotated and do not form good contours
+        # when rotated (look nothing like the original fragment) and do not form good contours
         spatial_wavelengths = [chan_params['lambda1'] for chan_params in gabor_params_dict_list]
         if any(chan_wavelength < 2 for chan_wavelength in spatial_wavelengths):
             print("Skipping Kernel @ {}, spatial frequency too high".format(tgt_filter_idx))
