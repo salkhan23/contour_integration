@@ -6,17 +6,16 @@
 # -------------------------------------------------------------------------------------------------
 import numpy as np
 import matplotlib.pyplot as plt
-import pickle
 
+from keras.preprocessing.image import load_img
+
+import generate_curved_contour_data_set_orient_matched
 import image_generator_curve
 import alex_net_utils
 
-from keras.preprocessing.image import load_img
-from generate_curved_contour_data_set_orient_matched import get_neurophysiological_data
-
 reload(image_generator_curve)
 reload(alex_net_utils)
-reload(get_neurophysiological_data)
+reload(generate_curved_contour_data_set_orient_matched)
 
 
 def contour_gain_vs_inter_fragment_rotation(
@@ -69,7 +68,7 @@ def contour_gain_vs_inter_fragment_rotation(
     # --------------------------------------
     # Get Neurophysiological Data
     # --------------------------------------
-    abs_gains_arr = get_neurophysiological_data()
+    abs_gains_arr = generate_curved_contour_data_set_orient_matched.get_neurophysiological_data()
     inter_frag_rotation_arr = np.array([0, 15, 30, 45, 60])
 
     # Plot Neurophysiological data
@@ -185,7 +184,7 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_r
 
     # --------------------------------------
     # Get Neurophysiological Data
-    abs_gains_arr = get_neurophysiological_data()
+    abs_gains_arr = generate_curved_contour_data_set_orient_matched.get_neurophysiological_data()
     c_len_arr = np.array([1, 3, 5, 7, 9])
 
     expected_gains = [abs_gains_arr[c_len][alpha][beta] for c_len in c_len_arr]
