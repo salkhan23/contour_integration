@@ -135,33 +135,61 @@ def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, al
     valid_beta = [0, 15, 30, 45, 60]
     valid_alpha = [0, 15, 30]
 
+    if c_len is None:
+        c_len = valid_c_len
+    elif isinstance(c_len, int):
+        c_len = [c_len]
+
+    if beta is None:
+        beta = valid_beta
+    elif isinstance(beta, int):
+        beta = [beta]
+
+    if alpha is None:
+        alpha = valid_alpha
+    elif isinstance(alpha, int):
+        alpha = [alpha]
+
+    if any(x not in valid_c_len for x in c_len):
+        raise Exception("Invalid c_len elements {}. All should be in {}".format(c_len, valid_c_len))
+
+    if any(x not in valid_beta for x in beta):
+        raise Exception("Invalid beta elements {}. All should be in {}".format(beta, valid_beta))
+
+    if any(x not in valid_alpha for x in alpha):
+        raise Exception("Invalid alpha elements {}. All should be in {}".format(alpha, valid_alpha))
+
     train_data_dict_of_dict, test_data_dict_of_dict =\
         _get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir)
 
-    # All data sets
-    use_set = train_data_dict_of_dict.keys()
+    full_set = train_data_dict_of_dict.keys()
+    use_set = []
+    for entry in c_len:
+        use_set.extend([x for x in full_set if 'c_len_{}'.format(entry) in x])
 
-    # Filter out everything that is not specified
-    if c_len is not None:
-        if c_len not in valid_c_len:
-            raise Exception("Invalid c_len {} should be in {}".format(c_len, valid_c_len))
+    full_set = use_set
+    use_set = []
+    for entry in beta:
+        use_set.extend([x for x in full_set if 'beta_{}'.format(entry) in x])
 
-        use_set = [x for x in use_set if 'c_len_{}'.format(c_len) in x]
-
-    if beta is not None:
-        if beta not in valid_beta:
-            raise Exception("Invalid beta {} should be in {}".format(beta, valid_beta))
-
-        use_set = [x for x in use_set if 'beta_{}'.format(beta) in x]
-
-    if alpha is not None:
-        if alpha not in valid_alpha:
-            raise Exception("Invalid alpha {} should be in {}".format(alpha, valid_alpha))
-
-        use_set = [x for x in use_set if 'alpha_{}'.format(alpha) in x]
+    full_set = use_set
+    use_set = []
+    for entry in alpha:
+        use_set.extend([x for x in full_set if 'alpha_{}'.format(entry) in x])
 
     if frag_orient is not None:
-        use_set = [x for x in use_set if 'forient_{}'.format(frag_orient) in x]
+        full_set = use_set
+        use_set = []
+
+        if isinstance(frag_orient, int):
+            frag_orient = [frag_orient]
+
+        for entry in frag_orient:
+            use_set.extend([x for x in full_set if 'forient_{}'.format(entry) in x])
+
+    # for entry in use_set:
+    #     print entry
+    # print(len(use_set))
 
     # Single dictionary containing (image file location, expected gain)
     active_train_set = {}
@@ -360,12 +388,16 @@ if __name__ == '__main__':
     #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
 
     target_kernel_idx_arr = \
-        [5]
-    data_directory = "./data/curved_contours/with_alpha_rotations"
+        [5, 10, 19]
+    data_directory = "./data/curved_contours/new_alpha"
+    # data_directory = './data/curved_contours/filter_matched'
     weights_store_file = \
-        './trained_models/ContourIntegrationModel3d/with_alpha_rotations.hf'
+        './trained_models/ContourIntegrationModel3d/alpha_rotations_uptil_clen_7.hf'
     # prev_train_weights = \
     #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
+
+    print("Data Source: {}".format(data_directory))
+    print("weights will be stored @ {}".format(weights_store_file))
 
     # -----------------------------------------------------------------------------------
     # Build
@@ -375,7 +407,7 @@ if __name__ == '__main__':
         rf_size=25,
         inner_leaky_relu_alpha=0.7,
         outer_leaky_relu_alpha=0.94,
-        l1_reg_loss_weight=0.005
+        l1_reg_loss_weight=0.001,
     )
 
     prev_trained_kernel_idx_arr = []
@@ -434,7 +466,7 @@ if __name__ == '__main__':
             training_cb=callbacks,
             steps_per_epoch=10,
             axis=loss_vs_epoch_ax,
-            alpha=0
+            # c_len=[1, 3, 5, 7, 9]
         )
 
         # load best weights
