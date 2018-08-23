@@ -9,3 +9,5 @@ PyCharm MetaData
 #Tensorboard logs
 logs
 
+# Ignore the data directory
+data/curved_contours
