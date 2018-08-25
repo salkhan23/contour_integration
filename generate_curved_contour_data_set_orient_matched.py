@@ -118,8 +118,6 @@ def get_neurophysiological_data():
     return c_len_dict
 
 
-# abs_gain = 1 + 2 * max((combined_detectability - 0.5), 0) * (abs_linear_gain_c_len[c_len] - 1)
-
 def generate_data_set(
         base_dir, tgt_filt_idx, n_img_per_set, frag, frag_params, f_tile_size,
         img_size=(227, 227, 3), overwrite_existing_data=False):
@@ -307,7 +305,7 @@ def search_black_n_white_search_space(
 
 
 def search_colored_parameter_space(
-        model_feat_extract_cb, lambda1_arr, psi_arr, sigma_arr, theta_arr, threshold=3.0):
+        model, lambda1_arr, psi_arr, sigma_arr, theta_arr, threshold=3.0):
     """
     Iterate through the provided lambda1_arr, psi_arr, sigma_arr & theta_arr, and store
     gabor parameters that maximally activate feature extracting kernels
@@ -316,7 +314,7 @@ def search_colored_parameter_space(
 
     TODO: single iter cycle and search individual channels for each kernel. (speed up this function)
 
-    :param model_feat_extract_cb:
+    :param model:
     :param lambda1_arr:
     :param psi_arr:
     :param sigma_arr:
@@ -325,15 +323,17 @@ def search_colored_parameter_space(
 
     :return: Dictionary of contour integration kernels along with the best fit parameters.
     Dictionary keys are kernel indexes, the value is another dictionary that contains 2 keys:
-    gabor_params and max value. Gabor Param is a list of dictionaries one for each channgel
+    gabor_params and max value. Gabor Param is a list of dictionaries one for each channel
 
     """
+    w, b = model.layers[1].get_weights()
+
     best_fit_params_dict = {}
 
     for theta_c0, sigma_c0, lambda1_c0, psi_c0 in itertools.product(
             theta_arr, sigma_arr, lambda1_arr, psi_arr):
 
-        print("C0: theta {0}, lambda {1}, sigma {2}, psi {3}".format(
+        print("C0: theta {0}, sigma {1}, lambda {2}, psi {3}".format(
             theta_c0, lambda1_c0, sigma_c0, psi_c0))
 
         c0_loop_start_time = datetime.datetime.now()
@@ -341,16 +341,17 @@ def search_colored_parameter_space(
         for theta_c1, sigma_c1, lambda1_c1, psi_c1 in itertools.product(
                 theta_arr, sigma_arr, lambda1_arr, psi_arr):
 
-            # print("C1: theta {0}, lambda {1}, sigma {2}, psi {3}".format(
+            # print("C1: theta {0}, sigma {1}, lambda {2}, psi {3}".format(
             #     theta_c1, lambda1_c1, sigma_c1, psi_c1))
 
-            c1_loop_start_time = datetime.datetime.now()
+            # c1_loop_start_time = datetime.datetime.now()
 
             for theta_c2, sigma_c2, lambda1_c2, psi_c2 in itertools.product(
                     theta_arr, sigma_arr, lambda1_arr, psi_arr):
 
-                # print("C2: theta {0}, lambda {1}, sigma {2}, psi {3}".format(
+                # print("C2: theta {0}, sigma {1}, lambda {2}, psi {3}".format(
                 #     theta_c2, lambda1_c2, sigma_c2, psi_c2))
+
                 # c2_loop_start_time = datetime.datetime.now()
 
                 # ------------------------------------------------------------------
@@ -394,13 +395,10 @@ def search_colored_parameter_space(
                     (11, 11)
                 )
 
-                k_idx, act_value = alex_net_utils.find_most_active_l1_kernel_index(
-                    frag,
-                    model_feat_extract_cb,
-                    plot=False
-                )
+                act = np.tensordot(frag, w, axes=((0, 1, 2), (0, 1, 2)))
 
-                # print("C2 search Cycle took {}".format(datetime.datetime.now() - c2_loop_start_time))
+                k_idx = np.argmax(act)
+                act_value = act[k_idx]
 
                 if act_value > threshold:
                     if k_idx not in best_fit_params_dict:
@@ -416,9 +414,8 @@ def search_colored_parameter_space(
                                 "max_act": act_value
                             }
 
-            # print("C1 search Cycle took {}".format(datetime.datetime.now() - c1_loop_start_time))
-
         print("C0 search Cycle took {}".format(datetime.datetime.now() - c0_loop_start_time))
+
     return best_fit_params_dict
 
 
@@ -458,9 +455,16 @@ if __name__ == '__main__':
     # theta_array = -90 + np.arange(0, 180, 30)
     # sigma_array = [2.5, 2.7]
 
-    gabor_params_dict = search_black_n_white_search_space(
-    # gabor_params_dict = search_colored_parameter_space(
-        feat_extract_act_cb,
+    # gabor_params_dict = search_black_n_white_search_space(
+    #     feat_extract_act_cb,
+    #     lambda1_arr=lambda1_array,
+    #     psi_arr=psi_array,
+    #     sigma_arr=sigma_array,
+    #     theta_arr=theta_array
+    # )
+
+    gabor_params_dict = search_colored_parameter_space(
+        cont_int_model,
         lambda1_arr=lambda1_array,
         psi_arr=psi_array,
         sigma_arr=sigma_array,
