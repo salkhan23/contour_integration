@@ -34,7 +34,7 @@ reload(alex_net_utils)
 reload(image_generator_curve)
 
 
-DATA_DIRECTORY = "./data/curved_contours/orientation_matched3"
+DATA_DIRECTORY = "./data/curved_contours/param_search_black_and_white"
 
 
 def get_neurophysiological_data_raw():
@@ -120,7 +120,7 @@ def get_neurophysiological_data():
 
 def generate_data_set(
         base_dir, tgt_filt_idx, n_img_per_set, frag, frag_params, f_tile_size,
-        img_size=(227, 227, 3), overwrite_existing_data=False):
+        img_size=np.array((227, 227, 3)), overwrite_existing_data=False):
     """
     Given a contour fragment and its gabor params, generate test and train images in
     the base directory
@@ -444,7 +444,7 @@ if __name__ == '__main__':
     # -----------
     lambda1_array = np.arange(15, 2, -0.5)
     psi_array = np.concatenate((np.arange(0, 8, 0.25), np.arange(-0.5, -7, -0.25)))
-    sigma_array = [2.5, 2.60, 2.70, 2.80]  # Any larger does not fit within the 11x11 fragment size.
+    sigma_array = [2.5, 2.60, 2.70, 2.75]  # Any larger does not fit within the 11x11 fragment size.
     # Gabor angles are wrt y axis (0 = vertical). To get wrt to x-axis -90
     theta_array = -90 + np.arange(0, 180, 15)
 
@@ -455,21 +455,21 @@ if __name__ == '__main__':
     # theta_array = -90 + np.arange(0, 180, 30)
     # sigma_array = [2.5, 2.7]
 
-    # gabor_params_dict = search_black_n_white_search_space(
-    #     feat_extract_act_cb,
-    #     lambda1_arr=lambda1_array,
-    #     psi_arr=psi_array,
-    #     sigma_arr=sigma_array,
-    #     theta_arr=theta_array
-    # )
-
-    gabor_params_dict = search_colored_parameter_space(
-        cont_int_model,
+    gabor_params_dict = search_black_n_white_search_space(
+        feat_extract_act_cb,
         lambda1_arr=lambda1_array,
         psi_arr=psi_array,
         sigma_arr=sigma_array,
         theta_arr=theta_array
     )
+
+    # gabor_params_dict = search_colored_parameter_space(
+    #     cont_int_model,
+    #     lambda1_arr=lambda1_array,
+    #     psi_arr=psi_array,
+    #     sigma_arr=sigma_array,
+    #     theta_arr=theta_array
+    # )
 
     print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*'*80, len(gabor_params_dict)))
     for kernel_idx in gabor_params_dict.keys():
@@ -513,8 +513,8 @@ if __name__ == '__main__':
     # ------------------------------------------------------------------------------
     # Generate the Data
     # ------------------------------------------------------------------------------
-    n_train_images = 500
-    n_test_images = 100
+    n_train_images = 300
+    n_test_images = 50
 
     full_tile_size = np.array((17, 17))
     frag_tile_size = np.array((11, 11))
@@ -537,7 +537,6 @@ if __name__ == '__main__':
             frag=fragment,
             frag_params=params,
             f_tile_size=full_tile_size,
-            img_size=(227, 227, 3)
         )
 
         print("Generating Test Data Set")
@@ -548,7 +547,6 @@ if __name__ == '__main__':
             frag=fragment,
             frag_params=params,
             f_tile_size=full_tile_size,
-            img_size=(227, 227, 3)
         )
 
         print("Data Generation for kernel index {0} took {1}".format(
