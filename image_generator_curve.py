@@ -138,8 +138,8 @@ def _add_single_side_of_contour_constant_separation(
         tile_offset[1] = d * np.sin(acc_angle / 180.0 * np.pi)
 
         curr_tile_start = prev_tile_start + tile_offset
-        # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
-        #     curr_tile_start, tile_offset, prev_tile_start, acc_angle))
+        print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
+            curr_tile_start, tile_offset, prev_tile_start, acc_angle))
 
         # check if the current tile overlaps with the previous tile
         # TODO: Check if current tile overlaps with ANY previous one.
@@ -150,15 +150,19 @@ def _add_single_side_of_contour_constant_separation(
         is_overlapping = do_tiles_overlap(l1, r1, l2, r2)
 
         if is_overlapping:
-            print("Next Tile @ {0} overlaps with tile at location {1}".format(
-                curr_tile_start, prev_tile_start))
+            print("Tile {0} overlaps with tile at location {1}".format(curr_tile_start, prev_tile_start))
 
             tile_offset[0] += d_delta * np.cos(acc_angle / 180.0 * np.pi)
             tile_offset[1] += d_delta * np.sin(acc_angle / 180.0 * np.pi)
 
+            if base_contour == 'circle' and d > 0:
+                tile_offset[0] += -d_delta * np.cos(acc_angle / 180.0 * np.pi)
+            else:  # sigmoid
+                tile_offset[0] += d_delta * np.cos(acc_angle / 180.0 * np.pi)
+            tile_offset[1] += d_delta * np.sin(acc_angle / 180.0 * np.pi)
+
             curr_tile_start = prev_tile_start + tile_offset
-            # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
-            #     curr_tile_start, tile_offset, prev_tile_start, acc_angle))
+            print("Current tile relocated to {0}. (offsets {1})".format(curr_tile_start, tile_offset))
 
         img = alex_net_utils.tile_image(
             img,
@@ -671,7 +675,7 @@ if __name__ == '__main__':
         tgt_filter,
         # match=[ 'x0', 'y0', 'theta_deg', 'amp', 'sigma', 'lambda1', 'psi', 'gamma']
         # match=['x0', 'y0', 'theta_deg', 'amp', 'psi', 'gamma']
-        match=[ 'theta_deg']
+        match=['theta_deg']
     )
     fragment_gabor_params['theta_deg'] = np.int(fragment_gabor_params['theta_deg'])
 
@@ -704,7 +708,7 @@ if __name__ == '__main__':
     # In the Ref, the visible portion of the fragment moves around inside large tiles.
     # Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
     fragment_size = np.array(fragment.shape[0:2])
-    full_tile_size = np.array([17, 17])
+    full_tile_size = np.array([15, 15])
 
     # -----------------------------------------------------------------------------------
     #  Add the Contour Path
@@ -717,6 +721,7 @@ if __name__ == '__main__':
         beta=beta_rotation,
         alpha=alpha_rotation,
         d=full_tile_size[0],
+        rand_inter_frag_direction_change=False
     )
 
     plt.figure()
