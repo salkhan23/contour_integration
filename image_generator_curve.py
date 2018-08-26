@@ -697,8 +697,9 @@ if __name__ == '__main__':
 
     test_image = np.ones(image_size, dtype=np.uint8) * bg_value
 
-    beta_rotation = 15
     contour_len = 9
+    beta_rotation = 15
+    alpha_rotation = 0
 
     # In the Ref, the visible portion of the fragment moves around inside large tiles.
     # Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
@@ -709,12 +710,13 @@ if __name__ == '__main__':
     #  Add the Contour Path
     # -----------------------------------------------------------------------------------
     test_image, path_fragment_starts = add_contour_path_constant_separation(
-        test_image,
-        fragment,
-        fragment_gabor_params,
-        contour_len,
-        beta_rotation,
-        full_tile_size[0],
+        img=test_image,
+        frag=fragment,
+        frag_params=fragment_gabor_params,
+        c_len=contour_len,
+        beta=beta_rotation,
+        alpha=alpha_rotation,
+        d=full_tile_size[0],
     )
 
     plt.figure()
