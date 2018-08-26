@@ -149,7 +149,7 @@ def _add_single_side_of_contour_constant_separation(
         r2 = l2 + frag_size
         is_overlapping = do_tiles_overlap(l1, r1, l2, r2)
 
-        if is_overlapping:
+        while is_overlapping:
             print("Tile {0} overlaps with tile at location {1}".format(curr_tile_start, prev_tile_start))
 
             tile_offset[0] += d_delta * np.cos(acc_angle / 180.0 * np.pi)
@@ -163,6 +163,10 @@ def _add_single_side_of_contour_constant_separation(
 
             curr_tile_start = prev_tile_start + tile_offset
             print("Current tile relocated to {0}. (offsets {1})".format(curr_tile_start, tile_offset))
+
+            l1 = curr_tile_start
+            r1 = l1 + frag_size
+            is_overlapping = do_tiles_overlap(l1, r1, l2, r2)
 
         img = alex_net_utils.tile_image(
             img,
@@ -708,7 +712,7 @@ if __name__ == '__main__':
     # In the Ref, the visible portion of the fragment moves around inside large tiles.
     # Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
     fragment_size = np.array(fragment.shape[0:2])
-    full_tile_size = np.array([15, 15])
+    full_tile_size = np.array([13, 13])
 
     # -----------------------------------------------------------------------------------
     #  Add the Contour Path
