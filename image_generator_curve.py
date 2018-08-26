@@ -223,7 +223,7 @@ def add_contour_path_constant_separation(
     c_tile_starts.extend(tiles)
 
     img, tiles = _add_single_side_of_contour_constant_separation(
-        img, center_frag_start, frag, frag_params, c_len, beta, alpha, -d, d_delta, frag_size,
+        img, center_frag_start, frag, frag_params, c_len, beta, alpha, -d, -d_delta, frag_size,
         random_frag_direction=rand_inter_frag_direction_change, base_contour=base_contour)
     c_tile_starts.extend(tiles)
 
