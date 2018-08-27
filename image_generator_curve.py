@@ -152,9 +152,6 @@ def _add_single_side_of_contour_constant_separation(
         while is_overlapping:
             print("Tile {0} overlaps with tile at location {1}".format(curr_tile_start, prev_tile_start))
 
-            tile_offset[0] += d_delta * np.cos(acc_angle / 180.0 * np.pi)
-            tile_offset[1] += d_delta * np.sin(acc_angle / 180.0 * np.pi)
-
             if base_contour == 'circle' and d > 0:
                 tile_offset[0] += -d_delta * np.cos(acc_angle / 180.0 * np.pi)
             else:  # sigmoid
