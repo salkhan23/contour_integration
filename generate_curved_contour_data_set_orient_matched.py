@@ -41,10 +41,11 @@ def get_neurophysiological_data_raw():
     """
     Retrieve neurophysiological data from pickle files.
 
-    Three dictionaries are returned
-    [1] absolute linear gain, indexed by c_len
-    [2] beta rotation detectability indexed by beta
-    [3] alpha rotation detectability indexed by alpha then beta
+    Four dictionaries are returned
+    [1] absolute linear gain, indexed by c_len [Li 2006 - Experiment 1]
+    [2] absolute linear gain, index by relative colinear distance [Li 2006 Experiment 2]
+    [3] beta rotation detectability indexed by beta [Fields 1993 - Experiment 1]
+    [4] alpha rotation detectability indexed by alpha then beta [Fields 19993 - Experiment 3]
 
     :return:
     """
@@ -57,6 +58,14 @@ def get_neurophysiological_data_raw():
         5: li_2006_data['contour_len_avg_gain'][2],
         7: li_2006_data['contour_len_avg_gain'][3],
         9: li_2006_data['contour_len_avg_gain'][4],
+    }
+
+    abs_linear_gain_f_spacing  = {
+        1: li_2006_data['contour_separation_avg_gain'][0],
+        1.2: li_2006_data['contour_separation_avg_gain'][1],
+        1.4: li_2006_data['contour_separation_avg_gain'][2],
+        1.6: li_2006_data['contour_separation_avg_gain'][3],
+        1.9: li_2006_data['contour_separation_avg_gain'][4],
     }
 
     with open('.//data//neuro_data//fields_1993_exp_1_beta.pickle', 'rb') as handle:
@@ -73,49 +82,78 @@ def get_neurophysiological_data_raw():
         30: fields_1993_exp_3_alpha['ah_djf_avg_alpha_30_proportion_correct']
     }
 
-    return abs_linear_gain_c_len, rel_beta_rot_detectability, rel_alpha_rot_detectability
+    return abs_linear_gain_c_len, abs_linear_gain_f_spacing, rel_beta_rot_detectability, rel_alpha_rot_detectability
 
 
-def get_neurophysiological_data():
+def get_neurophysiological_data(results_type):
     """
-    Returns a nested dictionary of absolute results
+    Returns a nested dictionary of absolute results that can be easily accessed.
 
-    The way to reference the results is results[c_len][alpha][beta]
+    The way to reference the results is results[c_len or f_spacing][alpha][beta]
 
     :return:
     """
+    valid_results_types = ['c_len', 'f_spacing']
+    results_type = results_type.lower()
+    if results_type not in valid_results_types:
+        raise Exception("Invalid results type requested: {}. Allowed ={}".format(results_type, valid_results_types))
 
-    abs_linear_gain_c_len, rel_beta_detectability, rel_alpha_detectability = \
+    abs_linear_gain_c_len, abs_linear_gain_f_spacing, rel_beta_detectability, rel_alpha_detectability = \
         get_neurophysiological_data_raw()
 
-    c_len_arr = [1, 3, 5, 7, 9]
     alpha_rot_arr = [0, 15, 30]
     beta_rot_arr = [0, 15, 30, 45, 60]
 
-    c_len_dict = {}
-    for c_len in c_len_arr:
+    results_dict = {}
 
-        alpha_dict = {}
-        for alpha in alpha_rot_arr:
+    if results_type == 'c_len':
+        c_len_arr = [1, 3, 5, 7, 9]
 
-            # Get Detectability Results
-            if alpha == 0:
-                detectability_dict = {beta: rel_beta_detectability[beta] for beta in beta_rot_arr}
-            else:
-                detectability_dict = {beta: rel_alpha_detectability[alpha][beta] for beta in beta_rot_arr}
+        for c_len in c_len_arr:
+            alpha_dict = {}
 
-            # Change to absolute gain values
-            # Relative gain curvature is actually detectability.
-            # at 100% detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
-            c_len_alpha_beta_dict = \
-                {beta: 1 + 2 * (detectability_dict[beta] - 0.5) * (abs_linear_gain_c_len[c_len] - 1)
-                 for beta in beta_rot_arr}
+            for alpha in alpha_rot_arr:
+                # Get Detectability Results
+                if alpha == 0:
+                    detectability_dict = {beta: rel_beta_detectability[beta] for beta in beta_rot_arr}
+                else:
+                    detectability_dict = {beta: rel_alpha_detectability[alpha][beta] for beta in beta_rot_arr}
 
-            alpha_dict[alpha] = c_len_alpha_beta_dict
+                # Change to absolute gain values
+                # Relative gain curvature is actually detectability.
+                # at 100 % detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
+                alpha_beta_dict = \
+                    {beta: 1 + 2 * (detectability_dict[beta] - 0.5) * (abs_linear_gain_c_len[c_len] - 1)
+                     for beta in beta_rot_arr}
 
-        c_len_dict[c_len] = alpha_dict
+                alpha_dict[alpha] = alpha_beta_dict
 
-    return c_len_dict
+            results_dict[c_len] = alpha_dict
+    else:  # results_type == 'f_spacing'
+        rcd_arr = [1, 1.2, 1.4, 1.6, 1.9]
+
+        for rcd in rcd_arr:
+            alpha_dict = {}
+
+            for alpha in alpha_rot_arr:
+                # Get Detectability Results
+                if alpha == 0:
+                    detectability_dict = {beta: rel_beta_detectability[beta] for beta in beta_rot_arr}
+                else:
+                    detectability_dict = {beta: rel_alpha_detectability[alpha][beta] for beta in beta_rot_arr}
+
+                # Change to absolute gain values
+                # Relative gain curvature is actually detectability.
+                # at 100 % detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
+                alpha_beta_dict = \
+                    {beta: 1 + 2 * (detectability_dict[beta] - 0.5) * (abs_linear_gain_c_len[c_len] - 1)
+                     for beta in beta_rot_arr}
+
+                alpha_dict[alpha] = alpha_beta_dict
+
+            results_dict[rcd] = alpha_dict
+
+    return results_dict
 
 
 def generate_data_set(
@@ -168,7 +206,7 @@ def generate_data_set(
     # -----------------------------------------------------------------------------------
     # Neurophysiological data
     # -----------------------------------------------------------------------------------
-    abs_gains_arr = get_neurophysiological_data()
+    abs_gains_arr = get_neurophysiological_data('c_len')
 
     # -----------------------------------------------------------------------------------
     #  Generate the Data
