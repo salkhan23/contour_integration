@@ -153,10 +153,20 @@ def _add_single_side_of_contour_constant_separation(
             print("Tile {0} overlaps with tile at location {1}".format(curr_tile_start, prev_tile_start))
 
             if base_contour == 'circle' and d > 0:
-                tile_offset[0] += -d_delta * np.cos(acc_angle / 180.0 * np.pi)
+                if abs(d_delta) > 1:
+                    tile_offset[0] += -d_delta * np.cos(acc_angle / 180.0 * np.pi)
+                else:
+                    tile_offset[0] += -d_delta
             else:  # sigmoid
-                tile_offset[0] += d_delta * np.cos(acc_angle / 180.0 * np.pi)
-            tile_offset[1] += d_delta * np.sin(acc_angle / 180.0 * np.pi)
+                if abs(d_delta) > 1:
+                    tile_offset[0] += d_delta * np.cos(acc_angle / 180.0 * np.pi)
+                else:
+                    tile_offset[0] += d_delta
+
+            if abs(d_delta) > 1:
+                tile_offset[1] += d_delta * np.sin(acc_angle / 180.0 * np.pi)
+            else:
+                tile_offset[1] += d_delta
 
             curr_tile_start = prev_tile_start + tile_offset
             print("Current tile relocated to {0}. (offsets {1})".format(curr_tile_start, tile_offset))
@@ -211,7 +221,7 @@ def add_contour_path_constant_separation(
         img_center = img_size // 2
         center_frag_start = img_center - (frag_size // 2)
 
-    d_delta = d // 4
+    d_delta = d // 8
 
     img = alex_net_utils.tile_image(
         img,
@@ -326,9 +336,9 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
         #     print("{0}: {1}".format(ii, dist))
 
         ovlp_bg_frag_idx_arr = np.argwhere(dist_to_c_frag <= frag.shape[0])
-        # for idx in ovlp_bg_frag_idx_arr:
-        #     print("contour fragment @ {0}, overlaps with bg fragment @ index {1} and location {2}".format(
-        #         c_frag_start, idx, bg_frag_starts[idx, :]))
+        for idx in ovlp_bg_frag_idx_arr:
+            print("contour fragment @ {0}, overlaps with bg fragment @ index {1} and location {2}".format(
+                c_frag_start, idx, bg_frag_starts[idx, :]))
 
         ovlp_bg_frag_idx_to_remove = []
 
@@ -338,6 +348,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
             novlp_bg_frag = None
             if relocate_allowed:
+                print("What am i donintg here")
                 # Is relocation possible?
                 novlp_bg_frag = get_nonoverlapping_bg_fragment(
                     np.squeeze(f_tile_start, axis=0),
@@ -347,14 +358,14 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
                 )
 
             if novlp_bg_frag is not None:
-                # print("Relocating tile @ {0} to {1}".format(bg_frag_starts[bg_frag_idx, :], novlp_bg_frag))
+                print("Relocating tile @ {0} to {1}".format(bg_frag_starts[bg_frag_idx, :], novlp_bg_frag))
 
                 bg_frag_starts[bg_frag_idx, :] = np.expand_dims(novlp_bg_frag, axis=0)
                 relocate_bg_frag_starts.append(novlp_bg_frag)
 
             else:
-                # print("Remove bg fragment at index {0}, location {1}".format(
-                #     bg_frag_idx, bg_frag_starts[bg_frag_idx, :]))
+                print("Remove bg fragment at index {0}, location {1}".format(
+                    bg_frag_idx, bg_frag_starts[bg_frag_idx, :]))
 
                 removed_bg_frag_starts.append(bg_frag_starts[bg_frag_idx, :])
                 ovlp_bg_frag_idx_to_remove.append(bg_frag_idx)
@@ -709,7 +720,7 @@ if __name__ == '__main__':
     # In the Ref, the visible portion of the fragment moves around inside large tiles.
     # Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
     fragment_size = np.array(fragment.shape[0:2])
-    full_tile_size = np.array([13, 13])
+    full_tile_size = np.array([16, 16])
 
     # -----------------------------------------------------------------------------------
     #  Add the Contour Path
@@ -722,7 +733,7 @@ if __name__ == '__main__':
         beta=beta_rotation,
         alpha=alpha_rotation,
         d=full_tile_size[0],
-        rand_inter_frag_direction_change=False
+        rand_inter_frag_direction_change=True
     )
 
     plt.figure()
@@ -738,7 +749,8 @@ if __name__ == '__main__':
         path_fragment_starts,
         full_tile_size,
         beta_rotation,
-        fragment_gabor_params
+        fragment_gabor_params,
+        relocate_allowed=True
     )
 
     plt.figure()
@@ -756,9 +768,9 @@ if __name__ == '__main__':
     # test_image = alex_net_utils.highlight_tiles(
     #     test_image, fragment.shape[0:2], bg_tiles, edge_color=[0, 255, 0])
 
-    # # Highlight Removed tiles
-    # test_image = alex_net_utils.highlight_tiles(
-    #     test_image, fragment.shape[0:2], bg_removed_tiles, edge_color=[0, 0, 255])
+    # Highlight Removed tiles
+    test_image = alex_net_utils.highlight_tiles(
+        test_image, fragment.shape[0:2], bg_removed_tiles, edge_color=[0, 0, 255])
 
     # # Highlight Relocated tiles
     # test_image = alex_net_utils.highlight_tiles(
