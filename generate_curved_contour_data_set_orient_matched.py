@@ -146,7 +146,7 @@ def get_neurophysiological_data(results_type):
                 # Relative gain curvature is actually detectability.
                 # at 100 % detectability, gain is full amount. @ 50 percent detectability, no gain (gain=1)
                 alpha_beta_dict = \
-                    {beta: 1 + 2 * (detectability_dict[beta] - 0.5) * (abs_linear_gain_c_len[c_len] - 1)
+                    {beta: 1 + 2 * (detectability_dict[beta] - 0.5) * (abs_linear_gain_f_spacing[rcd] - 1)
                      for beta in beta_rot_arr}
 
                 alpha_dict[alpha] = alpha_beta_dict
