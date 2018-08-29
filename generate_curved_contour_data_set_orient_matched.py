@@ -60,7 +60,7 @@ def get_neurophysiological_data_raw():
         9: li_2006_data['contour_len_avg_gain'][4],
     }
 
-    abs_linear_gain_f_spacing  = {
+    abs_linear_gain_f_spacing = {
         1: li_2006_data['contour_separation_avg_gain'][0],
         1.2: li_2006_data['contour_separation_avg_gain'][1],
         1.4: li_2006_data['contour_separation_avg_gain'][2],
@@ -176,12 +176,13 @@ def generate_data_set(
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
-    c_len_arr = np.array([1, 3, 5, 7, 9])
+    if type(frag_params) is not list:
+        frag_params = [frag_params]
+
     beta_rot_arr = np.array([0, 15, 30, 45, 60])  # main contour rotation
     alpha_rot_arr = np.array([0, 15, 30])   # fragment rotation wrt to contour direction
 
-    if type(frag_params) is not list:
-        frag_params = [frag_params]
+    data_key_dict = {}
 
     # -----------------------------------------------------------------------------------
     # Create the destination directory
@@ -204,26 +205,19 @@ def generate_data_set(
                 return
 
     # -----------------------------------------------------------------------------------
-    # Neurophysiological data
+    #  Li-2006 Experiment 1 (Contour Length vs Gain) + Fields-1993 Experiments
     # -----------------------------------------------------------------------------------
+    c_len_arr = np.array([1, 3, 5, 7, 9])
     abs_gains_arr = get_neurophysiological_data('c_len')
 
-    # -----------------------------------------------------------------------------------
-    #  Generate the Data
-    # -----------------------------------------------------------------------------------
-    data_key_dict = {}
-
     for c_len in c_len_arr:
-
-        c_len_dir = 'c_len_{0}'.format(c_len)
+        rcd_dir = 'c_len_{0}'.format(c_len)
 
         for b_idx, beta in enumerate(beta_rot_arr):
-
-            beta_n_c_len_dir = os.path.join(c_len_dir, 'beta_{0}'.format(beta))
+            beta_n_f_spacing_dir = os.path.join(rcd_dir, 'beta_{0}'.format(beta))
 
             for a_idx, alpha in enumerate(alpha_rot_arr):
-
-                alpha_n_beta_n_c_len_dir = os.path.join(beta_n_c_len_dir, 'alpha_{0}'.format(alpha))
+                alpha_n_beta_n_c_len_dir = os.path.join(beta_n_f_spacing_dir, 'alpha_{0}'.format(alpha))
 
                 abs_destination_dir = os.path.join(filt_dir, alpha_n_beta_n_c_len_dir)
                 if not os.path.exists(abs_destination_dir):
@@ -247,26 +241,90 @@ def generate_data_set(
 
                 # Save the images to file & create a dictionary key of (Image, Expected gain)
                 # that can be used by a python generator / keras sequence object
-                # --------------------------------------------------------------
-                data_dict = {}
-                for img_idx in range(img_arr.shape[0]):
-                    filename = "c_len_{0}_beta_{1}_alpha_{2}_forient_{3}__{4}.png".format(
-                        c_len, beta, alpha, frag_params[0]['theta_deg'], img_idx)
+                curr_set_dict = {}
+                set_base_filename = "c_len_{0}_beta_{1}_alpha_{2}_forient_{3}".format(
+                    c_len, beta, alpha, frag_params[0]['theta_deg'])
 
-                    plt.imsave(
-                        os.path.join(abs_destination_dir, filename),
-                        img_arr[img_idx, ],
-                        format='PNG'
+                for img_idx in range(img_arr.shape[0]):
+                    filename = os.path.join(
+                        abs_destination_dir,
+                        set_base_filename + '__{0}.png'.format(img_idx)
                     )
 
-                    data_dict[os.path.join(abs_destination_dir, filename)] = abs_gain
+                    plt.imsave(filename, img_arr[img_idx, ], format='PNG')
+                    curr_set_dict[filename] = abs_gain
 
                 # Add this dictionary to the dictionary of dictionaries
-                data_key_dict['c_len_{0}_beta_{1}_alpha_{2}_forient_{3}'.format(
-                    c_len, beta, alpha, frag_params[0]['theta_deg'])] = data_dict
+                data_key_dict[set_base_filename] = curr_set_dict
+
+    # -----------------------------------------------------------------------------------
+    #  Li-2006 Experiment 2 (Fragment Spacing vs Gain) + Fields-1993 Experiments
+    # -----------------------------------------------------------------------------------
+    c_len = 7
+    rcd_arr = np.array([1, 1.2, 1.4, 1.6, 1.9])
+    abs_gains_arr = get_neurophysiological_data('f_spacing')
+
+    for rcd in rcd_arr:
+
+        # Relative colinear distance is used in a different way than in the original paper.
+        # In the ref, RCD is defined as the ratio of distance between fragment centers to distance of some fixed
+        # tile size. The stimuli generated here are based on Fields-1993 stimuli and require spacing between fragments
+        # Since we are mostly interested in modeling the effects vs the actual results, we used rcd to change the
+        # distance between fragments from some arbitrary reference.
+        # rcd is use to see how much the fragment size increases, this is then used to increase the full tile size
+        # (the actual fragment size stays the same)
+
+        frag_size_inc = np.int(rcd * frag.shape[0]) - frag.shape[0]
+        updated_f_tile_size = f_tile_size + frag_size_inc
+
+        f_spacing_dir = 'f_spacingx10_{0}'.format(int(rcd * 10))  # prevent the . from appearing in the file name
+
+        for b_idx, beta in enumerate(beta_rot_arr):
+            beta_n_f_spacing_dir = os.path.join(f_spacing_dir, 'beta_{0}'.format(beta))
+
+            for a_idx, alpha in enumerate(alpha_rot_arr):
+                alpha_n_beta_n_c_len_dir = os.path.join(beta_n_f_spacing_dir, 'alpha_{0}'.format(alpha))
+
+                abs_destination_dir = os.path.join(filt_dir, alpha_n_beta_n_c_len_dir)
+                if not os.path.exists(abs_destination_dir):
+                    os.makedirs(abs_destination_dir)
+
+                abs_gain = abs_gains_arr[rcd][alpha][beta]
+
+                print("Generating {0} images for [f_spacing {1}, full_tile {2}, beta {3}, alpha {4}]. "
+                      "Expected Gain {5}".format(n_img_per_set, rcd, updated_f_tile_size, beta, alpha, abs_gain))
+
+                img_arr = image_generator_curve.generate_contour_images(
+                    n_images=n_img_per_set,
+                    frag=frag,
+                    frag_params=frag_params,
+                    c_len=c_len,
+                    beta=beta,
+                    alpha=alpha,
+                    f_tile_size=updated_f_tile_size,
+                    img_size=img_size
+                )
+
+                # Save the images to file & create a dictionary key of (Image, Expected gain)
+                # that can be used by a python generator / keras sequence object
+                curr_set_dict = {}
+                set_base_filename = "f_spacingx10_{0}_beta_{1}_alpha_{2}_forient_{3}".format(
+                    int(rcd * 10), beta, alpha, frag_params[0]['theta_deg'])
+
+                for img_idx in range(img_arr.shape[0]):
+                    filename = os.path.join(
+                        abs_destination_dir,
+                        set_base_filename + '__{0}.png'.format(img_idx)
+                    )
+
+                    plt.imsave(filename, img_arr[img_idx, ], format='PNG')
+                    curr_set_dict[filename] = abs_gain
+
+                # Add this dictionary to the dictionary of dictionaries
+                data_key_dict[set_base_filename] = curr_set_dict
 
     # print("Generated Data Dictionaries")
-    # for key in data_key_dict.keys():
+    # for key in sorted(data_key_dict.keys()):
     #     print(key)
 
     # Store the dictionary of Dictionaries
