@@ -118,7 +118,7 @@ def _get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir):
     return train_data_list_of_dict, test_data_list_of_dict
 
 
-def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, alpha=None, frag_orient=None):
+def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, alpha=None, f_spacing=None, frag_orient=None):
     """
     A data key is a dictionary of file location:expected gain tuples.
     Two Dictionaries are returned: one for testing and one for testing model performance
@@ -134,6 +134,7 @@ def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, al
     valid_c_len = [1, 3, 5, 7, 9]
     valid_beta = [0, 15, 30, 45, 60]
     valid_alpha = [0, 15, 30]
+    valid_f_spacing = [1, 1.2, 1.4, 1.6, 1.9]
 
     if c_len is None:
         c_len = valid_c_len
@@ -150,6 +151,11 @@ def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, al
     elif isinstance(alpha, int):
         alpha = [alpha]
 
+    if f_spacing is None:
+        f_spacing = valid_f_spacing
+    elif isinstance(f_spacing, int):
+        f_spacing = [f_spacing]
+
     if any(x not in valid_c_len for x in c_len):
         raise Exception("Invalid c_len elements {}. All should be in {}".format(c_len, valid_c_len))
 
@@ -159,13 +165,20 @@ def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, al
     if any(x not in valid_alpha for x in alpha):
         raise Exception("Invalid alpha elements {}. All should be in {}".format(alpha, valid_alpha))
 
+    if any(x not in valid_f_spacing for x in f_spacing):
+        raise Exception("Invalid f_spacing elements {}. All should be in {}".format(f_spacing, valid_f_spacing))
+
     train_data_dict_of_dict, test_data_dict_of_dict =\
         _get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir)
 
     full_set = train_data_dict_of_dict.keys()
     use_set = []
+
+    # Get all base files (c_len and frag_spacing )
     for entry in c_len:
         use_set.extend([x for x in full_set if 'c_len_{}'.format(entry) in x])
+    for entry in f_spacing:
+        use_set.extend([x for x in full_set if 'f_spacingx10_{}'.format(int(entry * 10)) in x])
 
     full_set = use_set
     use_set = []
@@ -187,9 +200,9 @@ def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, al
         for entry in frag_orient:
             use_set.extend([x for x in full_set if 'forient_{}'.format(entry) in x])
 
-    # for entry in use_set:
+    # for entry in sorted(use_set):
     #     print entry
-    # print(len(use_set))
+    # print("Number of Internal dictionaries selected {}".format(len(use_set)))
 
     # Single dictionary containing (image file location, expected gain)
     active_train_set = {}
@@ -204,7 +217,7 @@ def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, al
 
 def train_contour_integration_kernel(
         model, tgt_filt_idx, data_dir, b_size=32, n_epochs=200, training_cb=None, steps_per_epoch=10,
-        c_len=None, beta=None, alpha=None, axis=None):
+        c_len=None, beta=None, alpha=None, f_spacing=None, axis=None):
     """
 
     :param model:
@@ -232,7 +245,7 @@ def train_contour_integration_kernel(
     print("Building data generators...")
 
     train_data_dict, test_data_dict = get_train_n_test_data_keys(
-        tgt_filt_idx, data_dir, c_len=c_len, beta=beta, alpha=alpha)
+        tgt_filt_idx, data_dir, c_len=c_len, beta=beta, alpha=alpha, f_spacing=f_spacing)
 
     if b_size > len(train_data_dict):
         print("WARN: Specified batch size is > than number of actual data")
@@ -388,8 +401,8 @@ if __name__ == '__main__':
     #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
 
     target_kernel_idx_arr = \
-        [5, 10, 19]
-    data_directory = "./data/curved_contours/new_alpha"
+        [2, 5, 10, 19]
+    data_directory = "./data/curved_contours/parameter_matched"
     # data_directory = './data/curved_contours/filter_matched'
     weights_store_file = \
         './trained_models/ContourIntegrationModel3d/alpha_rotations_uptil_clen_7.hf'
@@ -466,8 +479,13 @@ if __name__ == '__main__':
             training_cb=callbacks,
             steps_per_epoch=10,
             axis=loss_vs_epoch_ax,
-            # c_len=[1, 3, 5, 7, 9]
+            c_len=[1, 3, 5, 7, 9],
+            f_spacing=[],
+            beta=[0],
+            alpha=[0]
         )
+
+        raw_input()
 
         # load best weights
         cont_int_model.load_weights(TEMP_WEIGHT_STORE_FILE)  # load best weights
