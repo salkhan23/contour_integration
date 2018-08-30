@@ -336,9 +336,9 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
         #     print("{0}: {1}".format(ii, dist))
 
         ovlp_bg_frag_idx_arr = np.argwhere(dist_to_c_frag <= frag.shape[0])
-        for idx in ovlp_bg_frag_idx_arr:
-            print("contour fragment @ {0}, overlaps with bg fragment @ index {1} and location {2}".format(
-                c_frag_start, idx, bg_frag_starts[idx, :]))
+        # for idx in ovlp_bg_frag_idx_arr:
+        #     print("contour fragment @ {0}, overlaps with bg fragment @ index {1} and location {2}".format(
+        #         c_frag_start, idx, bg_frag_starts[idx, :]))
 
         ovlp_bg_frag_idx_to_remove = []
 
@@ -348,7 +348,6 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
             novlp_bg_frag = None
             if relocate_allowed:
-                print("What am i donintg here")
                 # Is relocation possible?
                 novlp_bg_frag = get_nonoverlapping_bg_fragment(
                     np.squeeze(f_tile_start, axis=0),
@@ -358,14 +357,14 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
                 )
 
             if novlp_bg_frag is not None:
-                print("Relocating tile @ {0} to {1}".format(bg_frag_starts[bg_frag_idx, :], novlp_bg_frag))
+                # print("Relocating tile @ {0} to {1}".format(bg_frag_starts[bg_frag_idx, :], novlp_bg_frag))
 
                 bg_frag_starts[bg_frag_idx, :] = np.expand_dims(novlp_bg_frag, axis=0)
                 relocate_bg_frag_starts.append(novlp_bg_frag)
 
             else:
-                print("Remove bg fragment at index {0}, location {1}".format(
-                    bg_frag_idx, bg_frag_starts[bg_frag_idx, :]))
+                # print("Remove bg fragment at index {0}, location {1}".format(
+                #     bg_frag_idx, bg_frag_starts[bg_frag_idx, :]))
 
                 removed_bg_frag_starts.append(bg_frag_starts[bg_frag_idx, :])
                 ovlp_bg_frag_idx_to_remove.append(bg_frag_idx)
