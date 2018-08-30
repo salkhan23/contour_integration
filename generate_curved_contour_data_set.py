@@ -26,7 +26,7 @@ reload(generate_contour_images)
 reload(contour_integration_model_3d)
 reload(alex_net_utils)
 
-DATA_DIRECTORY = "./data/curved_contours/no_background"
+DATA_DIRECTORY = "./data/curved_contours/filter_matched"
 
 
 if __name__ == '__main__':
@@ -39,7 +39,6 @@ if __name__ == '__main__':
     # Initialization
     # -----------------------------------------------------------------------------------
     cont_int_kernel_arr = np.arange(96)
-    cont_int_kernel_arr = np.array([2, 5, 10, 19])
 
     n_train_images = 200
     n_test_images = 50
