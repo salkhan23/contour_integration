@@ -417,10 +417,10 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     cont_int_model = contour_integration_model_3d.build_contour_integration_model(
         tgt_filt_idx=0,
-        rf_size=25,
+        rf_size=29,
         inner_leaky_relu_alpha=0.7,
         outer_leaky_relu_alpha=0.94,
-        l1_reg_loss_weight=0.001,
+        l1_reg_loss_weight=0.01,
     )
 
     prev_trained_kernel_idx_arr = []
@@ -479,13 +479,11 @@ if __name__ == '__main__':
             training_cb=callbacks,
             steps_per_epoch=10,
             axis=loss_vs_epoch_ax,
-            c_len=[1, 3, 5, 7, 9],
-            f_spacing=[],
-            beta=[0],
-            alpha=[0]
+            # c_len=[1, 3, 5, 7, 9],
+            # f_spacing=[],
+            # beta=[0],
+            # alpha=[0]
         )
-
-        raw_input()
 
         # load best weights
         cont_int_model.load_weights(TEMP_WEIGHT_STORE_FILE)  # load best weights
@@ -549,11 +547,11 @@ if __name__ == '__main__':
                 axis=ax
             )
 
-            fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
+            fig.suptitle("Contour Curvature Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
                 target_kernel_idx, fragment_orientation))
 
         # -------------------------------------------------------------------------------
-        # Enhancement gain vs contour length
+        # Enhancement Gain vs Contour Length
         # -------------------------------------------------------------------------------
         print("Checking gain vs contour length performance ...")
         for fragment_orientation in fragment_orientation_arr:
@@ -580,7 +578,38 @@ if __name__ == '__main__':
                 axis=ax
             )
 
-            fig.suptitle("Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
+            fig.suptitle("Contour Length. Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
+                target_kernel_idx, fragment_orientation))
+
+        # -------------------------------------------------------------------------------
+        # Enhancement Gain vs Fragment Spacing
+        # -------------------------------------------------------------------------------
+        print("Checking gain vs fragment spacing performance ...")
+        for fragment_orientation in fragment_orientation_arr:
+
+            fig, ax = plt.subplots()
+
+            # Linear contours
+            field_1993_routines.contour_gain_vs_spacing(
+                cont_int_model,
+                test_data_dict_of_dicts,
+                beta=0,
+                frag_orient=fragment_orientation,
+                n_runs=100,
+                axis=ax
+            )
+
+            # For inter-fragment rotation of 15 degrees
+            field_1993_routines.contour_gain_vs_spacing(
+                cont_int_model,
+                test_data_dict_of_dicts,
+                beta=15,
+                frag_orient=fragment_orientation,
+                n_runs=100,
+                axis=ax
+            )
+
+            fig.suptitle("Fragment Spacing. Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
                 target_kernel_idx, fragment_orientation))
 
         # -------------------------------------------------------------------------------
