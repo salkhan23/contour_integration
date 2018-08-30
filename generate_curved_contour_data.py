@@ -706,14 +706,15 @@ if __name__ == '__main__':
     n_train_images_per_set = 200
     n_test_images_per_set = 50
 
-    full_tile_size = np.array((17, 17))
-    frag_tile_size = np.array((11, 11))
+    full_tile_size = np.array((18, 18))
+    frag_tile_size = np.array((9, 9))
 
     # -----------------------------------------------------------------------------------
     # Contour Integration Model
     # -----------------------------------------------------------------------------------
     print("Building Contour Integration Model...")
 
+    # Model only needed for feature extracting kernels
     cont_int_model = contour_integration_model_3d.build_contour_integration_model(5)
     feat_extract_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
 
@@ -722,13 +723,15 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # A. parameter_search_space method
     # --------------------------------
-    # gabor_params_dict = search_parameter_ranges_for_gabor_fits(feat_extract_act_cb, cont_int_model)
+    gabor_params_dict = search_parameter_ranges_for_gabor_fits(
+        feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
     # B. Best fit for each kernel individually
     # ----------------------------------------
     # cont_int_kernel_arr = np.arange(96)
     cont_int_kernel_arr = np.array([2, 5, 10, 19])
-    gabor_params_dict = individually_fit_gabors(cont_int_kernel_arr, feat_extract_act_cb, cont_int_model)
+    gabor_params_dict = individually_fit_gabors(
+        cont_int_kernel_arr, feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
     # print best fit params
     print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*' * 80, len(gabor_params_dict)))
@@ -747,7 +750,7 @@ if __name__ == '__main__':
     # # ------------------------------------------------------------------------------
     # # Plot all Gabors found to maximally activate neurons - Debug Step
     # # ------------------------------------------------------------------------------
-    # plot_fits_and_filters(gabor_params_dict, cont_int_model)
+    plot_fits_and_filters(gabor_params_dict, cont_int_model, frag_size=frag_tile_size)
 
     # ------------------------------------------------------------------------------
     # Generate the Data
