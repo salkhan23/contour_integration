@@ -344,7 +344,7 @@ def generate_data_set(
 
 
 def _search_black_n_white_search_space(
-        model_feat_extract_cb, lambda1_arr, psi_arr, sigma_arr, theta_arr, th=3.0):
+        model_feat_extract_cb, lambda1_arr, psi_arr, sigma_arr, theta_arr, th=3.0, frag_size=(11, 11)):
     """
 
     :param model_feat_extract_cb:
@@ -353,6 +353,7 @@ def _search_black_n_white_search_space(
     :param sigma_arr:
     :param theta_arr:
     :param th:
+    :param frag_size:
 
     :return: Dictionary of contour integration kernels along with the best fit parameters.
     Dictionary keys are kernel indexes, the value is another dictionary that contains 2 keys:
@@ -376,7 +377,7 @@ def _search_black_n_white_search_space(
             'gamma': 1
         }
 
-        frag = gabor_fits.get_gabor_fragment(g_params, (11, 11))
+        frag = gabor_fits.get_gabor_fragment(g_params, frag_size)
 
         k_idx, act_value = alex_net_utils.find_most_active_l1_kernel_index(
             frag,
@@ -402,7 +403,7 @@ def _search_black_n_white_search_space(
 
 
 def _search_colored_parameter_space(
-        model, lambda1_arr, psi_arr, sigma_arr, theta_arr, threshold=3.0):
+        model, lambda1_arr, psi_arr, sigma_arr, theta_arr, th=3.0, frag_size=(11, 11)):
     """
     Iterate through the provided lambda1_arr, psi_arr, sigma_arr & theta_arr, and store
     gabor parameters that maximally activate feature extracting kernels
@@ -416,7 +417,8 @@ def _search_colored_parameter_space(
     :param psi_arr:
     :param sigma_arr:
     :param theta_arr:
-    :param threshold:
+    :param th:
+    :param frag_size:
 
     :return: Dictionary of contour integration kernels along with the best fit parameters.
     Dictionary keys are kernel indexes, the value is another dictionary that contains 2 keys:
@@ -489,7 +491,7 @@ def _search_colored_parameter_space(
 
                 frag = gabor_fits.get_gabor_fragment(
                     g_params_dict_list,
-                    (11, 11)
+                    frag_size
                 )
 
                 act = np.tensordot(frag, w, axes=((0, 1, 2), (0, 1, 2)))
@@ -497,7 +499,7 @@ def _search_colored_parameter_space(
                 k_idx = np.argmax(act)
                 act_value = act[k_idx]
 
-                if act_value > threshold:
+                if act_value > th:
                     if k_idx not in best_fit_params_dict:
                         best_fit_params_dict[k_idx] = {
                             "gabor_params": g_params_dict_list,
@@ -517,13 +519,15 @@ def _search_colored_parameter_space(
 
 
 # noinspection PyUnusedLocal
-def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model):
+def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model, frag_size=(11, 11), threshold=3.0):
     """
     Search over gabor parameters ranges to find sets that maximally activate a feature
     extracting neuron
 
     :param model_feat_extract_cb:
     :param model:
+    :param threshold: Minimum model activation for a fitted gabor
+    :param frag_size:
 
     :return: Dictionary of best fit params for each kernel found. Dictionary is indexed by kernel index.
              Each 'value' is another dictionary with two keys [max_act] and 'gabor_params'
@@ -553,15 +557,19 @@ def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model):
         lambda1_arr=lambda1_array,
         psi_arr=psi_array,
         sigma_arr=sigma_array,
-        theta_arr=theta_array
+        theta_arr=theta_array,
+        th=threshold,
+        frag_size=frag_size,
     )
 
-    # g_params_dict = search_colored_parameter_space(
+    # g_params_dict = _search_colored_parameter_space(
     #     cont_int_model,
     #     lambda1_arr=lambda1_array,
     #     psi_arr=psi_array,
     #     sigma_arr=sigma_array,
-    #     theta_arr=theta_array
+    #     theta_arr=theta_array,
+    #     th=threshold,
+    #     frag_size=frag_size,
     # )
 
     print("Parameter Search took {}".format(datetime.datetime.now() - param_search_start_time))
