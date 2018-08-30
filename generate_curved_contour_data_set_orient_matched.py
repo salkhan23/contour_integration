@@ -516,6 +516,7 @@ def _search_colored_parameter_space(
     return best_fit_params_dict
 
 
+# noinspection PyUnusedLocal
 def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model):
     """
     Search over gabor parameters and find sets that maximally activate a feature
@@ -589,11 +590,12 @@ def plot_fits_and_filters(g_params_dict, model, frag_size=(11, 11)):
             frag_size,
         )
 
-        ax_arr[0].imshow(tgt_w)
-        ax_arr[0].title('kernel')
+        disp_kernel = (tgt_w - tgt_w.min()) / (tgt_w.max() - tgt_w.min())
+        ax_arr[0].imshow(disp_kernel)
+        ax_arr[0].set_title('kernel')
 
         ax_arr[1].imshow(frag)
-        ax_arr[1].title('fragment')
+        ax_arr[1].set_title('fragment')
 
         f.suptitle("Max active Kernel @ index {0}. Act Value {1}".format(
             k_idx, gabor_params_dict[k_idx]["max_act"]))
@@ -617,7 +619,7 @@ if __name__ == '__main__':
     keras_backend.set_image_dim_ordering('th')
     start_time = datetime.datetime.now()
 
-    n_train_images_per_set = 300
+    n_train_images_per_set = 200
     n_test_images_per_set = 50
 
     full_tile_size = np.array((17, 17))
