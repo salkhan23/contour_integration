@@ -674,11 +674,16 @@ def plot_fits_and_filters(g_params_dict, model, frag_size=(11, 11)):
             frag_size,
         )
 
-        disp_kernel = (tgt_w - tgt_w.min()) / (tgt_w.max() - tgt_w.min())
-        ax_arr[0].imshow(disp_kernel)
+        disp_tgt_w = (tgt_w - tgt_w.min()) / (tgt_w.max() - tgt_w.min())
+        ax_arr[0].imshow(
+            disp_tgt_w,
+            extent=[-disp_tgt_w.shape[1]/2., disp_tgt_w.shape[1]/2., -disp_tgt_w.shape[0]/2., disp_tgt_w.shape[0]/2.]
+        )
         ax_arr[0].set_title('kernel')
 
-        ax_arr[1].imshow(frag)
+        ax_arr[1].imshow(frag, extent=[-frag.shape[1]/2., frag.shape[1]/2., -frag.shape[0]/2., frag.shape[0]/2.])
+        ax_arr[1].set_xlim([-disp_tgt_w.shape[1] / 2., disp_tgt_w.shape[1] / 2.])
+        ax_arr[1].set_ylim([-disp_tgt_w.shape[0] / 2., disp_tgt_w.shape[0] / 2.])
         ax_arr[1].set_title('fragment')
 
         f.suptitle("Max active Kernel @ index {0}. Act Value {1}".format(
@@ -723,8 +728,8 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # A. parameter_search_space method
     # --------------------------------
-    gabor_params_dict = search_parameter_ranges_for_gabor_fits(
-        feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
+    # gabor_params_dict = search_parameter_ranges_for_gabor_fits(
+    #     feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
     # B. Best fit for each kernel individually
     # ----------------------------------------
