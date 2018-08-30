@@ -34,7 +34,7 @@ reload(alex_net_utils)
 reload(image_generator_curve)
 
 
-DATA_DIRECTORY = "./data/curved_contours/param_search_black_and_white"
+DATA_DIRECTORY = "./data/curved_contours/test"
 
 
 def get_neurophysiological_data_raw():
@@ -519,7 +519,7 @@ def _search_colored_parameter_space(
 # noinspection PyUnusedLocal
 def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model):
     """
-    Search over gabor parameters and find sets that maximally activate a feature
+    Search over gabor parameters ranges to find sets that maximally activate a feature
     extracting neuron
 
     :param model_feat_extract_cb:
@@ -565,6 +565,82 @@ def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model):
     # )
 
     print("Parameter Search took {}".format(datetime.datetime.now() - param_search_start_time))
+    return g_params_dict
+
+
+def individually_fit_gabors(k_arr, model_feat_extract_cb, model, frag_size=(11, 11)):
+    """
+    Individually fit each feature extracting kernel to a gabor.
+    Return a dictionary of gabor fits for each kernel that can be fitted.
+
+    :param k_arr:
+    :param model_feat_extract_cb:
+    :param model:
+    :param frag_size:
+
+    :return: Dictionary of best fit params for each kernel found. Dictionary is indexed by kernel index.
+             Each 'value' is another dictionary with two keys [max_act] and 'gabor_params'
+             The way to reference g_param_dict[kernel_idx]['gabor_params']
+    """
+    print("Fitting Feature Extract kernels Individually...")
+    routine_start_time = datetime.datetime.now()
+
+    w, b = model.layers[1].get_weights()
+    g_params_dict = {}
+
+    for k_idx in k_arr:
+
+        tgt_w = w[:, :, :, k_idx]
+
+        best_fit_params_list = gabor_fits.find_best_fit_2d_gabor(tgt_w)
+
+        if any(x is None for x in best_fit_params_list):
+            print("Gabor Params for kernel {} not found".format(k_idx))
+            continue
+
+        # Create list of dictionaries of gabor params
+        kernel_param_dict_list = []
+        for chan_params in best_fit_params_list:
+            p = {
+                'x0': chan_params[0],
+                'y0': chan_params[1],
+                'theta_deg': np.int(chan_params[2]),
+                'amp': chan_params[3],
+                'sigma': 2.75,
+                'lambda1': chan_params[5],
+                'psi': chan_params[6],
+                'gamma': chan_params[7]
+            }
+            kernel_param_dict_list.append(p)
+
+        frag = gabor_fits.get_gabor_fragment(kernel_param_dict_list, frag_size)
+
+        # Get most responsive kernel and activation value
+        max_active_k, max_act_value = alex_net_utils.find_most_active_l1_kernel_index(
+            frag, model_feat_extract_cb, plot=False, tgt_filt=tgt_w)
+
+        if max_active_k != k_idx:
+            print("Gabor Fragment for kernel {} not found. Most active kernel {} is not target kernel".format(
+                k_idx, max_active_k))
+            continue
+        else:
+            print("Fragment for filter @ {} found. Max. activation {}".format(
+                max_active_k, max_act_value))
+
+        # Do not generate data for fragments with a high spatial frequency. These suffer from aliasing
+        # when rotated (look nothing like the original fragment) and do not form good contours
+        spatial_wavelengths = [chan_params['lambda1'] for chan_params in kernel_param_dict_list]
+        if any(chan_wavelength < 2 for chan_wavelength in spatial_wavelengths):
+            print("Skipping Kernel @ {}, spatial frequency too high".format(k_idx))
+            continue
+
+        # Store the parameters
+        g_params_dict[k_idx] = {
+            "gabor_params": kernel_param_dict_list,
+            "max_act": max_act_value,
+        }
+
+    print("Individually searching for Gabor Fits took {}".format(datetime.datetime.now() - routine_start_time))
     return g_params_dict
 
 
@@ -628,6 +704,8 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Contour Integration Model
     # -----------------------------------------------------------------------------------
+    print("Building Contour Integration Model...")
+
     cont_int_model = contour_integration_model_3d.build_contour_integration_model(5)
     feat_extract_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
 
@@ -635,7 +713,14 @@ if __name__ == '__main__':
     # Find Best Fit Gabor Parameters
     # -----------------------------------------------------------------------------------
     # A. parameter_search_space method
-    gabor_params_dict = search_parameter_ranges_for_gabor_fits(feat_extract_act_cb, cont_int_model)
+    # --------------------------------
+    # gabor_params_dict = search_parameter_ranges_for_gabor_fits(feat_extract_act_cb, cont_int_model)
+
+    # B. Best fit for each kernel individually
+    # ----------------------------------------
+    # cont_int_kernel_arr = np.arange(96)
+    cont_int_kernel_arr = np.array([2, 5, 10, 19])
+    gabor_params_dict = individually_fit_gabors(cont_int_kernel_arr, feat_extract_act_cb, cont_int_model)
 
     # print best fit params
     print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*' * 80, len(gabor_params_dict)))
@@ -651,10 +736,10 @@ if __name__ == '__main__':
     with open(best_fit_params_store_file, 'wb') as f_id:
         pickle.dump(gabor_params_dict, f_id)
 
-    # ------------------------------------------------------------------------------
-    # Plot all Gabors found to maximally activate neurons
-    # ------------------------------------------------------------------------------
-    plot_fits_and_filters(gabor_params_dict, cont_int_model)
+    # # ------------------------------------------------------------------------------
+    # # Plot all Gabors found to maximally activate neurons - Debug Step
+    # # ------------------------------------------------------------------------------
+    # plot_fits_and_filters(gabor_params_dict, cont_int_model)
 
     # ------------------------------------------------------------------------------
     # Generate the Data
