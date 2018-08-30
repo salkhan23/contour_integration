@@ -9,13 +9,13 @@ import matplotlib.pyplot as plt
 
 from keras.preprocessing.image import load_img
 
-import generate_curved_contour_data_set_orient_matched
+import generate_curved_contour_data
 import image_generator_curve
 import alex_net_utils
 
 reload(image_generator_curve)
 reload(alex_net_utils)
-reload(generate_curved_contour_data_set_orient_matched)
+reload(generate_curved_contour_data)
 
 
 def contour_gain_vs_inter_fragment_rotation(
@@ -68,7 +68,7 @@ def contour_gain_vs_inter_fragment_rotation(
     # --------------------------------------
     # Get Neurophysiological Data
     # --------------------------------------
-    abs_gains_arr = generate_curved_contour_data_set_orient_matched.get_neurophysiological_data('c_len')
+    abs_gains_arr = generate_curved_contour_data.get_neurophysiological_data('c_len')
     inter_frag_rotation_arr = np.array([0, 15, 30, 45, 60])
 
     # Plot Neurophysiological data
@@ -184,7 +184,7 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_r
 
     # --------------------------------------
     # Get Neurophysiological Data
-    abs_gains_arr = generate_curved_contour_data_set_orient_matched.get_neurophysiological_data('c_len')
+    abs_gains_arr = generate_curved_contour_data.get_neurophysiological_data('c_len')
     c_len_arr = np.array([1, 3, 5, 7, 9])
 
     expected_gains = [abs_gains_arr[c_len][alpha][beta] for c_len in c_len_arr]
@@ -298,7 +298,7 @@ def contour_gain_vs_spacing(model, data_key, beta, frag_orient=None, alpha=0, n_
 
     # --------------------------------------
     # Get Neurophysiological Data
-    abs_gains_arr = generate_curved_contour_data_set_orient_matched.get_neurophysiological_data('f_spacing')
+    abs_gains_arr = generate_curved_contour_data.get_neurophysiological_data('f_spacing')
 
     f_spacing_arr = np.array([1, 1.2, 1.4, 1.6, 1.9])
 
