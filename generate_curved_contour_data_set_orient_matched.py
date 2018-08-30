@@ -171,6 +171,7 @@ def generate_data_set(
     :param frag_params:
     :param f_tile_size:
     :param img_size:
+
     :return:
     """
     # -----------------------------------------------------------------------------------
@@ -342,7 +343,7 @@ def generate_data_set(
         pickle.dump(data_key_dict, handle)
 
 
-def search_black_n_white_search_space(
+def _search_black_n_white_search_space(
         model_feat_extract_cb, lambda1_arr, psi_arr, sigma_arr, theta_arr, th=3.0):
     """
 
@@ -400,7 +401,7 @@ def search_black_n_white_search_space(
     return best_fit_params_dict
 
 
-def search_colored_parameter_space(
+def _search_colored_parameter_space(
         model, lambda1_arr, psi_arr, sigma_arr, theta_arr, threshold=3.0):
     """
     Iterate through the provided lambda1_arr, psi_arr, sigma_arr & theta_arr, and store
@@ -515,26 +516,21 @@ def search_colored_parameter_space(
     return best_fit_params_dict
 
 
-if __name__ == '__main__':
-    # -----------------------------------------------------------------------------------
-    # Initialization
-    # -----------------------------------------------------------------------------------
-    plt.ion()
-    keras_backend.clear_session()
-    keras_backend.set_image_dim_ordering('th')
-    start_time = datetime.datetime.now()
+def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model):
+    """
+    Search over gabor parameters and find sets that maximally activate a feature
+    extracting neuron
 
-    # -----------------------------------------------------------------------------------
-    # Contour Integration Model
-    # -----------------------------------------------------------------------------------
-    cont_int_model = contour_integration_model_3d.build_contour_integration_model(5)
-    feat_extract_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
+    :param model_feat_extract_cb:
+    :param model:
 
-    # -----------------------------------------------------------------------------------
-    #  Search over gabor parameters and find sets that maximally activate a feature
-    #  extracting neuron
-    # -----------------------------------------------------------------------------------
-    print("Searching Gabor Parameter Ranges")
+    :return: Dictionary of best fit params for each kernel found. Dictionary is indexed by kernel index.
+             Each 'value' is another dictionary with two keys [max_act] and 'gabor_params'
+             The way to reference g_param_dict[kernel_idx]['gabor_params']
+
+    """
+    print("Searching Gabor Parameter Ranges...")
+    param_search_start_time = datetime.datetime.now()
 
     # Full Range
     # -----------
@@ -551,15 +547,15 @@ if __name__ == '__main__':
     # theta_array = -90 + np.arange(0, 180, 30)
     # sigma_array = [2.5, 2.7]
 
-    gabor_params_dict = search_black_n_white_search_space(
-        feat_extract_act_cb,
+    g_params_dict = _search_black_n_white_search_space(
+        model_feat_extract_cb,
         lambda1_arr=lambda1_array,
         psi_arr=psi_array,
         sigma_arr=sigma_array,
         theta_arr=theta_array
     )
 
-    # gabor_params_dict = search_colored_parameter_space(
+    # g_params_dict = search_colored_parameter_space(
     #     cont_int_model,
     #     lambda1_arr=lambda1_array,
     #     psi_arr=psi_array,
@@ -567,14 +563,85 @@ if __name__ == '__main__':
     #     theta_arr=theta_array
     # )
 
-    print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*'*80, len(gabor_params_dict)))
+    print("Parameter Search took {}".format(datetime.datetime.now() - param_search_start_time))
+    return g_params_dict
+
+
+def plot_fits_and_filters(g_params_dict, model, frag_size=(11, 11)):
+    """
+
+    :param g_params_dict:
+    :param model:
+    :param frag_size:
+
+    :return:
+    """
+    w, b = model.layers[1].get_weights()
+
+    for k_idx in g_params_dict.keys():
+
+        tgt_w = w[:, :, :, k_idx]
+
+        f, ax_arr = plt.subplots(1, 2)
+
+        frag = gabor_fits.get_gabor_fragment(
+            gabor_params_dict[k_idx]["gabor_params"],
+            frag_size,
+        )
+
+        ax_arr[0].imshow(tgt_w)
+        ax_arr[0].title('kernel')
+
+        ax_arr[1].imshow(frag)
+        ax_arr[1].title('fragment')
+
+        f.suptitle("Max active Kernel @ index {0}. Act Value {1}".format(
+            k_idx, gabor_params_dict[k_idx]["max_act"]))
+
+        # Plot all rotations of the fragment
+        gabor_fits.plot_fragment_rotations(frag, g_params_dict[k_idx]["gabor_params"])
+
+        print(g_params_dict[k_idx])
+
+        raw_input("Press any key to continue to next entry")
+
+    print("All done")
+
+
+if __name__ == '__main__':
+    # -----------------------------------------------------------------------------------
+    # Initialization
+    # -----------------------------------------------------------------------------------
+    plt.ion()
+    keras_backend.clear_session()
+    keras_backend.set_image_dim_ordering('th')
+    start_time = datetime.datetime.now()
+
+    n_train_images_per_set = 300
+    n_test_images_per_set = 50
+
+    full_tile_size = np.array((17, 17))
+    frag_tile_size = np.array((11, 11))
+
+    # -----------------------------------------------------------------------------------
+    # Contour Integration Model
+    # -----------------------------------------------------------------------------------
+    cont_int_model = contour_integration_model_3d.build_contour_integration_model(5)
+    feat_extract_act_cb = alex_net_utils.get_activation_cb(cont_int_model, 1)
+
+    # -----------------------------------------------------------------------------------
+    # Find Best Fit Gabor Parameters
+    # -----------------------------------------------------------------------------------
+    # A. parameter_search_space method
+    gabor_params_dict = search_parameter_ranges_for_gabor_fits(feat_extract_act_cb, cont_int_model)
+
+    # print best fit params
+    print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*' * 80, len(gabor_params_dict)))
     for kernel_idx in gabor_params_dict.keys():
         print("Kernel {0}, max_activation {1}".format(
             kernel_idx, gabor_params_dict[kernel_idx]["max_act"]))
 
-    print("Parameter Search took {}".format(datetime.datetime.now() - start_time))
-
-    # Store the best fit params
+    # Store best fit params
     if not os.path.exists(DATA_DIRECTORY):
         os.mkdir(DATA_DIRECTORY)
 
@@ -582,41 +649,16 @@ if __name__ == '__main__':
     with open(best_fit_params_store_file, 'wb') as f_id:
         pickle.dump(gabor_params_dict, f_id)
 
-    # # Load the pickle file to make sure it its written correctly
-    # with open(best_fit_params_store_file, 'rb') as handle:
-    #     reloaded_params = pickle.load(handle)
-    #     print("length of reloaded kernels {}".format(len(reloaded_params)))
-
-    # # ------------------------------------------------------------------------------
-    # # Plot all Gabors found to maximally activate neurons
-    # # ------------------------------------------------------------------------------
-    # for k_idx in gabor_params_dict.keys():
-    #
-    #     fragment = gabor_fits.get_gabor_fragment(
-    #         gabor_params_dict[k_idx]["gabor_params"],
-    #         (11, 11)
-    #     )
-    #
-    #     gabor_fits.plot_fragment_rotations(fragment, gabor_params_dict[k_idx]["gabor_params"])
-    #     plt.suptitle("Max active Kernel @ index {0}. Act Value {1}".format(
-    #         k_idx,
-    #         gabor_params_dict[k_idx]["max_act"]
-    #     ))
-    #
-    #     print(gabor_params_dict[k_idx])
-    #     raw_input()
+    # ------------------------------------------------------------------------------
+    # Plot all Gabors found to maximally activate neurons
+    # ------------------------------------------------------------------------------
+    plot_fits_and_filters(gabor_params_dict, cont_int_model)
 
     # ------------------------------------------------------------------------------
     # Generate the Data
     # ------------------------------------------------------------------------------
-    n_train_images = 300
-    n_test_images = 50
-
-    full_tile_size = np.array((17, 17))
-    frag_tile_size = np.array((11, 11))
-
     for kernel_idx in gabor_params_dict.keys():
-        print("Generated Data for Contour Integration kernel @ index {0} [Feature Extract Activation {1}]...".format(
+        print("Generated Data for kernel @ index {0} [Feature Extract Activation {1}]...".format(
             kernel_idx, gabor_params_dict[kernel_idx]["max_act"]))
 
         kernel_data_gen_start_time = datetime.datetime.now()
@@ -629,7 +671,7 @@ if __name__ == '__main__':
         generate_data_set(
             base_dir=os.path.join(DATA_DIRECTORY, 'train'),
             tgt_filt_idx=kernel_idx,
-            n_img_per_set=n_train_images,
+            n_img_per_set=n_train_images_per_set,
             frag=fragment,
             frag_params=params,
             f_tile_size=full_tile_size,
@@ -639,7 +681,7 @@ if __name__ == '__main__':
         generate_data_set(
             base_dir=os.path.join(DATA_DIRECTORY, 'test'),
             tgt_filt_idx=kernel_idx,
-            n_img_per_set=n_test_images,
+            n_img_per_set=n_test_images_per_set,
             frag=fragment,
             frag_params=params,
             f_tile_size=full_tile_size,
