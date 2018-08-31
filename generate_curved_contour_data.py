@@ -712,7 +712,7 @@ if __name__ == '__main__':
     n_test_images_per_set = 50
 
     full_tile_size = np.array((18, 18))
-    frag_tile_size = np.array((9, 9))
+    frag_tile_size = np.array((11, 11))
 
     # -----------------------------------------------------------------------------------
     # Contour Integration Model
@@ -728,15 +728,15 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # A. parameter_search_space method
     # --------------------------------
-    # gabor_params_dict = search_parameter_ranges_for_gabor_fits(
-    #     feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
+    gabor_params_dict = search_parameter_ranges_for_gabor_fits(
+        feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
-    # B. Best fit for each kernel individually
-    # ----------------------------------------
-    # cont_int_kernel_arr = np.arange(96)
-    cont_int_kernel_arr = np.array([2, 5, 10, 19])
-    gabor_params_dict = individually_fit_gabors(
-        cont_int_kernel_arr, feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
+    # # B. Best fit for each kernel individually
+    # # ----------------------------------------
+    # # cont_int_kernel_arr = np.arange(96)
+    # cont_int_kernel_arr = np.array([2, 5, 10, 19])
+    # gabor_params_dict = individually_fit_gabors(
+    #     cont_int_kernel_arr, feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
     # print best fit params
     print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*' * 80, len(gabor_params_dict)))
@@ -755,7 +755,7 @@ if __name__ == '__main__':
     # # ------------------------------------------------------------------------------
     # # Plot all Gabors found to maximally activate neurons - Debug Step
     # # ------------------------------------------------------------------------------
-    plot_fits_and_filters(gabor_params_dict, cont_int_model, frag_size=frag_tile_size)
+    # plot_fits_and_filters(gabor_params_dict, cont_int_model, frag_size=frag_tile_size)
 
     # ------------------------------------------------------------------------------
     # Generate the Data
