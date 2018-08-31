@@ -75,11 +75,16 @@ def get_neurophysiological_data_raw():
 
     with open('.//data//neuro_data//fields_1993_exp_3_alpha.pickle', 'rb') as handle:
         fields_1993_exp_3_alpha = pickle.load(handle)
+
+    with open('.//data//neuro_data//fields_1993_exp_2_alpha_no_rotation.pickle', 'rb') as handle:
+        fields_1993_exp_2_alpha_no_rotation = pickle.load(handle)
+
     # Use averaged data
     rel_alpha_rot_detectability = {
         0: fields_1993_exp_3_alpha['ah_djf_avg_alpha_0_proportion_correct'],
         15: fields_1993_exp_3_alpha['ah_djf_avg_alpha_15_proportion_correct'],
-        30: fields_1993_exp_3_alpha['ah_djf_avg_alpha_30_proportion_correct']
+        30: fields_1993_exp_3_alpha['ah_djf_avg_alpha_30_proportion_correct'],
+        90: fields_1993_exp_2_alpha_no_rotation['ah_djf_avg_alpha_90_no_rotation_proportion_correct']
     }
 
     return abs_linear_gain_c_len, abs_linear_gain_f_spacing, rel_beta_rot_detectability, rel_alpha_rot_detectability
@@ -181,7 +186,7 @@ def generate_data_set(
         frag_params = [frag_params]
 
     beta_rot_arr = np.array([0, 15, 30, 45, 60])  # main contour rotation
-    alpha_rot_arr = np.array([0, 15, 30])   # fragment rotation wrt to contour direction
+    alpha_rot_arr = np.array([0, 15, 30, 90])   # fragment rotation wrt to contour direction
 
     data_key_dict = {}
 
