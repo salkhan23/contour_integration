@@ -68,7 +68,7 @@ def do_tiles_overlap(l1, r1, l2, r2):
 
 def _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, alpha, d, d_delta, frag_size,
-        random_frag_direction=False, base_contour='sigmoid'):
+        random_frag_direction=False, random_alpha_rot=True, base_contour='sigmoid'):
     """
 
     :param img:
@@ -86,6 +86,8 @@ def _add_single_side_of_contour_constant_separation(
         generated contour (2 calls to this function with d and -d) are symmetric about the origin, if set to
         circle, they are mirror symmetric about the vertical axis. This is for the case random_frag_direction
         is set to false.
+    :param random_alpha_rot:
+
     :return:
     """
     if type(frag_params) is not list:
@@ -113,7 +115,10 @@ def _add_single_side_of_contour_constant_separation(
         # print("fragment idx {} acc_angle {}".format(i, acc_angle))
 
         rotated_frag_params_list = copy.deepcopy(frag_params)
-        frag_from_contour_rot = np.random.choice((-alpha, alpha), size=1)
+        if random_alpha_rot:
+            frag_from_contour_rot = np.random.choice((-alpha, alpha), size=1)
+        else:
+            frag_from_contour_rot = alpha
 
         for c_params in rotated_frag_params_list:
             if base_contour == 'circle' and d > 0:
@@ -195,7 +200,7 @@ def _add_single_side_of_contour_constant_separation(
 
 def add_contour_path_constant_separation(
         img, frag, frag_params, c_len, beta, alpha, d, center_frag_start=None,
-        rand_inter_frag_direction_change=True, base_contour='sigmoid'):
+        rand_inter_frag_direction_change=True, random_alpha_rot=True, base_contour='sigmoid'):
     """
     Add curved contours to the test image as added in the ref. a constant separation (d)
     is projected from the previous tile to find the location of the next tile.
@@ -211,6 +216,7 @@ def add_contour_path_constant_separation(
     :param d:
     :param center_frag_start:
     :param rand_inter_frag_direction_change:
+    :param random_alpha_rot:[True]
     :param base_contour:
     :return:
     """
@@ -221,11 +227,27 @@ def add_contour_path_constant_separation(
         img_center = img_size // 2
         center_frag_start = img_center - (frag_size // 2)
 
-    d_delta = d // 8
+    d_delta = d // 1
+
+    # Add center fragment
+    if alpha == 0:
+        frag_from_contour_rot = 0
+    else:
+        if random_alpha_rot:
+            frag_from_contour_rot = np.random.choice((-alpha, alpha), size=1)
+        else:
+            frag_from_contour_rot = alpha
+
+    first_frag_params_list = copy.deepcopy(frag_params)
+
+    for c_params in first_frag_params_list:
+        c_params["theta_deg"] = c_params["theta_deg"] + frag_from_contour_rot
+
+    first_frag = gabor_fits.get_gabor_fragment(first_frag_params_list, frag.shape[0:2])
 
     img = alex_net_utils.tile_image(
         img,
-        frag,
+        first_frag,
         center_frag_start,
         rotate=False,
         gaussian_smoothing=False,
@@ -234,12 +256,17 @@ def add_contour_path_constant_separation(
 
     img, tiles = _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, alpha, d, d_delta, frag_size,
-        random_frag_direction=rand_inter_frag_direction_change, base_contour=base_contour)
+        random_frag_direction=rand_inter_frag_direction_change,
+        random_alpha_rot=random_alpha_rot,
+        base_contour=base_contour)
     c_tile_starts.extend(tiles)
 
     img, tiles = _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, alpha, -d, -d_delta, frag_size,
-        random_frag_direction=rand_inter_frag_direction_change, base_contour=base_contour)
+        random_frag_direction=rand_inter_frag_direction_change,
+        random_alpha_rot=random_alpha_rot,
+        base_contour=base_contour)
+
     c_tile_starts.extend(tiles)
 
     # ---------------------------
@@ -412,7 +439,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
 
 def generate_contour_images(
         n_images, frag, frag_params, c_len, beta, alpha, f_tile_size, img_size=None, bg_frag_relocate=True,
-        rand_inter_frag_direction_change=True, center_frag_start=None, base_contour='sigmoid'):
+        rand_inter_frag_direction_change=True, random_alpha_rot=True, center_frag_start=None, base_contour='sigmoid'):
     """
     Generate n_images with the specified fragment parameters.
 
@@ -430,7 +457,8 @@ def generate_contour_images(
         :param center_frag_start:
     :param bg_frag_relocate: If True, for a full tile that contains a background fragment, try to
              relocate bg fragment within the full tile to see if it can fit.
-    :param rand_inter_frag_direction_change:
+    :param rand_inter_frag_direction_change: [True]
+    :param random_alpha_rot: [True]
     :param base_contour:
 
     :return: array of generated images [n_images, r, c, ch]
@@ -464,6 +492,7 @@ def generate_contour_images(
                 img, frag, frag_params, c_len, beta, alpha, f_tile_size[0],
                 center_frag_start=center_frag_start,
                 rand_inter_frag_direction_change=rand_inter_frag_direction_change,
+                random_alpha_rot=random_alpha_rot,
                 base_contour=base_contour
             )
         # If c_len == 1 and beta != 0, only background fragments are added. In this case the enhancement gain

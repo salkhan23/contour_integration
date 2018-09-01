@@ -76,7 +76,7 @@ def get_neurophysiological_data_raw():
     with open('.//data//neuro_data//fields_1993_exp_3_alpha.pickle', 'rb') as handle:
         fields_1993_exp_3_alpha = pickle.load(handle)
 
-    with open('.//data//neuro_data//fields_1993_exp_2_alpha_no_rotation.pickle', 'rb') as handle:
+    with open('.//data//neuro_data//fields_1993_exp_2_alpha_90_no_rotation.pickle', 'rb') as handle:
         fields_1993_exp_2_alpha_no_rotation = pickle.load(handle)
 
     # Use averaged data
@@ -106,7 +106,7 @@ def get_neurophysiological_data(results_type):
     abs_linear_gain_c_len, abs_linear_gain_f_spacing, rel_beta_detectability, rel_alpha_detectability = \
         get_neurophysiological_data_raw()
 
-    alpha_rot_arr = [0, 15, 30]
+    alpha_rot_arr = [0, 15, 30, 90]
     beta_rot_arr = [0, 15, 30, 45, 60]
 
     results_dict = {}
@@ -234,6 +234,11 @@ def generate_data_set(
                 print("Generating {0} images for [contour length {1}, beta {2}, alpha {3}]. Expected Gain {4}".format(
                     n_img_per_set, c_len, beta, alpha, abs_gain))
 
+                if alpha == 90:
+                    random_alpha_rot = False
+                else:
+                    random_alpha_rot = True
+
                 img_arr = image_generator_curve.generate_contour_images(
                     n_images=n_img_per_set,
                     frag=frag,
@@ -242,7 +247,8 @@ def generate_data_set(
                     beta=beta,
                     alpha=alpha,
                     f_tile_size=f_tile_size,
-                    img_size=img_size
+                    img_size=img_size,
+                    random_alpha_rot=random_alpha_rot
                 )
 
                 # Save the images to file & create a dictionary key of (Image, Expected gain)
@@ -713,8 +719,8 @@ if __name__ == '__main__':
     keras_backend.set_image_dim_ordering('th')
     start_time = datetime.datetime.now()
 
-    n_train_images_per_set = 200
-    n_test_images_per_set = 50
+    n_train_images_per_set = 20
+    n_test_images_per_set = 5
 
     full_tile_size = np.array((18, 18))
     frag_tile_size = np.array((11, 11))
@@ -733,15 +739,15 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # A. parameter_search_space method
     # --------------------------------
-    gabor_params_dict = search_parameter_ranges_for_gabor_fits(
-        feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
+    # gabor_params_dict = search_parameter_ranges_for_gabor_fits(
+    #     feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
     # # B. Best fit for each kernel individually
     # # ----------------------------------------
-    # # cont_int_kernel_arr = np.arange(96)
-    # cont_int_kernel_arr = np.array([2, 5, 10, 19])
-    # gabor_params_dict = individually_fit_gabors(
-    #     cont_int_kernel_arr, feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
+    # cont_int_kernel_arr = np.arange(96)
+    cont_int_kernel_arr = np.array([2, 5, 10, 19])
+    gabor_params_dict = individually_fit_gabors(
+        cont_int_kernel_arr, feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
     # print best fit params
     print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*' * 80, len(gabor_params_dict)))
