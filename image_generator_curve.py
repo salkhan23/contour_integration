@@ -227,7 +227,7 @@ def add_contour_path_constant_separation(
         img_center = img_size // 2
         center_frag_start = img_center - (frag_size // 2)
 
-    d_delta = d // 1
+    d_delta = d // 4
 
     # Add center fragment
     if alpha == 0:
