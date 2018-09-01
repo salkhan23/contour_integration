@@ -250,26 +250,18 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_r
 
 def contour_gain_vs_spacing(model, data_key, beta, frag_orient=None, alpha=0, n_runs=100, axis=None):
     """
+    Plot model contour enhancement gain as a function of fragment spacing.
+    [Li 2006 Experiment 2]
 
-    todo: Fix the description!
-    Model contour enhancement gain as a function of fragment spacing. This is similar
-    to an experiment from Li-2006 except that additionally contour curvature is considered.
+    Different from Li-2006, stimuli are based on Fields-1993; fragment positions are not fixed
+    [fragments in the image move around within a square tile]. This is a necessary condition
+    for curved contours.
 
-    This is a derived Neurophysiological Result. Expected Gain for a given length is found by
-    multiplying the relative curvature gain from Fields 1993 with the absolute gain for a linear
-    contour as specified by Li -2006. Not that inter-fragment spacing is different from
-    Li 2006 Results.
+    This function does not generate any data, and only uses the stored data key to identify images
+    of a particular spacing, clen, rotation etc. The expected gain is also picked from the data key.
 
-    Detectability = 100%, Absolute enhancement gain = Full linear gain
-    Detectability = 50%, absolute enhancement gain = 1
-
-    TODO: Inter-fragment spacing is currently not accounted for. Li-2006 presents
-    TODO: enhancement gain for relative spacing between fragments. The considered spacing
-    TODO: are too small for the base spacing considered in Fields-1993.
-    TODO: Need to properly account for these.
-
-    Different from the previous version of this routine (Li2006Routines), here stimuli are
-    generated based on Fields -1993 Method.
+    The expected gain is a derived quantity, details of which can be found in function
+    get_neurophysiological_data of generate_curved_contour_data
 
     :param model: Contour Integration Model
         (Should be training model with last layer = enhancement gain calculating layer)
