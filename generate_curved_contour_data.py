@@ -34,7 +34,7 @@ reload(alex_net_utils)
 reload(image_generator_curve)
 
 
-DATA_DIRECTORY = "./data/curved_contours/test"
+DATA_DIRECTORY = "./data/curved_contours/frag_11x11_full_18_18"
 
 
 def get_neurophysiological_data_raw():
@@ -719,8 +719,8 @@ if __name__ == '__main__':
     keras_backend.set_image_dim_ordering('th')
     start_time = datetime.datetime.now()
 
-    n_train_images_per_set = 20
-    n_test_images_per_set = 5
+    n_train_images_per_set = 200
+    n_test_images_per_set = 50
 
     full_tile_size = np.array((18, 18))
     frag_tile_size = np.array((11, 11))
@@ -737,15 +737,15 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Find Best Fit Gabor Parameters
     # -----------------------------------------------------------------------------------
-    # A. parameter_search_space method
-    # --------------------------------
+    # # A. parameter_search_space method
+    # # --------------------------------
     # gabor_params_dict = search_parameter_ranges_for_gabor_fits(
     #     feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
-    # # B. Best fit for each kernel individually
-    # # ----------------------------------------
+    # # # B. Best fit for each kernel individually
+    # # # ----------------------------------------
     # cont_int_kernel_arr = np.arange(96)
-    cont_int_kernel_arr = np.array([2, 5, 10, 19])
+    cont_int_kernel_arr = np.array([5, 10, 19, 20, 21, 79])
     gabor_params_dict = individually_fit_gabors(
         cont_int_kernel_arr, feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
