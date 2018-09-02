@@ -118,7 +118,8 @@ def _get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir):
     return train_data_list_of_dict, test_data_list_of_dict
 
 
-def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, alpha=None, f_spacing=None, frag_orient=None):
+def get_train_n_test_data_keys(
+        tgt_filt_idx, data_dir, c_len=None, beta=None, alpha=None, f_spacing=None, frag_orient=None):
     """
     A data key is a dictionary of file location:expected gain tuples.
     Two Dictionaries are returned: one for testing and one for testing model performance
@@ -128,6 +129,7 @@ def get_train_n_test_data_keys(tgt_filt_idx, data_dir, c_len=None, beta=None, al
     :param c_len:
     :param beta:
     :param alpha:
+    :param f_spacing: fragment spacing.
     :param frag_orient:
     :return:
     """
@@ -230,6 +232,7 @@ def train_contour_integration_kernel(
     :param beta:
     :param alpha:
     :param training_cb:
+    :param f_spacing:
     :param axis:
     :return:
     """
@@ -385,29 +388,15 @@ if __name__ == '__main__':
     save_weights = True
     prev_train_weights = None
 
-    # target_kernel_idx_arr = [5, 10]
-    # data_directory = './data/curved_contours/filt_matched_frag'
-    # weights_store_file = \
-    #     './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights_2.hf'
-    # prev_train_weights =\
-    #     './trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf'
+    target_kernel_idx_arr = [5, 10, 19, 20, 21, 79]
 
-    # target_kernel_idx_arr = \
-    #     [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 62, 64, 65, 66, 68, 72, 73, 74, 76, 77, 79, 80, 82, 85]
-    # data_directory = './data/curved_contours/orientation_matched2'
-    # weights_store_file = \
-    #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights_2.hf'
-    # prev_train_weights = \
-    #     './trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf'
+    data_directory = "./data/curved_contours/frag_11x11_full_18_18_no_background"
 
-    target_kernel_idx_arr = \
-        [2, 5, 10, 19]
-    data_directory = "./data/curved_contours/parameter_matched"
-    # data_directory = './data/curved_contours/filter_matched'
     weights_store_file = \
-        './trained_models/ContourIntegrationModel3d/alpha_rotations_uptil_clen_7.hf'
+        './trained_models/ContourIntegrationModel3d/alpha_rotations_no_bg_no_alpha_beta_spacing.hf'
     # prev_train_weights = \
-    #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
+    #     './trained_models/
+    # ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
 
     print("Data Source: {}".format(data_directory))
     print("weights will be stored @ {}".format(weights_store_file))
@@ -418,8 +407,8 @@ if __name__ == '__main__':
     cont_int_model = contour_integration_model_3d.build_contour_integration_model(
         tgt_filt_idx=0,
         rf_size=29,
-        inner_leaky_relu_alpha=0.7,
-        outer_leaky_relu_alpha=0.94,
+        inner_leaky_relu_alpha=0.3,
+        outer_leaky_relu_alpha=0.3,
         l1_reg_loss_weight=0.01,
     )
 
@@ -480,9 +469,9 @@ if __name__ == '__main__':
             steps_per_epoch=10,
             axis=loss_vs_epoch_ax,
             # c_len=[1, 3, 5, 7, 9],
-            # f_spacing=[],
-            # beta=[0],
-            # alpha=[0]
+            f_spacing=[],
+            beta=[0],
+            alpha=[0]
         )
 
         # load best weights
