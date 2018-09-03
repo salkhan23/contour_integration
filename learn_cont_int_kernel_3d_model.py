@@ -234,7 +234,7 @@ def train_contour_integration_kernel(
     :param training_cb:
     :param f_spacing:
     :param axis:
-    :return:
+    :return: (min_train_loss, min_test_loss)
     """
     print("Learning contour integration kernel @ index {} ...".format(tgt_filt_idx))
 
@@ -290,10 +290,10 @@ def train_contour_integration_kernel(
         callbacks=training_cb
     )
 
-    print("Minimum Training Loss {0}, Validation loss {1}".format(
-        min(history.history['loss']),
-        min(history.history['val_loss'])
-    ))
+    min_train_loss = min(history.history['loss'])
+    min_test_loss = min(history.history['val_loss'])
+
+    print("Minimum Training Loss {0}, Validation loss {1}".format(min_train_loss, min_test_loss))
 
     # Plot Loss vs Time
     # --------------------------------------
@@ -313,6 +313,8 @@ def train_contour_integration_kernel(
     del train_data_dict, test_data_dict
     del history
     gc.collect()
+
+    return min_train_loss, min_test_loss
 
 
 def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w=None):
@@ -406,10 +408,10 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     cont_int_model = contour_integration_model_3d.build_contour_integration_model(
         tgt_filt_idx=0,
-        rf_size=29,
+        rf_size=31,
         inner_leaky_relu_alpha=0.3,
         outer_leaky_relu_alpha=0.3,
-        l1_reg_loss_weight=0.01,
+        l1_reg_loss_weight=0.005,
     )
 
     prev_trained_kernel_idx_arr = []
@@ -426,6 +428,7 @@ if __name__ == '__main__':
     # Train
     # -------------------------------------------------------------------------------
     fig, loss_vs_epoch_ax = plt.subplots()
+    min_loss_arr = []
 
     for target_kernel_idx in target_kernel_idx_arr:
 
@@ -459,7 +462,7 @@ if __name__ == '__main__':
         )
         callbacks = [tensorboard, checkpoint]
 
-        train_contour_integration_kernel(
+        min_losses = train_contour_integration_kernel(
             model=cont_int_model,
             tgt_filt_idx=target_kernel_idx,
             data_dir=data_directory,
@@ -469,10 +472,12 @@ if __name__ == '__main__':
             steps_per_epoch=10,
             axis=loss_vs_epoch_ax,
             # c_len=[1, 3, 5, 7, 9],
-            f_spacing=[],
-            beta=[0],
-            alpha=[0]
+            # f_spacing=[],
+            # beta=[0],
+            alpha=[0, 15, 30]
         )
+
+        min_loss_arr.append(min_losses)
 
         # load best weights
         cont_int_model.load_weights(TEMP_WEIGHT_STORE_FILE)  # load best weights
@@ -632,6 +637,10 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     print("Total Elapsed Time {}".format(datetime.now() - start_time))
     os.remove(TEMP_WEIGHT_STORE_FILE)
+
+    for idx, target_kernel_idx in enumerate(target_kernel_idx_arr):
+        print ("Min Losses for kernel {0}: Train {1}, Test{2}".format(
+            target_kernel_idx, min_loss_arr[idx][0], min_loss_arr[idx][1]))
 
     train_sum_file = get_weights_training_summary_file(weights_store_file)
     prev_trained_idxes = np.array(list(get_prev_learnt_kernels(train_sum_file)))
