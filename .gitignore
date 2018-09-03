@@ -11,3 +11,6 @@ logs
 
 # Ignore the data directory
 data/curved_contours
+
+# Ignore the results directoy
+results
