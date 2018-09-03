@@ -353,6 +353,7 @@ def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w
     ax_arr[2].set_title("Feature Extract")
 
     f.suptitle("Input channels feeding of contour integration kernel @ index {}".format(tgt_filt_idx))
+    f.set_size_inches(18, 9)
 
 
 def clear_unlearnt_contour_integration_kernels(model, trained_kernels):
@@ -385,23 +386,37 @@ if __name__ == '__main__':
     start_time = datetime.now()
 
     batch_size = 32
-    num_epochs = 200
+    num_epochs = 2
 
     save_weights = True
     prev_train_weights = None
 
     target_kernel_idx_arr = [5, 10, 19, 20, 21, 79]
 
-    data_directory = "./data/curved_contours/frag_11x11_full_18_18_no_background"
+    data_directory = "./data/curved_contours/frag_11x11_full_18_18"
+    results_identifier = 'frag_11x11_full_18x18'
 
-    weights_store_file = \
-        './trained_models/ContourIntegrationModel3d/alpha_rotations_no_bg_no_alpha_beta_spacing.hf'
     # prev_train_weights = \
-    #     './trained_models/
-    # ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
+    #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
+
+    # Immutable  ------------------------------------------------------------------------
+    base_trained_models_dir = './trained_models/ContourIntegrationModel3d'
+    base_results_dir = './results'
+
+    if not os.path.exists(base_trained_models_dir):
+        os.makedirs(base_trained_models_dir)
+    if not os.path.exists(base_results_dir):
+        os.makedirs(base_results_dir)
+
+    results_dir = os.path.join(base_results_dir, results_identifier)
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+
+    weights_store_file = os.path.join(base_trained_models_dir, results_identifier + '.hf')
 
     print("Data Source: {}".format(data_directory))
-    print("weights will be stored @ {}".format(weights_store_file))
+    print("Weights will be stored @ {}".format(weights_store_file))
+    print("Figures will be stored @ {}".format(results_dir))
 
     # -----------------------------------------------------------------------------------
     # Build
@@ -427,7 +442,7 @@ if __name__ == '__main__':
     # -------------------------------------------------------------------------------
     # Train
     # -------------------------------------------------------------------------------
-    fig, loss_vs_epoch_ax = plt.subplots()
+    fig_losses, loss_vs_epoch_ax = plt.subplots()
     min_loss_arr = []
 
     for target_kernel_idx in target_kernel_idx_arr:
@@ -477,6 +492,8 @@ if __name__ == '__main__':
             alpha=[0, 15, 30]
         )
 
+        fig_losses.savefig(os.path.join(results_dir, 'losses.png'), dpi=fig_losses.dpi)
+
         min_loss_arr.append(min_losses)
 
         # load best weights
@@ -501,6 +518,10 @@ if __name__ == '__main__':
             start_weights,
         )
 
+        learnt_kernel_fig = plt.gcf()
+        learnt_kernel_fig.savefig(os.path.join(
+            results_dir, 'learnt_contour_integration_kernel_{}.png'.format(target_kernel_idx)))
+
         # -------------------------------------------------------------------------------
         # Todo: Should be moved to another File
         train_data_dict_of_dicts, test_data_dict_of_dicts = _get_train_n_test_dictionary_of_dictionaries(
@@ -521,7 +542,7 @@ if __name__ == '__main__':
         # -------------------------------------------------------------------------------
         print("Checking gain vs curvature performance ...")
         for fragment_orientation in fragment_orientation_arr:
-            fig, ax = plt.subplots()
+            fig_curvature_perf, ax = plt.subplots()
 
             field_1993_routines.contour_gain_vs_inter_fragment_rotation(
                 cont_int_model,
@@ -541,8 +562,13 @@ if __name__ == '__main__':
                 axis=ax
             )
 
-            fig.suptitle("Contour Curvature Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
-                target_kernel_idx, fragment_orientation))
+            fig_curvature_perf.suptitle(
+                "Contour Curvature (Beta Rotations) Performance. Kernel @ index {0}, Frag orientation {1}".format(
+                    target_kernel_idx, fragment_orientation))
+
+            fig_curvature_perf.set_size_inches(11, 9)
+            fig_curvature_perf.savefig(os.path.join(
+                results_dir, 'beta_rotations_performance_kernel_{}.png'.format(target_kernel_idx)))
 
         # -------------------------------------------------------------------------------
         # Enhancement Gain vs Contour Length
@@ -550,7 +576,7 @@ if __name__ == '__main__':
         print("Checking gain vs contour length performance ...")
         for fragment_orientation in fragment_orientation_arr:
 
-            fig, ax = plt.subplots()
+            fig_c_len_perf, ax = plt.subplots()
 
             # Linear contours
             field_1993_routines.contour_gain_vs_length(
@@ -572,8 +598,12 @@ if __name__ == '__main__':
                 axis=ax
             )
 
-            fig.suptitle("Contour Length. Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
+            fig_c_len_perf.suptitle("Contour Length Performance. kernel @ index {0}, Frag orientation {1}".format(
                 target_kernel_idx, fragment_orientation))
+
+            fig_c_len_perf.set_size_inches(11, 9)
+            fig_c_len_perf.savefig(os.path.join(
+                results_dir, 'contour_len_performance_kernel_{}.png'.format(target_kernel_idx)))
 
         # -------------------------------------------------------------------------------
         # Enhancement Gain vs Fragment Spacing
@@ -581,7 +611,7 @@ if __name__ == '__main__':
         print("Checking gain vs fragment spacing performance ...")
         for fragment_orientation in fragment_orientation_arr:
 
-            fig, ax = plt.subplots()
+            fig_spacing_perf, ax = plt.subplots()
 
             # Linear contours
             field_1993_routines.contour_gain_vs_spacing(
@@ -603,8 +633,12 @@ if __name__ == '__main__':
                 axis=ax
             )
 
-            fig.suptitle("Fragment Spacing. Contour Integration kernel @ index {0}, Fragment orientation {1}".format(
+            fig_spacing_perf.suptitle("Fragment Spacing Performance. kernel @ index {0}, Frag orientation {1}".format(
                 target_kernel_idx, fragment_orientation))
+
+            fig_spacing_perf.set_size_inches(11, 9)
+            fig_spacing_perf.savefig(os.path.join(
+                results_dir, 'fragment_spacing_performance_kernel_{}.png'.format(target_kernel_idx)))
 
         # -------------------------------------------------------------------------------
         # Debug - Plot the performance on a test image
@@ -624,13 +658,20 @@ if __name__ == '__main__':
         test_image = load_img(os.path.join(test_image_dir, image_file))
         test_image = np.array(test_image) / 255.0
 
-        alex_net_utils.plot_l1_and_l2_activations(
+        sample_img_fig, sample_img_act_fig = alex_net_utils.plot_l1_and_l2_activations(
             test_image,
             feat_extract_callback,
             cont_int_callback,
             target_kernel_idx
         )
-        plt.suptitle("Contour Integration kernel @ index {}".format(target_kernel_idx))
+
+        sample_img_act_fig.suptitle("Contour Integration kernel @ index {}".format(target_kernel_idx))
+
+        sample_img_act_fig.set_size_inches(18, 9)
+        sample_img_act_fig.savefig(os.path.join(
+            results_dir, 'sample_image_activation_kernel_{}.png'.format(target_kernel_idx)))
+        sample_img_fig.savefig(os.path.join(
+            results_dir, 'sample_image_kernel_{}.png'.format(target_kernel_idx)))
 
     # -----------------------------------------------------------------------------------
     #  End
