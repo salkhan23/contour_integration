@@ -70,6 +70,13 @@ def plot_contour_integration_weights_in_channels(weights, out_chan_idx, margin=1
     cax = axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
     f.colorbar(cax, orientation='horizontal', ax=axis)
 
+    # Put borders between tiles
+    for r_idx in range(n):
+        margin_lines = np.arange((r_idx * (r + margin)) + r, (r_idx * (r + margin)) + (r + margin))
+        for line in margin_lines:
+            axis.axvline(line, color='k')
+            axis.axhline(line, color='k')
+
 
 def plot_contour_integration_weights_out_channels(weights, in_chan_idx, margin=1, axis=None):
     """
