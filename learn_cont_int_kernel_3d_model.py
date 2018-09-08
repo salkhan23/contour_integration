@@ -399,6 +399,12 @@ if __name__ == '__main__':
     data_directory = "./data/curved_contours/frag_11x11_full_18x18_fitted_beta"
     results_identifier = 'test'
 
+    # What data to train with (None means everything)
+    contour_lengths = None
+    fragment_spacing = None
+    beta_rotations = None
+    alpha_rotations = [0]
+
     # prev_train_weights = \
     #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
 
@@ -416,6 +422,15 @@ if __name__ == '__main__':
         os.makedirs(results_dir)
 
     weights_store_file = os.path.join(base_trained_models_dir, results_identifier + '.hf')
+
+    if contour_lengths is None:
+        contour_lengths = [1, 3, 5, 7, 9]
+    if beta_rotations is None:
+        beta_rotations = [0, 15, 30, 45, 60]
+    if alpha_rotations is None:
+        alpha_rotations = [0, 15, 30]
+    if fragment_spacing is None:
+        fragment_spacing = [1, 1.2, 1.4, 1.6, 1.9]
 
     print("Data Source: {}".format(data_directory))
     print("Weights will be stored @ {}".format(weights_store_file))
@@ -492,10 +507,10 @@ if __name__ == '__main__':
             n_epochs=num_epochs,
             training_cb=callbacks,
             axis=loss_vs_epoch_ax,
-            # c_len=[1, 3, 5, 7, 9],
-            # f_spacing=[],
-            # beta=[0],
-            alpha=[0]
+            c_len=contour_lengths,
+            f_spacing=fragment_spacing,
+            beta=beta_rotations,
+            alpha=alpha_rotations
         )
 
         fig_losses.savefig(os.path.join(results_dir, 'losses.png'), dpi=fig_losses.dpi)
@@ -702,6 +717,13 @@ if __name__ == '__main__':
             n_training_images, n_test_images))
         f_id.write("Number of Epochs: {}.\n".format(num_epochs))
         f_id.write("Batch Size: {} images.\n".format(batch_size))
+        f_id.write("\n")
+
+        f_id.write("Training Data Set Details: ---------------------------------\n")
+        f_id.write("Contour Lengths: {}\n".format(contour_lengths))
+        f_id.write("Fragment_spacing: {}\n".format(fragment_spacing))
+        f_id.write("Beta: {}\n".format(beta_rotations))
+        f_id.write("Alpha: {}\n".format(alpha_rotations))
         f_id.write("\n")
 
         f_id.write("Min Losses : -----------------------------------------------\n")
