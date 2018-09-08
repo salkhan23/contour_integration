@@ -34,7 +34,7 @@ reload(alex_net_utils)
 reload(image_generator_curve)
 
 
-DATA_DIRECTORY = "./data/curved_contours/frag_11x11_full_18x18_fitted_beta"
+DATA_DIRECTORY = "./data/curved_contours/frag_11x11_full_18x18_param_search"
 
 
 def get_neurophysiological_data_raw():
@@ -355,7 +355,7 @@ def generate_data_set(
 
 
 def _search_black_n_white_search_space(
-        model_feat_extract_cb, lambda1_arr, psi_arr, sigma_arr, theta_arr, th=3.0, frag_size=(11, 11)):
+        model_feat_extract_cb, lambda1_arr, psi_arr, sigma_arr, theta_arr, gamma_arr, th=3.0, frag_size=(11, 11)):
     """
 
     :param model_feat_extract_cb:
@@ -363,6 +363,7 @@ def _search_black_n_white_search_space(
     :param psi_arr:
     :param sigma_arr:
     :param theta_arr:
+    :param gamma_arr:
     :param th:
     :param frag_size:
 
@@ -372,7 +373,7 @@ def _search_black_n_white_search_space(
     """
     best_fit_params_dict = {}
 
-    for theta, sigma, lambda1, psi in itertools.product(theta_arr, sigma_arr, lambda1_arr, psi_arr):
+    for theta, sigma, lambda1, psi, gamma in itertools.product(theta_arr, sigma_arr, lambda1_arr, psi_arr, gamma_arr):
 
         # print("theta {0}, sigma {1} lambda1 {2}, psi {3}".format(
         #     theta, sigma, lambda1, psi))
@@ -385,7 +386,7 @@ def _search_black_n_white_search_space(
             'sigma': sigma,
             'lambda1': lambda1,
             'psi': psi,
-            'gamma': 1
+            'gamma': gamma
         }
 
         frag = gabor_fits.get_gabor_fragment(g_params, frag_size)
@@ -530,13 +531,15 @@ def _search_colored_parameter_space(
 
 
 # noinspection PyUnusedLocal
-def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model, frag_size=(11, 11), threshold=3.0):
+def search_parameter_ranges_for_gabor_fits(
+        model_feat_extract_cb, model, tgt_filt_arr, frag_size=(11, 11), threshold=3.0):
     """
     Search over gabor parameters ranges to find sets that maximally activate a feature
     extracting neuron
 
     :param model_feat_extract_cb:
     :param model:
+    :param tgt_filt_arr:
     :param threshold: Minimum model activation for a fitted gabor
     :param frag_size:
 
@@ -555,6 +558,7 @@ def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model, frag_si
     sigma_array = [2.5, 2.60, 2.70, 2.75]  # Any larger does not fit within the 11x11 fragment size.
     # Gabor angles are wrt y axis (0 = vertical). To get wrt to x-axis -90
     theta_array = -90 + np.arange(0, 180, 15)
+    gamma_array = [0.8, 0.9, 1.0, 1.1, 1.2]
 
     # # Short Range [test functionality]
     # # ---------------------------------
@@ -569,6 +573,7 @@ def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model, frag_si
         psi_arr=psi_array,
         sigma_arr=sigma_array,
         theta_arr=theta_array,
+        gamma_arr=gamma_array,
         th=threshold,
         frag_size=frag_size,
     )
@@ -583,8 +588,19 @@ def search_parameter_ranges_for_gabor_fits(model_feat_extract_cb, model, frag_si
     #     frag_size=frag_size,
     # )
 
+    # Only return gabor filters for target kernels
+    tgt_g_params_dict = {}
+    found_filters = g_params_dict.keys()
+
+    for tgt_k_idx in tgt_filt_arr:
+        if tgt_k_idx in found_filters:
+            tgt_g_params_dict[tgt_k_idx] = g_params_dict[tgt_k_idx]
+        else:
+            raise Exception("Best Fit parameters for kernel {} not found".format(tgt_k_idx))
+
     print("Parameter Search took {}".format(datetime.datetime.now() - param_search_start_time))
-    return g_params_dict
+
+    return tgt_g_params_dict
 
 
 def individually_fit_gabors(k_arr, model_feat_extract_cb, model, frag_size=(11, 11)):
@@ -725,6 +741,10 @@ if __name__ == '__main__':
     full_tile_size = np.array((18, 18))
     frag_tile_size = np.array((11, 11))
 
+    # cont_int_kernel_arr = np.arange(96)
+    # cont_int_kernel_arr = np.array([5, 10, 19, 20, 21, 79])
+    cont_int_kernel_arr = np.array([5, 10])
+
     # -----------------------------------------------------------------------------------
     # Contour Integration Model
     # -----------------------------------------------------------------------------------
@@ -739,15 +759,13 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # # A. parameter_search_space method
     # # --------------------------------
-    # gabor_params_dict = search_parameter_ranges_for_gabor_fits(
-    #     feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
+    gabor_params_dict = search_parameter_ranges_for_gabor_fits(
+        feat_extract_act_cb, cont_int_model, cont_int_kernel_arr, frag_size=frag_tile_size)
 
-    # # # B. Best fit for each kernel individually
-    # # # ----------------------------------------
-    # cont_int_kernel_arr = np.arange(96)
-    cont_int_kernel_arr = np.array([5, 10, 19, 20, 21, 79])
-    gabor_params_dict = individually_fit_gabors(
-        cont_int_kernel_arr, feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
+    # # B. Best fit for each kernel individually
+    # # ----------------------------------------
+    # gabor_params_dict = individually_fit_gabors(
+    #     cont_int_kernel_arr, feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
     # print best fit params
     print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*' * 80, len(gabor_params_dict)))
