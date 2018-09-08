@@ -386,15 +386,15 @@ if __name__ == '__main__':
     start_time = datetime.now()
 
     batch_size = 32
-    num_epochs = 2
+    num_epochs = 5000
 
     save_weights = True
     prev_train_weights = None
 
-    target_kernel_idx_arr = [5, 10, 19, 20, 21, 79]
+    target_kernel_idx_arr = [5, 10]
 
-    data_directory = "./data/curved_contours/frag_11x11_full_18_18"
-    results_identifier = 'frag_11x11_full_18x18'
+    data_directory = "./data/curved_contours/frag_11x11_full_18x18_fitted_beta"
+    results_identifier = 'clen_and_f_spacing_beta_iterations_5000'
 
     # prev_train_weights = \
     #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
@@ -424,9 +424,9 @@ if __name__ == '__main__':
     cont_int_model = contour_integration_model_3d.build_contour_integration_model(
         tgt_filt_idx=0,
         rf_size=31,
-        inner_leaky_relu_alpha=0.3,
-        outer_leaky_relu_alpha=0.3,
-        l1_reg_loss_weight=0.005,
+        inner_leaky_relu_alpha=0.9,
+        outer_leaky_relu_alpha=0.9,
+        l1_reg_loss_weight=0.0005,
     )
 
     prev_trained_kernel_idx_arr = []
@@ -475,7 +475,8 @@ if __name__ == '__main__':
             mode='min',
             save_weights_only=True,
         )
-        callbacks = [tensorboard, checkpoint]
+        #callbacks = [tensorboard, checkpoint]
+        callbacks = [checkpoint]
 
         min_losses = train_contour_integration_kernel(
             model=cont_int_model,
@@ -484,12 +485,12 @@ if __name__ == '__main__':
             b_size=batch_size,
             n_epochs=num_epochs,
             training_cb=callbacks,
-            steps_per_epoch=10,
+            steps_per_epoch=100,
             axis=loss_vs_epoch_ax,
             # c_len=[1, 3, 5, 7, 9],
             # f_spacing=[],
             # beta=[0],
-            alpha=[0, 15, 30]
+            alpha=[0]
         )
 
         fig_losses.savefig(os.path.join(results_dir, 'losses.png'), dpi=fig_losses.dpi)
@@ -679,15 +680,34 @@ if __name__ == '__main__':
     print("Total Elapsed Time {}".format(datetime.now() - start_time))
     os.remove(TEMP_WEIGHT_STORE_FILE)
 
-    for idx, target_kernel_idx in enumerate(target_kernel_idx_arr):
-        print ("Min Losses for kernel {0}: Train {1}, Test{2}".format(
-            target_kernel_idx, min_loss_arr[idx][0], min_loss_arr[idx][1]))
+    # Write the Summary of the run to a file
+    with open(os.path.join(results_dir, 'summary.txt'), 'wb') as f_id:
 
+        f_id.write("Model Hyper-Parameters : --------------------------------------\n")
+        f_id.write("L1_loss: {}\n".format(cont_int_model.layers[2].l1_reg_loss_weight))
+        f_id.write("Contour Integration rf size {}\n".format(cont_int_model.layers[2].n))
+        f_id.write("Outer Relu alpha {}\n".format(cont_int_model.layers[2].outer_leaky_relu_alpha))
+        f_id.write("Inner Relu alpha {}\n".format(cont_int_model.layers[2].inner_leaky_relu_alpha))
+        f_id.write("\n")
+
+        f_id.write("Training Parameters : --------------------------------------\n")
+        f_id.write("Number of runs: {}.\n".format(num_epochs))
+        f_id.write("Each Batch contains: {} images.\n".format(batch_size))
+        f_id.write("\n")
+
+        f_id.write("Min Losses : -----------------------------------------------\n")
+
+        for idx, target_kernel_idx in enumerate(target_kernel_idx_arr):
+            loss_string = "Min Losses for kernel {0}: Train {1}, Test{2}".format(
+                target_kernel_idx, min_loss_arr[idx][0], min_loss_arr[idx][1])
+            print(loss_string)
+            f_id.write(loss_string + '\n')
+
+    # At end of Training, clear all contour integration kernels that are not trained
     train_sum_file = get_weights_training_summary_file(weights_store_file)
     prev_trained_idxes = np.array(list(get_prev_learnt_kernels(train_sum_file)))
 
     trained_kernel_idxes = np.concatenate((prev_trained_idxes, np.array(target_kernel_idx_arr)))
     trained_kernel_idxes = set(trained_kernel_idxes)
 
-    # At end of Training, clear all contour integration kernels that are not trained
     clear_unlearnt_contour_integration_kernels(cont_int_model, trained_kernel_idxes)
