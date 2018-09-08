@@ -218,7 +218,7 @@ def get_train_n_test_data_keys(
 
 
 def train_contour_integration_kernel(
-        model, tgt_filt_idx, data_dir, b_size=32, n_epochs=200, training_cb=None, steps_per_epoch=10,
+        model, tgt_filt_idx, data_dir, b_size=32, n_epochs=200, training_cb=None,
         c_len=None, beta=None, alpha=None, f_spacing=None, axis=None):
     """
 
@@ -227,14 +227,13 @@ def train_contour_integration_kernel(
     :param data_dir:
     :param b_size:
     :param n_epochs:
-    :param steps_per_epoch:
     :param c_len:
     :param beta:
     :param alpha:
     :param training_cb:
     :param f_spacing:
     :param axis:
-    :return: (min_train_loss, min_test_loss)
+    :return: (min_train_loss, min_test_loss, size_of_train_data_dict, size_of_test_data_dict)
     """
     print("Learning contour integration kernel @ index {} ...".format(tgt_filt_idx))
 
@@ -277,6 +276,10 @@ def train_contour_integration_kernel(
     if training_cb is None:
         training_cb = []
 
+    n_train_imgs = len(train_data_dict)
+    n_test_imgs = len(test_data_dict)
+    steps_per_epoch = n_train_imgs / b_size
+
     print("Training ...")
     history = model.fit_generator(
         generator=train_image_generator,
@@ -290,10 +293,10 @@ def train_contour_integration_kernel(
         callbacks=training_cb
     )
 
-    min_train_loss = min(history.history['loss'])
-    min_test_loss = min(history.history['val_loss'])
+    min_loss_train = min(history.history['loss'])
+    min_loss_test = min(history.history['val_loss'])
 
-    print("Minimum Training Loss {0}, Validation loss {1}".format(min_train_loss, min_test_loss))
+    print("Minimum Training Loss {0}, Validation loss {1}".format(min_loss_train, min_loss_test))
 
     # Plot Loss vs Time
     # --------------------------------------
@@ -314,7 +317,7 @@ def train_contour_integration_kernel(
     del history
     gc.collect()
 
-    return min_train_loss, min_test_loss
+    return min_loss_train, min_loss_test, n_train_imgs, n_test_imgs
 
 
 def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w=None):
@@ -386,7 +389,7 @@ if __name__ == '__main__':
     start_time = datetime.now()
 
     batch_size = 32
-    num_epochs = 5000
+    num_epochs = 100
 
     save_weights = True
     prev_train_weights = None
@@ -394,7 +397,7 @@ if __name__ == '__main__':
     target_kernel_idx_arr = [5, 10]
 
     data_directory = "./data/curved_contours/frag_11x11_full_18x18_fitted_beta"
-    results_identifier = 'clen_and_f_spacing_beta_iterations_5000'
+    results_identifier = 'test'
 
     # prev_train_weights = \
     #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
@@ -443,7 +446,10 @@ if __name__ == '__main__':
     # Train
     # -------------------------------------------------------------------------------
     fig_losses, loss_vs_epoch_ax = plt.subplots()
+
     min_loss_arr = []
+    n_training_images = 0
+    n_test_images = 0
 
     for target_kernel_idx in target_kernel_idx_arr:
 
@@ -475,17 +481,16 @@ if __name__ == '__main__':
             mode='min',
             save_weights_only=True,
         )
-        #callbacks = [tensorboard, checkpoint]
-        callbacks = [checkpoint]
+        callbacks = [tensorboard, checkpoint]
+        # callbacks = [checkpoint]
 
-        min_losses = train_contour_integration_kernel(
+        min_train_loss, min_test_loss, n_training_images, n_test_images = train_contour_integration_kernel(
             model=cont_int_model,
             tgt_filt_idx=target_kernel_idx,
             data_dir=data_directory,
             b_size=batch_size,
             n_epochs=num_epochs,
             training_cb=callbacks,
-            steps_per_epoch=100,
             axis=loss_vs_epoch_ax,
             # c_len=[1, 3, 5, 7, 9],
             # f_spacing=[],
@@ -495,7 +500,7 @@ if __name__ == '__main__':
 
         fig_losses.savefig(os.path.join(results_dir, 'losses.png'), dpi=fig_losses.dpi)
 
-        min_loss_arr.append(min_losses)
+        min_loss_arr.append((min_train_loss, min_test_loss))
 
         # load best weights
         cont_int_model.load_weights(TEMP_WEIGHT_STORE_FILE)  # load best weights
@@ -677,7 +682,9 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  End
     # -----------------------------------------------------------------------------------
+    # print Elapsed Time
     print("Total Elapsed Time {}".format(datetime.now() - start_time))
+
     os.remove(TEMP_WEIGHT_STORE_FILE)
 
     # Write the Summary of the run to a file
@@ -691,8 +698,10 @@ if __name__ == '__main__':
         f_id.write("\n")
 
         f_id.write("Training Parameters : --------------------------------------\n")
-        f_id.write("Number of runs: {}.\n".format(num_epochs))
-        f_id.write("Each Batch contains: {} images.\n".format(batch_size))
+        f_id.write("Number of (train, test) images for each kernel: ({0}, {1}).\n".format(
+            n_training_images, n_test_images))
+        f_id.write("Number of Epochs: {}.\n".format(num_epochs))
+        f_id.write("Batch Size: {} images.\n".format(batch_size))
         f_id.write("\n")
 
         f_id.write("Min Losses : -----------------------------------------------\n")
