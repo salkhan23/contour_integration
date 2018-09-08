@@ -141,8 +141,8 @@ class ContourIntegrationLayer3D(Layer):
 
         outputs = K.conv2d(inputs, self.kernel, strides=(1, 1), padding='same')
 
-        outputs = outputs * inputs
         outputs = K.bias_add(outputs, self.bias)
+        outputs = outputs * inputs
 
         # outputs = self.activation(outputs) + inputs
         outputs = K.relu(outputs, alpha=self.inner_leaky_relu_alpha) + inputs
