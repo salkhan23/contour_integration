@@ -34,7 +34,7 @@ reload(alex_net_utils)
 reload(image_generator_curve)
 
 
-DATA_DIRECTORY = "./data/curved_contours/frag_11x11_full_18_18"
+DATA_DIRECTORY = "./data/curved_contours/frag_11x11_full_18x18_fitted_beta"
 
 
 def get_neurophysiological_data_raw():
@@ -71,7 +71,7 @@ def get_neurophysiological_data_raw():
     with open('.//data//neuro_data//fields_1993_exp_1_beta.pickle', 'rb') as handle:
         fields_1993_exp_1_beta = pickle.load(handle)
     # Use averaged data
-    rel_beta_rot_detectability = fields_1993_exp_1_beta['ah_djf_avg_1s_proportion_correct']
+    rel_beta_rot_detectability = fields_1993_exp_1_beta['ah_djf_avg_1s_fitted_proportion_correct']
 
     with open('.//data//neuro_data//fields_1993_exp_3_alpha.pickle', 'rb') as handle:
         fields_1993_exp_3_alpha = pickle.load(handle)
@@ -186,7 +186,7 @@ def generate_data_set(
         frag_params = [frag_params]
 
     beta_rot_arr = np.array([0, 15, 30, 45, 60])  # main contour rotation
-    alpha_rot_arr = np.array([0, 15, 30, 90])   # fragment rotation wrt to contour direction
+    alpha_rot_arr = np.array([0, 15, 30])   # fragment rotation wrt to contour direction
 
     data_key_dict = {}
 
