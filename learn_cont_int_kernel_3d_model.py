@@ -415,7 +415,7 @@ def test_sample_output(data_dir, tgt_filt_idx, feat_extract_cb, cont_int_cb, rsl
 
     sample_img_act_fig.set_size_inches(18, 9)
 
-    image_id = 'clen_{}_beta_{}_alpha_{}_img_idx_{}'.format(c_len, beta, alpha, img_idx)
+    image_id = 'kernel_{}_clen_{}_beta_{}_alpha_{}_img_idx_{}'.format(tgt_filt_idx, c_len, beta, alpha, img_idx)
 
     sample_img_act_fig.savefig(os.path.join(
         rslt_dir, 'sample_image_activation_kernel_' + image_id + '.png'))
