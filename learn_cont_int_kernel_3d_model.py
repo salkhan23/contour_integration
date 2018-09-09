@@ -432,6 +432,8 @@ if __name__ == '__main__':
     keras_backend.clear_session()
     start_time = datetime.now()
 
+    np.random.seed(7)
+
     batch_size = 32
     num_epochs = 50
 
@@ -441,7 +443,7 @@ if __name__ == '__main__':
     target_kernel_idx_arr = [5, 10]
 
     data_directory = "./data/curved_contours/frag_11x11_full_18x18_param_search"
-    results_identifier = 'param_search_clen_f_spacing_data_beta_30'
+    results_identifier = 'param_search_clen_f_spacing_data_beta_upto30'
 
     # What data to train with (None means everything)
     contour_lengths = None
