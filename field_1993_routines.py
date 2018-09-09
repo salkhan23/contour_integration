@@ -245,6 +245,7 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_r
     axis.legend()
     axis.set_xlabel("Contour Length")
     axis.set_ylabel("Gain")
+    axis.set_ylim(bottom=0)
     axis.set_title("Enhancement gain vs Contour Length")
 
 
@@ -350,7 +351,7 @@ def contour_gain_vs_spacing(model, data_key, beta, frag_orient=None, alpha=0, n_
         marker='o', label='Model-beta_{}'.format(beta), linestyle='-')
 
     axis.legend()
-    axis.set_xlabel("Contour Length")
+    axis.set_xlabel("Fragment Spacing")
     axis.set_ylabel("Gain")
     axis.set_title("Enhancement gain vs Fragment Spacing")
 
