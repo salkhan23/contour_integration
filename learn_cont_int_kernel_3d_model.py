@@ -379,9 +379,10 @@ def clear_unlearnt_contour_integration_kernels(model, trained_kernels):
     model.layers[2].set_weights([w, b])
 
 
-def test_sample_output(data_dir, tgt_filt_idx, feat_extract_cb, cont_int_cb, c_len, beta, alpha, img_idx=0):
+def test_sample_output(data_dir, tgt_filt_idx, feat_extract_cb, cont_int_cb, rslt_dir, c_len, beta, alpha, img_idx=0):
     """
 
+    :param rslt_dir:
     :param cont_int_cb:
     :param feat_extract_cb:
     :param tgt_filt_idx:
@@ -409,13 +410,17 @@ def test_sample_output(data_dir, tgt_filt_idx, feat_extract_cb, cont_int_cb, c_l
         tgt_filt_idx
     )
 
-    sample_img_act_fig.suptitle("Contour Integration kernel @ index {}".format(tgt_filt_idx))
+    sample_img_act_fig.suptitle("Contour Integration kernel @ index {0}. [c_len={1}, beta={2}, alpha={3}]".format(
+        tgt_filt_idx, c_len, beta, alpha))
 
     sample_img_act_fig.set_size_inches(18, 9)
+
+    image_id = 'clen_{}_beta_{}_alpha_{}_img_idx_{}'.format(c_len, beta, alpha, img_idx)
+
     sample_img_act_fig.savefig(os.path.join(
-        results_dir, 'sample_image_activation_kernel_{}.png'.format(tgt_filt_idx)))
+        rslt_dir, 'sample_image_activation_kernel_' + image_id + '.png'))
     sample_img_fig.savefig(os.path.join(
-        results_dir, 'sample_image_kernel_{}.png'.format(tgt_filt_idx)))
+        rslt_dir, 'sample_image_' + image_id + '.png'))
 
 
 if __name__ == '__main__':
@@ -436,12 +441,12 @@ if __name__ == '__main__':
     target_kernel_idx_arr = [5, 10]
 
     data_directory = "./data/curved_contours/frag_11x11_full_18x18_param_search"
-    results_identifier = 'param_search_clen_f_spacing_data_beta_15'
+    results_identifier = 'param_search_clen_f_spacing_data_beta_30'
 
     # What data to train with (None means everything)
     contour_lengths = None
     fragment_spacing = None
-    beta_rotations = [0, 15]
+    beta_rotations = [0, 15, 30]
     alpha_rotations = [0]
 
     # prev_train_weights = \
@@ -710,6 +715,7 @@ if __name__ == '__main__':
             tgt_filt_idx=target_kernel_idx,
             feat_extract_cb= feat_extract_callback,
             cont_int_cb=cont_int_callback,
+            rslt_dir=results_dir,
             c_len=9,
             beta=15,
             alpha=0,
@@ -721,6 +727,7 @@ if __name__ == '__main__':
             tgt_filt_idx=target_kernel_idx,
             feat_extract_cb=feat_extract_callback,
             cont_int_cb=cont_int_callback,
+            rslt_dir=results_dir,
             c_len=9,
             beta=30,
             alpha=0,
