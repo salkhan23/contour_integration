@@ -379,6 +379,45 @@ def clear_unlearnt_contour_integration_kernels(model, trained_kernels):
     model.layers[2].set_weights([w, b])
 
 
+def test_sample_output(data_dir, tgt_filt_idx, feat_extract_cb, cont_int_cb, c_len, beta, alpha, img_idx=0):
+    """
+
+    :param cont_int_cb:
+    :param feat_extract_cb:
+    :param tgt_filt_idx:
+    :param data_dir:
+    :param c_len:
+    :param beta:
+    :param alpha:
+    :param img_idx:
+    :return:
+    """
+    test_image_dir = os.path.join(
+        data_dir,
+        'test/filter_{0}/c_len_{1}/beta_{2}/alpha_{3}'.format(
+            tgt_filt_idx, c_len, beta, alpha)
+    )
+
+    image_file = os.listdir(test_image_dir)[img_idx]
+    test_image = load_img(os.path.join(test_image_dir, image_file))
+    test_image = np.array(test_image) / 255.0
+
+    sample_img_fig, sample_img_act_fig = alex_net_utils.plot_l1_and_l2_activations(
+        test_image,
+        feat_extract_cb,
+        cont_int_cb,
+        tgt_filt_idx
+    )
+
+    sample_img_act_fig.suptitle("Contour Integration kernel @ index {}".format(tgt_filt_idx))
+
+    sample_img_act_fig.set_size_inches(18, 9)
+    sample_img_act_fig.savefig(os.path.join(
+        results_dir, 'sample_image_activation_kernel_{}.png'.format(tgt_filt_idx)))
+    sample_img_fig.savefig(os.path.join(
+        results_dir, 'sample_image_kernel_{}.png'.format(tgt_filt_idx)))
+
+
 if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
@@ -389,20 +428,20 @@ if __name__ == '__main__':
     start_time = datetime.now()
 
     batch_size = 32
-    num_epochs = 100
+    num_epochs = 50
 
     save_weights = True
     prev_train_weights = None
 
     target_kernel_idx_arr = [5, 10]
 
-    data_directory = "./data/curved_contours/frag_11x11_full_18x18_fitted_beta"
-    results_identifier = 'test'
+    data_directory = "./data/curved_contours/frag_11x11_full_18x18_param_search"
+    results_identifier = 'param_search_clen_f_spacing_data_beta_15'
 
     # What data to train with (None means everything)
     contour_lengths = None
     fragment_spacing = None
-    beta_rotations = None
+    beta_rotations = [0, 15]
     alpha_rotations = [0]
 
     # prev_train_weights = \
@@ -443,7 +482,7 @@ if __name__ == '__main__':
         tgt_filt_idx=0,
         rf_size=31,
         inner_leaky_relu_alpha=0.9,
-        outer_leaky_relu_alpha=0.9,
+        outer_leaky_relu_alpha=1.,
         l1_reg_loss_weight=0.0005,
     )
 
@@ -664,35 +703,29 @@ if __name__ == '__main__':
         # -------------------------------------------------------------------------------
         # Debug - Plot the performance on a test image
         # -------------------------------------------------------------------------------
-        image_idx = 0
-        contour_len = 9
-        beta_rot = 15
-        alpha_rot = 0
+        print("Checking performance on sample images ...")
 
-        test_image_dir = os.path.join(
-            data_directory,
-            'test/filter_{0}/c_len_{1}/beta_{2}/alpha_{3}'.format(
-                target_kernel_idx, contour_len, beta_rot, alpha_rot)
+        test_sample_output(
+            data_dir=data_directory,
+            tgt_filt_idx=target_kernel_idx,
+            feat_extract_cb= feat_extract_callback,
+            cont_int_cb=cont_int_callback,
+            c_len=9,
+            beta=15,
+            alpha=0,
+            img_idx=0
         )
 
-        image_file = os.listdir(test_image_dir)[image_idx]
-        test_image = load_img(os.path.join(test_image_dir, image_file))
-        test_image = np.array(test_image) / 255.0
-
-        sample_img_fig, sample_img_act_fig = alex_net_utils.plot_l1_and_l2_activations(
-            test_image,
-            feat_extract_callback,
-            cont_int_callback,
-            target_kernel_idx
+        test_sample_output(
+            data_dir=data_directory,
+            tgt_filt_idx=target_kernel_idx,
+            feat_extract_cb=feat_extract_callback,
+            cont_int_cb=cont_int_callback,
+            c_len=9,
+            beta=30,
+            alpha=0,
+            img_idx=10
         )
-
-        sample_img_act_fig.suptitle("Contour Integration kernel @ index {}".format(target_kernel_idx))
-
-        sample_img_act_fig.set_size_inches(18, 9)
-        sample_img_act_fig.savefig(os.path.join(
-            results_dir, 'sample_image_activation_kernel_{}.png'.format(target_kernel_idx)))
-        sample_img_fig.savefig(os.path.join(
-            results_dir, 'sample_image_kernel_{}.png'.format(target_kernel_idx)))
 
     # -----------------------------------------------------------------------------------
     #  End
@@ -720,6 +753,7 @@ if __name__ == '__main__':
         f_id.write("\n")
 
         f_id.write("Training Data Set Details: ---------------------------------\n")
+        f_id.write("Data Directory: {}\n".format(data_directory))
         f_id.write("Contour Lengths: {}\n".format(contour_lengths))
         f_id.write("Fragment_spacing: {}\n".format(fragment_spacing))
         f_id.write("Beta: {}\n".format(beta_rotations))
