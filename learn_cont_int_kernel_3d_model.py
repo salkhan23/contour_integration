@@ -17,6 +17,7 @@ import keras.backend as keras_backend
 from keras.callbacks import TensorBoard, ModelCheckpoint
 from keras.preprocessing.image import load_img
 from keras import losses
+from keras import optimizers
 
 import alex_net_utils
 import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
@@ -33,6 +34,11 @@ reload(field_1993_routines)
 
 IMAGE_SIZE = (227, 227, 3)
 TEMP_WEIGHT_STORE_FILE = 'best_weights.hf'
+
+
+def value_normalized_loss(y_true, y_pred):
+    print (keras_backend.square(y_pred - y_true))
+    return keras_backend.mean((keras_backend.square(y_pred - y_true)) / y_pred, axis=-1)
 
 
 def load_pretrained_weights(model, prev_trained_weights_file):
@@ -239,7 +245,9 @@ def train_contour_integration_kernel(
 
     # Modify the contour integration training model to train the target kernel
     contour_integration_model_3d.update_contour_integration_kernel(model, tgt_filt_idx)
-    model.compile(optimizer='Adam', loss=losses.mean_squared_error)
+    model.compile(
+        optimizer=optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False),
+        loss=value_normalized_loss)
 
     # -----------------------------------------------------------------------------------
     # Build the Data Generators
@@ -435,7 +443,7 @@ if __name__ == '__main__':
     np.random.seed(7)
 
     batch_size = 32
-    num_epochs = 50
+    num_epochs = 100
 
     save_weights = True
     prev_train_weights = None
@@ -443,7 +451,7 @@ if __name__ == '__main__':
     target_kernel_idx_arr = [5, 10]
 
     data_directory = "./data/curved_contours/frag_11x11_full_18x18_param_search"
-    results_identifier = 'param_search_clen_f_spacing_data_beta_upto30'
+    results_identifier = 'clen_fspacing_beta_upto30_learningrate_0.00001_normalized_cost'
 
     # What data to train with (None means everything)
     contour_lengths = None
@@ -487,7 +495,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     cont_int_model = contour_integration_model_3d.build_contour_integration_model(
         tgt_filt_idx=0,
-        rf_size=31,
+        rf_size=35,
         inner_leaky_relu_alpha=0.9,
         outer_leaky_relu_alpha=1.,
         l1_reg_loss_weight=0.0005,
@@ -715,7 +723,7 @@ if __name__ == '__main__':
         test_sample_output(
             data_dir=data_directory,
             tgt_filt_idx=target_kernel_idx,
-            feat_extract_cb= feat_extract_callback,
+            feat_extract_cb=feat_extract_callback,
             cont_int_cb=cont_int_callback,
             rslt_dir=results_dir,
             c_len=9,
