@@ -56,11 +56,11 @@ def do_tiles_overlap(l1, r1, l2, r2):
     :return:  True of the input tiles overlap, false otherwise
     """
     # Does one square lie to the Left of the other
-    if l1[1] > r2[1] or l2[1] > r1[1]:
+    if l1[1] >= r2[1] or l2[1] >= r1[1]:
         return False
 
         # Does one square lie above the other
-    if l1[0] > r2[0] or l2[0] > r1[0]:
+    if l1[0] >= r2[0] or l2[0] >= r1[0]:
         return False
 
     return True
@@ -309,7 +309,7 @@ def get_nonoverlapping_bg_fragment(f_tile_start, c_tile_starts, c_tile_size, max
     return None
 
 
-def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_params,
+def add_background_fragments(img, frag, c_frag_starts, f_tile_size, delta_rotation, frag_params,
                              relocate_allowed=True):
     """
 
@@ -317,7 +317,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
     :param frag:
     :param c_frag_starts:
     :param f_tile_size:
-    :param beta:
+    :param delta_rotation:
     :param frag_params:
     :param relocate_allowed: If a bg frag overlaps with a contour fragment, try to
         relocate fragment, so it can fit in the tile without overlapping with the
@@ -362,7 +362,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
         # for ii, dist in enumerate(dist_to_c_frag):
         #     print("{0}: {1}".format(ii, dist))
 
-        ovlp_bg_frag_idx_arr = np.argwhere(dist_to_c_frag <= frag.shape[0])
+        ovlp_bg_frag_idx_arr = np.argwhere(dist_to_c_frag <= np.sqrt(2)*frag.shape[0])
         # for idx in ovlp_bg_frag_idx_arr:
         #     print("contour fragment @ {0}, overlaps with bg fragment @ index {1} and location {2}".format(
         #         c_frag_start, idx, bg_frag_starts[idx, :]))
@@ -416,11 +416,11 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, beta, frag_p
         frag_params = [frag_params]
     rotated_frag_params_list = copy.deepcopy(frag_params)
 
-    num_possible_rotations = 360 // beta
+    num_possible_rotations = 360 // delta_rotation
 
     for start in bg_frag_starts:
 
-        random_rotation = np.random.randint(0, np.int(num_possible_rotations)) * beta
+        random_rotation = np.random.randint(0, np.int(num_possible_rotations)) * delta_rotation
         for c_params in rotated_frag_params_list:
             c_params['theta_deg'] = c_params['theta_deg'] + random_rotation
 
@@ -499,7 +499,7 @@ def generate_contour_images(
         # should be 1 (no enhancement) and serves as example when not to enhance the fragment
 
         img, bg_frag_starts, removed_tiles, relocated_tiles = add_background_fragments(
-            img, frag, c_frag_starts, f_tile_size, 15, frag_params, bg_frag_relocate)
+            img, frag, c_frag_starts, f_tile_size, 10, frag_params, bg_frag_relocate)
 
         images[img_idx, ] = img
 
