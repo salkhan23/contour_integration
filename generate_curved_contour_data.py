@@ -596,7 +596,7 @@ def search_parameter_ranges_for_gabor_fits(
         if tgt_k_idx in found_filters:
             tgt_g_params_dict[tgt_k_idx] = g_params_dict[tgt_k_idx]
         else:
-            raise Exception("Best Fit parameters for kernel {} not found".format(tgt_k_idx))
+            print("Best Fit parameters for kernel {} not found".format(tgt_k_idx))
 
     print("Parameter Search took {}".format(datetime.datetime.now() - param_search_start_time))
 
@@ -741,9 +741,9 @@ if __name__ == '__main__':
     full_tile_size = np.array((18, 18))
     frag_tile_size = np.array((11, 11))
 
-    # cont_int_kernel_arr = np.arange(96)
+    cont_int_kernel_arr = np.arange(96)
     # cont_int_kernel_arr = np.array([5, 10, 19, 20, 21, 79])
-    cont_int_kernel_arr = np.array([5, 10])
+    # cont_int_kernel_arr = np.array([5, 10])
 
     # -----------------------------------------------------------------------------------
     # Contour Integration Model
