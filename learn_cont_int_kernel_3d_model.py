@@ -332,6 +332,7 @@ def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w
     :param start_w: complete set of weights at star of training [Optional]
     :return:
     """
+    plt.figure()
     ax0 = plt.subplot2grid((3, 4), (0, 0), colspan=3, rowspan=3)
 
     learnt_w, _ = model.layers[2].get_weights()
