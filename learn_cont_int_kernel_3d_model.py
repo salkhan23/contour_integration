@@ -332,23 +332,25 @@ def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w
     :param start_w: complete set of weights at star of training [Optional]
     :return:
     """
-    f, ax_arr = plt.subplots(1, 3)
+    ax0 = plt.subplot2grid((3, 4), (0, 0), colspan=3, rowspan=3)
 
     learnt_w, _ = model.layers[2].get_weights()
     linear_contour_training.plot_contour_integration_weights_in_channels(
         learnt_w,
         tgt_filt_idx,
-        axis=ax_arr[0]
+        axis=ax0,
     )
-    ax_arr[0].set_title("Learnt Contour Int")
+    ax0.set_title("Learnt Contour Int")
 
     if start_w is not None:
+
+        ax1 = plt.subplot2grid((3, 4), (0, 3))
         linear_contour_training.plot_contour_integration_weights_in_channels(
             start_w,
             tgt_filt_idx,
-            axis=ax_arr[1]
+            axis=ax1
         )
-        ax_arr[1].set_title("Initial Contour Int")
+        ax1.set_title("Initial Contour Int")
 
     feat_extract_w, _ = model.layers[1].get_weights()
     tgt_feat_extract_w = feat_extract_w[:, :, :, tgt_filt_idx]
@@ -356,9 +358,11 @@ def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w
     normalized_tgt_feat_extract_w = (tgt_feat_extract_w - tgt_feat_extract_w.min()) / \
         (tgt_feat_extract_w.max() - tgt_feat_extract_w.min())
 
-    ax_arr[2].imshow(normalized_tgt_feat_extract_w)
-    ax_arr[2].set_title("Feature Extract")
+    ax2 = plt.subplot2grid((3, 4), (2, 3))
+    ax2.imshow(normalized_tgt_feat_extract_w)
+    ax2.set_title("Feature Extract")
 
+    f = plt.gcf()
     f.suptitle("Input channels feeding of contour integration kernel @ index {}".format(tgt_filt_idx))
     f.set_size_inches(18, 9)
 
@@ -439,19 +443,20 @@ if __name__ == '__main__':
     np.random.seed(7)
 
     batch_size = 32
-    num_epochs = 100
+    num_epochs = 1
 
     save_weights = True
     prev_train_weights = None
 
-    target_kernel_idx_arr = [
-        5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
-        60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
-        76, 77, 79, 80, 82,
-    ]
+    target_kernel_idx_arr = [5, 10]
+    # target_kernel_idx_arr = [
+    #     5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
+    #     60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
+    #     76, 77, 79, 80, 82,
+    # ]
 
     data_directory = "./data/curved_contours/frag_11x11_full_18x18_param_search"
-    results_identifier = 'beta_rotations_upto30'
+    results_identifier = 'test'
 
     # What data to train with (None means everything)
     contour_lengths = None
@@ -515,7 +520,7 @@ if __name__ == '__main__':
     # -------------------------------------------------------------------------------
     # Train
     # -------------------------------------------------------------------------------
-    fig_losses, loss_vs_epoch_ax = plt.subplots()
+    fig_losses, loss_vs_epoch_ax = plt.subplots(figsize=(14, 9))
 
     min_loss_arr = []
     n_training_images = 0
