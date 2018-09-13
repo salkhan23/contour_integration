@@ -36,11 +36,6 @@ IMAGE_SIZE = (227, 227, 3)
 TEMP_WEIGHT_STORE_FILE = 'best_weights.hf'
 
 
-def value_normalized_loss(y_true, y_pred):
-    print (keras_backend.square(y_pred - y_true))
-    return keras_backend.mean((keras_backend.square(y_pred - y_true)) / y_pred, axis=-1)
-
-
 def load_pretrained_weights(model, prev_trained_weights_file):
     """
 
@@ -247,7 +242,8 @@ def train_contour_integration_kernel(
     contour_integration_model_3d.update_contour_integration_kernel(model, tgt_filt_idx)
     model.compile(
         optimizer=optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False),
-        loss=value_normalized_loss)
+        loss=losses.mean_squared_error
+    )
 
     # -----------------------------------------------------------------------------------
     # Build the Data Generators
