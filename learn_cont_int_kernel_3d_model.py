@@ -444,10 +444,14 @@ if __name__ == '__main__':
     save_weights = True
     prev_train_weights = None
 
-    target_kernel_idx_arr = [5, 10]
+    target_kernel_idx_arr = [
+        5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
+        60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
+        76, 77, 79, 80, 82,
+    ]
 
     data_directory = "./data/curved_contours/frag_11x11_full_18x18_param_search"
-    results_identifier = 'clen_fspacing_beta_upto30_learningrate_0.00001_normalized_cost'
+    results_identifier = 'beta_rotations_upto30'
 
     # What data to train with (None means everything)
     contour_lengths = None
@@ -459,11 +463,7 @@ if __name__ == '__main__':
     #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
 
     # Immutable  ------------------------------------------------------------------------
-    base_trained_models_dir = './trained_models/ContourIntegrationModel3d'
     base_results_dir = './results'
-
-    if not os.path.exists(base_trained_models_dir):
-        os.makedirs(base_trained_models_dir)
     if not os.path.exists(base_results_dir):
         os.makedirs(base_results_dir)
 
@@ -471,7 +471,7 @@ if __name__ == '__main__':
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
 
-    weights_store_file = os.path.join(base_trained_models_dir, results_identifier + '.hf')
+    weights_store_file = os.path.join(results_dir, 'trained_weights.hf')
 
     if contour_lengths is None:
         contour_lengths = [1, 3, 5, 7, 9]
@@ -482,9 +482,14 @@ if __name__ == '__main__':
     if fragment_spacing is None:
         fragment_spacing = [1, 1.2, 1.4, 1.6, 1.9]
 
+    print("*"*80)
     print("Data Source: {}".format(data_directory))
-    print("Weights will be stored @ {}".format(weights_store_file))
-    print("Figures will be stored @ {}".format(results_dir))
+    print("Results will be stored @ {}".format(results_dir))
+    print("*"*80)
+
+    # Turn off figure display when running in batch mode
+    if len(target_kernel_idx_arr) > 2:
+        plt.ioff()
 
     # -----------------------------------------------------------------------------------
     # Build
