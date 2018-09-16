@@ -49,8 +49,8 @@ def get_neurophysiological_data_raw():
 
     :return:
     """
-    with open('.//data//neuro_data//Li2006.pickle', 'rb') as handle:
-        li_2006_data = pickle.load(handle)
+    with open('.//data//neuro_data//Li2006.pickle', 'rb') as h:
+        li_2006_data = pickle.load(h)
 
     abs_linear_gain_c_len = {
         1: li_2006_data['contour_len_avg_gain'][0],
@@ -68,16 +68,16 @@ def get_neurophysiological_data_raw():
         1.9: li_2006_data['contour_separation_avg_gain'][4],
     }
 
-    with open('.//data//neuro_data//fields_1993_exp_1_beta.pickle', 'rb') as handle:
-        fields_1993_exp_1_beta = pickle.load(handle)
+    with open('.//data//neuro_data//fields_1993_exp_1_beta.pickle', 'rb') as h:
+        fields_1993_exp_1_beta = pickle.load(h)
     # Use averaged data
     rel_beta_rot_detectability = fields_1993_exp_1_beta['ah_djf_avg_1s_fitted_proportion_correct']
 
-    with open('.//data//neuro_data//fields_1993_exp_3_alpha.pickle', 'rb') as handle:
-        fields_1993_exp_3_alpha = pickle.load(handle)
+    with open('.//data//neuro_data//fields_1993_exp_3_alpha.pickle', 'rb') as h:
+        fields_1993_exp_3_alpha = pickle.load(h)
 
-    with open('.//data//neuro_data//fields_1993_exp_2_alpha_90_no_rotation.pickle', 'rb') as handle:
-        fields_1993_exp_2_alpha_no_rotation = pickle.load(handle)
+    with open('.//data//neuro_data//fields_1993_exp_2_alpha_90_no_rotation.pickle', 'rb') as h:
+        fields_1993_exp_2_alpha_no_rotation = pickle.load(h)
 
     # Use averaged data
     rel_alpha_rot_detectability = {
@@ -345,13 +345,13 @@ def generate_data_set(
     master_key_file_loc = os.path.join(filt_dir, 'data_key.pickle')
 
     if os.path.exists(master_key_file_loc):
-        with open(master_key_file_loc, 'rb') as handle:
-            prev_data_key_dict = pickle.load(handle)
+        with open(master_key_file_loc, 'rb') as h:
+            prev_data_key_dict = pickle.load(h)
 
         data_key_dict.update(prev_data_key_dict)
 
-    with open(master_key_file_loc, 'wb') as handle:
-        pickle.dump(data_key_dict, handle)
+    with open(master_key_file_loc, 'wb') as h:
+        pickle.dump(data_key_dict, h)
 
 
 def _search_black_n_white_search_space(
@@ -745,6 +745,9 @@ if __name__ == '__main__':
     # cont_int_kernel_arr = np.array([5, 10, 19, 20, 21, 79])
     # cont_int_kernel_arr = np.array([5, 10])
 
+    # gabor_params_dict_file = None
+    gabor_params_dict_file = "/home/salman/workspace/keras/my_projects/contour_integration/data/curved_contours/" \
+        "frag_11x11_full_18x18_param_search/best_fit_params.pickle"
     # -----------------------------------------------------------------------------------
     # Contour Integration Model
     # -----------------------------------------------------------------------------------
@@ -757,29 +760,38 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Find Best Fit Gabor Parameters
     # -----------------------------------------------------------------------------------
-    # # A. parameter_search_space method
-    # # --------------------------------
-    gabor_params_dict = search_parameter_ranges_for_gabor_fits(
-        feat_extract_act_cb, cont_int_model, cont_int_kernel_arr, frag_size=frag_tile_size)
+    if gabor_params_dict_file is None:
+        print("Searching for Gabor Parameter fits for feature extracting kernels")
 
-    # # B. Best fit for each kernel individually
-    # # ----------------------------------------
-    # gabor_params_dict = individually_fit_gabors(
-    #     cont_int_kernel_arr, feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
+        # # A. parameter_search_space method
+        # # --------------------------------
+        gabor_params_dict = search_parameter_ranges_for_gabor_fits(
+            feat_extract_act_cb, cont_int_model, cont_int_kernel_arr, frag_size=frag_tile_size)
 
-    # print best fit params
-    print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*' * 80, len(gabor_params_dict)))
-    for kernel_idx in gabor_params_dict.keys():
-        print("Kernel {0}, max_activation {1}".format(
-            kernel_idx, gabor_params_dict[kernel_idx]["max_act"]))
+        # # B. Best fit for each kernel individually
+        # # ----------------------------------------
+        # gabor_params_dict = individually_fit_gabors(
+        #     cont_int_kernel_arr, feat_extract_act_cb, cont_int_model, frag_size=frag_tile_size)
 
-    # Store best fit params
-    if not os.path.exists(DATA_DIRECTORY):
-        os.mkdir(DATA_DIRECTORY)
+        # print best fit params
+        print("{0}\n Number of trainable kernels {1}.\n {0}, ".format('*' * 80, len(gabor_params_dict)))
+        for kernel_idx in gabor_params_dict.keys():
+            print("Kernel {0}, max_activation {1}".format(
+                kernel_idx, gabor_params_dict[kernel_idx]["max_act"]))
 
-    best_fit_params_store_file = os.path.join(DATA_DIRECTORY, 'best_fit_params.pickle')
-    with open(best_fit_params_store_file, 'wb') as f_id:
-        pickle.dump(gabor_params_dict, f_id)
+        # Store best fit params
+        if not os.path.exists(DATA_DIRECTORY):
+            os.mkdir(DATA_DIRECTORY)
+
+        best_fit_params_store_file = os.path.join(DATA_DIRECTORY, 'best_fit_params.pickle')
+        with open(best_fit_params_store_file, 'wb') as f_id:
+            pickle.dump(gabor_params_dict, f_id)
+
+    else:
+        print("Using stored Gabor parameters from {}".format(gabor_params_dict_file))
+
+        with open(gabor_params_dict_file, 'rb') as handle:
+            gabor_params_dict = pickle.load(handle)
 
     # # ------------------------------------------------------------------------------
     # # Plot all Gabors found to maximally activate neurons - Debug Step
