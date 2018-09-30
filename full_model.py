@@ -21,13 +21,13 @@ reload(contour_integration_module)
 reload(alex_net_module)
 reload(learning_module)
 
-IMAGE_NET_TRAIN_DIR = '/media/salman/076d0e17-1483-4b67-ba60-aa8e7efc8edf/SalmanExternal/' \
-                     'ImageNet_ILSVRC2012/imagenet-data/train'
-IMAGE_NET_VALIDATION_DIR = '/media/salman/076d0e17-1483-4b67-ba60-aa8e7efc8edf/SalmanExternal/' \
-                     'ImageNet_ILSVRC2012/imagenet-data/validation'
+# IMAGE_NET_TRAIN_DIR = '/media/salman/076d0e17-1483-4b67-ba60-aa8e7efc8edf/SalmanExternal/' \
+#                      'ImageNet_ILSVRC2012/imagenet-data/train'
+# IMAGE_NET_VALIDATION_DIR = '/media/salman/076d0e17-1483-4b67-ba60-aa8e7efc8edf/SalmanExternal/' \
+#                      'ImageNet_ILSVRC2012/imagenet-data/validation'
 
-# IMAGE_NET_TRAIN_DIR = "./data/imagenet-data/train"
-# IMAGE_NET_VALIDATION_DIR = './data/imagenet-data/validation'
+IMAGE_NET_TRAIN_DIR = "./data/imagenet-data/train"
+IMAGE_NET_VALIDATION_DIR = './data/imagenet-data/validation'
 
 RESULTS_DIR = "./results/full_model"
 
@@ -63,8 +63,8 @@ if __name__ == '__main__':
     batch_size = 64
     n_epochs = 25  # Alexnet uses 90
 
-    n_train_images = 1300 * 3  # 1200000
-    n_test_images = 50 * 3  # 500000
+    n_train_images = 1200000
+    n_test_images = 500000
 
     # Needs to be provided
     trained_contour_integration_kernels = [
