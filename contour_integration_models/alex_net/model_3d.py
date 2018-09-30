@@ -264,7 +264,7 @@ def build_full_contour_integration_model(
     dense_2 = Dense(4096, activation='relu', name='dense_22')(dense_2)
 
     dense_3 = Dropout(0.5)(dense_2)
-    dense_3 = Dense(3, name='dense_33')(dense_3)
+    dense_3 = Dense(1000, name='dense_33')(dense_3)
     prediction = Activation('softmax', name='softmax')(dense_3)
 
     model = Model(inputs=input_layer, outputs=prediction)
