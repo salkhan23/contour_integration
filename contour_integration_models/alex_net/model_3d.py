@@ -11,13 +11,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import keras.backend as K
-from keras.layers import Input, Conv2D
 from keras.engine.topology import Layer
 import keras.activations as activations
 from keras.regularizers import l1, Regularizer
 import keras
+from keras.layers import Input, Conv2D, MaxPooling2D, ZeroPadding2D, Concatenate, \
+    Flatten, Dense, Dropout, Activation
 from keras.models import Model
 
+from base_models import alex_net
+
+reload(alex_net)
 
 class ContourGainCalculatorLayer(Layer):
     def __init__(self, tgt_filt_idx, **kwargs):
@@ -190,6 +194,83 @@ def build_contour_integration_model(
 
     model.load_weights("trained_models/AlexNet/alexnet_weights.h5", by_name=True)
     model.compile(optimizer='Adam', loss='mse')
+
+    return model
+
+
+def build_full_contour_integration_model(
+        weights_file=None, rf_size=35, inner_leaky_relu_alpha=0.9, outer_leaky_relu_alpha=1.,
+        l1_reg_loss_weight=0.0005):
+    """
+
+    Build the full contour integration Alexnet Model
+    Note:[1] Model needs to be complied fore use.
+         [2] The name of the layers after the contour integration layer are changed from alexnet
+             so weights of alexnet can be loaded safely.
+
+    :param weights_file:
+    :param rf_size:
+    :param inner_leaky_relu_alpha:
+    :param outer_leaky_relu_alpha:
+    :param l1_reg_loss_weight:
+    :return:
+    """
+    input_layer = Input(shape=(3, 227, 227))
+
+    conv_1 = Conv2D(96, (11, 11), strides=(4, 4), activation='relu', name='conv_1')(input_layer)
+
+    contour_integrate_layer = ContourIntegrationLayer3D(
+        tgt_filt_idx=0,  # not important for full model
+        rf_size=rf_size,
+        inner_leaky_relu_alpha=inner_leaky_relu_alpha,
+        outer_leaky_relu_alpha=outer_leaky_relu_alpha,
+        l1_reg_loss_weight=l1_reg_loss_weight,
+        name='contour_integration_layer')(conv_1)
+
+    conv_2 = MaxPooling2D((3, 3), strides=(2, 2))(contour_integrate_layer)
+    conv_2 = alex_net.crosschannelnormalization(name='Contrast_Normalization')(conv_2)
+    conv_2 = ZeroPadding2D((2, 2))(conv_2)
+
+    conv_2_1 = Conv2D(128, (5, 5), activation='relu', name='conv_22_1') \
+        (alex_net.splittensor(ratio_split=2, id_split=0)(conv_2))
+    conv_2_2 = Conv2D(128, (5, 5), activation='relu', name='conv_22_2') \
+        (alex_net.splittensor(ratio_split=2, id_split=1)(conv_2))
+    conv_2 = Concatenate(axis=1, name='conv_22')([conv_2_1, conv_2_2])
+
+    conv_3 = MaxPooling2D((3, 3), strides=(2, 2))(conv_2)
+    conv_3 = alex_net.crosschannelnormalization()(conv_3)
+    conv_3 = ZeroPadding2D((1, 1))(conv_3)
+    conv_3 = Conv2D(384, (3, 3), activation='relu', name='conv_33')(conv_3)
+
+    conv_4 = ZeroPadding2D((1, 1))(conv_3)
+    conv_4_1 = Conv2D(192, (3, 3), activation='relu', name='conv_44_1') \
+        (alex_net.splittensor(ratio_split=2, id_split=0)(conv_4))
+    conv_4_2 = Conv2D(192, (3, 3), activation='relu', name='conv_44_2') \
+        (alex_net.splittensor(ratio_split=2, id_split=1)(conv_4))
+    conv_4 = Concatenate(axis=1, name='conv_44')([conv_4_1, conv_4_2])
+
+    conv_5 = ZeroPadding2D((1, 1))(conv_4)
+    conv_5_1 = Conv2D(128, (3, 3), activation='relu', name='conv_55_1') \
+        (alex_net.splittensor(ratio_split=2, id_split=0)(conv_5))
+    conv_5_2 = Conv2D(128, (3, 3), activation='relu', name='conv_55_2') \
+        (alex_net.splittensor(ratio_split=2, id_split=1)(conv_5))
+    conv_5 = Concatenate(axis=1, name='conv_55')([conv_5_1, conv_5_2])
+
+    dense_1 = MaxPooling2D((3, 3), strides=(2, 2), name='convpool_5')(conv_5)
+    dense_1 = Flatten(name='flatten')(dense_1)
+    dense_1 = Dense(4096, activation='relu', name='dense_11')(dense_1)
+
+    dense_2 = Dropout(0.5)(dense_1)
+    dense_2 = Dense(4096, activation='relu', name='dense_22')(dense_2)
+
+    dense_3 = Dropout(0.5)(dense_2)
+    dense_3 = Dense(3, name='dense_33')(dense_3)
+    prediction = Activation('softmax', name='softmax')(dense_3)
+
+    model = Model(inputs=input_layer, outputs=prediction)
+
+    if weights_file:
+        model.load_weights(weights_file)
 
     return model
 
