@@ -80,7 +80,7 @@ cd "${OUTDIR}"
 
 # Download all images from the ImageNet 2012 train dataset.
 TRAIN_TARBALL="./data/ILSVRC2012_img_train.tar"
-OUTPUT_PATH="${OUTDIR}/data/imagenet_data/train"
+OUTPUT_PATH="${OUTDIR}/data/imagenet-data/train"
 #mkdir -p "${OUTPUT_PATH}"
 
 #cd "${OUTDIR}/.."
