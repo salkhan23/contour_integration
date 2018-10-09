@@ -38,8 +38,8 @@ set -e
 #   read -p "Access key: " IMAGENET_ACCESS_KEY
 # fi
 
-OUTDIR="./data/imagenet-data"
-SYNSETS_FILE="../../misc_scripts/imagenet_preprocessing/imagenet_lsvrc_2015_synsets.txt"
+OUTDIR="."
+SYNSETS_FILE="./misc_scripts/imagenet_preprocessing/imagenet_lsvrc_2015_synsets.txt"
 
 
 echo "Saving downloaded files to $OUTDIR"
@@ -80,7 +80,7 @@ cd "${OUTDIR}"
 
 # Download all images from the ImageNet 2012 train dataset.
 TRAIN_TARBALL="./data/ILSVRC2012_img_train.tar"
-OUTPUT_PATH="${OUTDIR}/train/"
+OUTPUT_PATH="${OUTDIR}/data/image-net/train"
 #mkdir -p "${OUTPUT_PATH}"
 
 #cd "${OUTDIR}/.."
@@ -97,6 +97,7 @@ echo $(pwd)
 
 while read SYNSET; do
   echo "Processing: ${SYNSET}"
+  echo ${OUTPUT_PATH}/${SYNSET}
 
   # Create a directory and delete anything there.
   mkdir -p "${OUTPUT_PATH}/${SYNSET}"
