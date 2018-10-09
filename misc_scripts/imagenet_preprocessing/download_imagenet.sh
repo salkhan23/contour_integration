@@ -101,12 +101,12 @@ while read SYNSET; do
 
   # Create a directory and delete anything there.
   mkdir -p "${OUTPUT_PATH}/${SYNSET}"
-#  rm -rf "${OUTPUT_PATH}/${SYNSET}/*"
-#
-#  # Uncompress into the directory.
-#  tar xf "${TRAIN_TARBALL}" "${SYNSET}.tar"
-#  tar xf "${SYNSET}.tar" -C "${OUTPUT_PATH}/${SYNSET}/"
-#  rm -f "${SYNSET}.tar"
+  rm -rf "${OUTPUT_PATH}/${SYNSET}/*"
+
+  # Uncompress into the directory.
+  tar xf "${TRAIN_TARBALL}" "${SYNSET}.tar"
+  tar xf "${SYNSET}.tar" -C "${OUTPUT_PATH}/${SYNSET}/"
+  rm -f "${SYNSET}.tar"
 
   echo "Finished processing: ${SYNSET}"
 done < "${SYNSETS_FILE}"
