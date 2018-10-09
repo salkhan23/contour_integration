@@ -44,6 +44,12 @@ class CenteredImageDataGenerator(ImageDataGenerator):
         return x
 
 
+def preprocessing_function(x):
+    # return imagenet_utils.preprocess_input(x, mode='tf')
+    x = (x - x.min()) / (x.max() - x.min())
+    return x
+
+
 if __name__ == '__main__':
 
     # -----------------------------------------------------------------------------------
@@ -61,7 +67,7 @@ if __name__ == '__main__':
     l1_reg_loss_weight = 0.0005
 
     batch_size = 64
-    n_epochs = 25  # Alexnet uses 90
+    n_epochs = 35  # Alexnet uses 90
 
     n_train_images = 1200000
     n_test_images = 500000
@@ -119,15 +125,15 @@ if __name__ == '__main__':
     #     raw_input()
 
     # Compile the model
-    sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(optimizer=sgd, loss='mse', metrics=['accuracy'])
+    # sgd = optimizers.SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+    # model.compile(optimizer=sgd, loss='mse', metrics=['accuracy'])
 
-    # model.compile(
-    #     optimizer=optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
-    #     loss=losses.mean_squared_error,
-    #     # loss=normalized_loss
-    #     metrics=['accuracy']
-    # )
+    model.compile(
+        optimizer=optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
+        loss=losses.categorical_crossentropy,
+        # loss=normalized_loss
+        metrics=['accuracy']
+    )
 
     model.save_weights(os.path.join(RESULTS_DIR, "fake_full_model_weights.hf"))
 
@@ -138,11 +144,11 @@ if __name__ == '__main__':
 
     train_datagen = ImageDataGenerator(
         data_format='channels_first',
-        preprocessing_function=imagenet_utils.preprocess_input
+        preprocessing_function=preprocessing_function
     )
     test_datagen = ImageDataGenerator(
         data_format='channels_first',
-        preprocessing_function=imagenet_utils.preprocess_input
+        preprocessing_function=preprocessing_function
     )
 
     # train_datagen = CenteredImageDataGenerator(
