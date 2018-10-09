@@ -38,8 +38,8 @@ set -e
 #   read -p "Access key: " IMAGENET_ACCESS_KEY
 # fi
 
-OUTDIR="/media/salman/076d0e17-1483-4b67-ba60-aa8e7efc8edf/SalmanExternal/ImageNet_ILSVRC2012/imagenet-data"
-SYNSETS_FILE="/media/salman/076d0e17-1483-4b67-ba60-aa8e7efc8edf/SalmanExternal/ImageNet_ILSVRC2012/processing/imagenet_lsvrc_2015_synsets.txt"
+OUTDIR="./data/imagenet-data"
+SYNSETS_FILE="/misc_scripts/imagenet_preprocessing/imagenet_lsvrc_2015_synsets.txt"
 
 echo "Saving downloaded files to $OUTDIR"
 mkdir -p "${OUTDIR}"
@@ -78,7 +78,7 @@ cd "${OUTDIR}"
 # tar xf "${VALIDATION_TARBALL}" -C "${OUTPUT_PATH}"
 
 # Download all images from the ImageNet 2012 train dataset.
-TRAIN_TARBALL="/media/salman/076d0e17-1483-4b67-ba60-aa8e7efc8edf/SalmanExternal/ImageNet_ILSVRC2012/downloaded_tar_files/ILSVRC2012_img_train.tar"
+TRAIN_TARBALL="./data/ILSVRC2012_img_train.tar"
 OUTPUT_PATH="${OUTDIR}/train/"
 mkdir -p "${OUTPUT_PATH}"
 cd "${OUTDIR}/.."
