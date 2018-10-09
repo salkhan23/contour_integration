@@ -43,7 +43,7 @@ SYNSETS_FILE="../../misc_scripts/imagenet_preprocessing/imagenet_lsvrc_2015_syns
 
 
 echo "Saving downloaded files to $OUTDIR"
-mkdir -p "${OUTDIR}"
+#mkdir -p "${OUTDIR}"
 INITIAL_DIR=$(pwd)
 # BBOX_DIR="${OUTDIR}bounding_boxes"
 # mkdir -p "${BBOX_DIR}"
