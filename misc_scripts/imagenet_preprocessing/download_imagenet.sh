@@ -39,7 +39,8 @@ set -e
 # fi
 
 OUTDIR="./data/imagenet-data"
-SYNSETS_FILE="./misc_scripts/imagenet_preprocessing/imagenet_lsvrc_2015_synsets.txt"
+SYNSETS_FILE="../../misc_scripts/imagenet_preprocessing/imagenet_lsvrc_2015_synsets.txt"
+
 
 echo "Saving downloaded files to $OUTDIR"
 mkdir -p "${OUTDIR}"
@@ -80,26 +81,31 @@ cd "${OUTDIR}"
 # Download all images from the ImageNet 2012 train dataset.
 TRAIN_TARBALL="./data/ILSVRC2012_img_train.tar"
 OUTPUT_PATH="${OUTDIR}/train/"
-mkdir -p "${OUTPUT_PATH}"
-cd "${OUTDIR}/.."
+#mkdir -p "${OUTPUT_PATH}"
+
+#cd "${OUTDIR}/.."
 echo "Processing ${TRAIN_TARBALL} to ${OUTPUT_PATH}."
 # wget -nd -c "${BASE_URL}/${TRAIN_TARBALL}"
+
+# /home/salman/workspace/keras/my_projects/contour_integration/data/imagenet-data
 
 # Un-compress the individual tar-files within the train tar-file.
 echo "Uncompressing individual train tar-balls in the training data."
 echo "Salman ${SYNSET}"
+
+echo $(pwd)
 
 while read SYNSET; do
   echo "Processing: ${SYNSET}"
 
   # Create a directory and delete anything there.
   mkdir -p "${OUTPUT_PATH}/${SYNSET}"
-  rm -rf "${OUTPUT_PATH}/${SYNSET}/*"
-
-  # Uncompress into the directory.
-  tar xf "${TRAIN_TARBALL}" "${SYNSET}.tar"
-  tar xf "${SYNSET}.tar" -C "${OUTPUT_PATH}/${SYNSET}/"
-  rm -f "${SYNSET}.tar"
+#  rm -rf "${OUTPUT_PATH}/${SYNSET}/*"
+#
+#  # Uncompress into the directory.
+#  tar xf "${TRAIN_TARBALL}" "${SYNSET}.tar"
+#  tar xf "${SYNSET}.tar" -C "${OUTPUT_PATH}/${SYNSET}/"
+#  rm -f "${SYNSET}.tar"
 
   echo "Finished processing: ${SYNSET}"
 done < "${SYNSETS_FILE}"
