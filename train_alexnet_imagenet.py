@@ -56,6 +56,8 @@ if __name__ == '__main__':
     base_model_weights = \
         "trained_models/AlexNet/alexnet_weights.h5"
 
+    if not os.path.exists("./results"):
+        os.mkdir("./results")
     if not os.path.exists(RESULTS_DIR):
         os.mkdir(RESULTS_DIR)
 
