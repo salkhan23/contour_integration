@@ -39,7 +39,7 @@ set -e
 # fi
 
 OUTDIR="./data/imagenet-data"
-SYNSETS_FILE="/misc_scripts/imagenet_preprocessing/imagenet_lsvrc_2015_synsets.txt"
+SYNSETS_FILE="./misc_scripts/imagenet_preprocessing/imagenet_lsvrc_2015_synsets.txt"
 
 echo "Saving downloaded files to $OUTDIR"
 mkdir -p "${OUTDIR}"
