@@ -447,26 +447,25 @@ if __name__ == '__main__':
     num_epochs = 100
 
     save_weights = True
-    prev_train_weights = None
+    # prev_train_weights = \
+    #     '/home/salman/workspace/keras/my_projects/contour_integration/results/' \
+    #     'beta_rotations_upto30/trained_weights.hf'
 
-    # target_kernel_idx_arr = [10]
-    target_kernel_idx_arr = [
-        5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
-        60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
-        76, 77, 79, 80, 82, 85
-    ]
+    target_kernel_idx_arr = [10]
+    # target_kernel_idx_arr = [
+    #     5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
+    #     60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
+    #     76, 77, 79, 80, 82, 85
+    # ]
 
     data_directory = "./data/curved_contours/frag_11x11_full_18x18_param_search"
-    results_identifier = 'for_paper'
+    results_identifier = 'kernel_10_full'
 
     # What data to train with (None means everything)
     contour_lengths = None
     fragment_spacing = None
     beta_rotations = None
     alpha_rotations = [0, 15, 30]
-
-    # prev_train_weights = \
-    #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
 
     # Immutable  ------------------------------------------------------------------------
     base_results_dir = './results'
@@ -478,6 +477,9 @@ if __name__ == '__main__':
         os.makedirs(results_dir)
 
     weights_store_file = os.path.join(results_dir, 'trained_weights.hf')
+
+    if 'prev_train_weights' not in globals():
+        prev_train_weights = None
 
     if contour_lengths is None:
         contour_lengths = [1, 3, 5, 7, 9]
@@ -723,6 +725,23 @@ if __name__ == '__main__':
                 results_dir, 'fragment_spacing_performance_kernel_{}.eps'.format(target_kernel_idx)), format='eps')
 
         # -------------------------------------------------------------------------------
+        # Enhancement Gain as alpha Changes
+        # -------------------------------------------------------------------------------
+        print("Checking gain vs alpha rotation performance ...")
+        c_len = 9
+
+        contour_integration_model_3d.update_contour_integration_kernel(cont_int_model, target_kernel_idx)
+        for fragment_orientation in fragment_orientation_arr:
+
+            field_1993_routines.contour_gain_vs_alpha_rotation(
+                cont_int_model,
+                train_data_dict_of_dicts,
+                c_len,
+                frag_orient=fragment_orientation,
+                n_runs=100,
+            )
+
+        # -------------------------------------------------------------------------------
         # Debug - Plot the performance on a test image
         # -------------------------------------------------------------------------------
         print("Checking performance on sample images ...")
@@ -757,7 +776,8 @@ if __name__ == '__main__':
     # print Elapsed Time
     print("Total Elapsed Time {}".format(datetime.now() - start_time))
 
-    os.remove(TEMP_WEIGHT_STORE_FILE)
+    if os.path.exists(TEMP_WEIGHT_STORE_FILE):
+        os.remove(TEMP_WEIGHT_STORE_FILE)
 
     # Write the Summary of the run to a file
     with open(os.path.join(results_dir, 'summary.txt'), 'wb') as f_id:
