@@ -128,14 +128,14 @@ def contour_gain_vs_inter_fragment_rotation(
 
     axis.errorbar(
         inter_frag_rotation_arr, avg_gain_per_angle, std_gain_per_angle,
-        marker='o', label='model-c_len_{}'.format(c_len), linestyle='-',linewidth=3,)
+        marker='o', label='model-c_len_{}'.format(c_len), linestyle='-', linewidth=3,)
 
     axis.legend(prop={'size': 40})
     axis.set_xlabel(r"Contour Curvature $\beta$")
     axis.set_xticks([0, 15, 30, 45, 60])
     axis.set_ylabel("Gain")
     axis.set_yticks([1, 1.4, 1.8, 2.2, 2.6])
-    #axis.set_title("Enhancement gain vs inter-fragment rotation - Fields -1993 (Exp 1)")
+    # axis.set_title("Enhancement gain vs inter-fragment rotation - Fields -1993 (Exp 1)")
 
 
 def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_runs=100, axis=None):
@@ -358,7 +358,113 @@ def contour_gain_vs_spacing(model, data_key, beta, frag_orient=None, alpha=0, n_
     axis.set_xlabel(r"Fragment Spacing $c_{spacing}$")
     axis.set_ylabel("Gain")
     axis.set_yticks([1, 1.4, 1.8, 2.2, 2.6])
-    #axis.set_title("Enhancement gain vs Fragment Spacing")
+    # axis.set_title("Enhancement gain vs Fragment Spacing")
+
+
+def contour_gain_vs_alpha_rotation(
+        model, data_key, c_len, frag_orient=None, n_runs=100, axis=None):
+    """
+    Fields -1993 - Experiment 3: Effect of alpha rotations (Rotations of individual fragments)
+    with respect to the orientation of the curve (beta)
+
+    Figure 11 of reference.
+
+    Compare model performance with Fields-1993 Experiment 1 - Contour enhancement gain as a
+    function of inter-fragment rotation.
+
+
+    :return:
+    """
+    # --------------------------------------
+    # Validation
+    # --------------------------------------
+    valid_c_len = [1, 3, 5, 7, 9]
+    if c_len not in valid_c_len:
+        raise Exception("Invalid contour length {0} specified. Allowed = {1}".format(c_len, valid_c_len))
+
+    print("Model Contour Gain vs individual fragment (alpha) rotation"
+          "for contour length {0}, frag orientation {1}".format(c_len, frag_orient))
+
+    # --------------------------------------
+    # Get Neurophysiological Data
+    # --------------------------------------
+    abs_gains_arr = generate_curved_contour_data.get_neurophysiological_data('c_len')
+    inter_frag_rotation_arr = np.array([0, 15, 30, 45, 60])
+    alpha_rot_arr = np.array([0, 15, 30])
+
+    if axis is None:
+        f, axis = plt.subplots()
+
+    # Plot expected gains
+    for alpha in alpha_rot_arr:
+
+        expected_gains = [abs_gains_arr[c_len][alpha][beta] for beta in inter_frag_rotation_arr]
+
+        axis.plot(
+            inter_frag_rotation_arr, expected_gains,
+            label='Expected Gain-c_len-{}-alpha={}'.format(c_len, alpha),
+            marker='s',
+            linestyle='--',
+            linewidth=3,
+        )
+
+    # Get and Plot Model Results
+    for alpha in alpha_rot_arr:
+
+        avg_gain_per_angle = []
+        std_gain_per_angle = []
+
+        for beta in inter_frag_rotation_arr:
+
+            print("Processing c_len = {}, beta = {}, alpha = {}".format(c_len, beta, alpha))
+
+            # Get the images associated with the condition under test
+            use_set = data_key
+            use_set = [x for x in use_set if 'c_len_{}'.format(c_len) in x]
+            use_set = [x for x in use_set if 'beta_{}'.format(beta) in x]
+            use_set = [x for x in use_set if 'alpha_{}'.format(alpha) in x]
+            if frag_orient is not None:
+                use_set = [x for x in use_set if 'forient_{}'.format(frag_orient) in x]
+
+            active_test_set = {}
+            for set_id in use_set:
+                active_test_set.update(data_key[set_id])
+
+            # Generator for the selected images
+            image_generator = image_generator_curve.DataGenerator(
+                active_test_set,
+                batch_size=1,
+                shuffle=True,
+            )
+
+            gen_out = iter(image_generator)
+
+            # Evaluate
+            y_hat_arr = []
+            for r_idx in range(n_runs):
+
+                x_in, y = gen_out.next()
+
+                # TODO: look into using activations callbacks. Then this routine can be used by
+                # TODO: the full contour integration model, which does not have a gain calculating layer.
+                y_hat = model.predict(x_in, batch_size=1)
+                y_hat_arr.append(y_hat)
+                # print("Predicted gain {0}, Expected gain {1}".format(y_hat, y))
+
+            avg_gain_per_angle.append(np.mean(y_hat_arr))
+            std_gain_per_angle.append(np.std(y_hat_arr))
+
+        # PLot the results for one alpha
+        axis.errorbar(
+            inter_frag_rotation_arr, avg_gain_per_angle, std_gain_per_angle,
+            marker='o', label='model-c_len_{}-alpha_{}'.format(c_len, alpha), linestyle='-', linewidth=3,)
+
+    axis.legend(prop={'size': 40})
+    axis.set_xlabel(r"Contour Curvature $\beta$")
+    axis.set_xticks([0, 15, 30, 45, 60])
+    axis.set_ylabel("Gain")
+    axis.set_yticks([1, 1.4, 1.8, 2.2, 2.6])
+    # axis.set_title("Enhancement gain vs inter-fragment rotation  for diffrent alpha - Fields -1993 (Exp 3)")
 
 
 def plot_activations(model, img_file, tgt_filt_idx,):
