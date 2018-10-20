@@ -11,6 +11,7 @@ logs
 
 # Ignore the data directory
 data/curved_contours
+data/imagenet-data
 
-# Ignore the results directoy
+# Ignore the results directory
 results
