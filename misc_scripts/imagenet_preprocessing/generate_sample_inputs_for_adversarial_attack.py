@@ -15,12 +15,14 @@ IMAGE_NET_META_DATA_FILE = '/media/salman/076d0e17-1483-4b67-ba60-aa8e7efc8edf/S
     '/ImageNet_ILSVRC2012/processing/imagenet_metadata.txt'
 
 STORE_IMG_DIR = '/media/salman/076d0e17-1483-4b67-ba60-aa8e7efc8edf/SalmanExternal/' \
-    '/ImageNet_ILSVRC2012/sample_images_3'
+    '/ImageNet_ILSVRC2012/sample_images_5'
 
 if not os.path.exists(STORE_IMG_DIR):
     os.mkdir(STORE_IMG_DIR)
 
 if __name__ == '__main__':
+
+    np.random.seed(57)
 
     # Label 2 Words Converter
     with open(IMAGE_NET_META_DATA_FILE, 'rb') as handle:
