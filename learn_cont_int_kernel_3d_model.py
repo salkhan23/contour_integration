@@ -241,7 +241,7 @@ def train_contour_integration_kernel(
     # Modify the contour integration training model to train the target kernel
     contour_integration_model_3d.update_contour_integration_kernel(model, tgt_filt_idx)
     model.compile(
-        optimizer=optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False),
+        optimizer=optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
         loss=losses.mean_squared_error
     )
 
@@ -444,26 +444,26 @@ if __name__ == '__main__':
     np.random.seed(7)
 
     batch_size = 32
-    num_epochs = 1
+    num_epochs = 100
 
     save_weights = True
     prev_train_weights = None
 
-    target_kernel_idx_arr = [5, 10]
-    # target_kernel_idx_arr = [
-    #     5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
-    #     60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
-    #     76, 77, 79, 80, 82,
-    # ]
+    # target_kernel_idx_arr = [10]
+    target_kernel_idx_arr = [
+        5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
+        60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
+        76, 77, 79, 80, 82, 85
+    ]
 
     data_directory = "./data/curved_contours/frag_11x11_full_18x18_param_search"
-    results_identifier = 'test'
+    results_identifier = 'for_paper'
 
     # What data to train with (None means everything)
     contour_lengths = None
     fragment_spacing = None
-    beta_rotations = [0, 15, 30]
-    alpha_rotations = [0]
+    beta_rotations = None
+    alpha_rotations = [0, 15, 30]
 
     # prev_train_weights = \
     #     './trained_models/ContourIntegrationModel3d/filter_matched/contour_integration_weights.hf'
@@ -574,7 +574,7 @@ if __name__ == '__main__':
             alpha=alpha_rotations
         )
 
-        fig_losses.savefig(os.path.join(results_dir, 'losses.png'), dpi=fig_losses.dpi)
+        fig_losses.savefig(os.path.join(results_dir, 'losses.eps'), dpi=fig_losses.dpi, format='eps')
 
         min_loss_arr.append((min_train_loss, min_test_loss))
 
@@ -602,7 +602,7 @@ if __name__ == '__main__':
 
         learnt_kernel_fig = plt.gcf()
         learnt_kernel_fig.savefig(os.path.join(
-            results_dir, 'learnt_contour_integration_kernel_{}.png'.format(target_kernel_idx)))
+            results_dir, 'learnt_contour_integration_kernel_{}.eps'.format(target_kernel_idx)), format='eps')
 
         # -------------------------------------------------------------------------------
         # Todo: Should be moved to another File
@@ -628,7 +628,7 @@ if __name__ == '__main__':
 
             field_1993_routines.contour_gain_vs_inter_fragment_rotation(
                 cont_int_model,
-                test_data_dict_of_dicts,
+                train_data_dict_of_dicts,
                 c_len=9,
                 frag_orient=fragment_orientation,
                 n_runs=100,
@@ -637,7 +637,7 @@ if __name__ == '__main__':
 
             field_1993_routines.contour_gain_vs_inter_fragment_rotation(
                 cont_int_model,
-                test_data_dict_of_dicts,
+                train_data_dict_of_dicts,
                 c_len=7,
                 frag_orient=fragment_orientation,
                 n_runs=100,
@@ -650,7 +650,7 @@ if __name__ == '__main__':
 
             fig_curvature_perf.set_size_inches(11, 9)
             fig_curvature_perf.savefig(os.path.join(
-                results_dir, 'beta_rotations_performance_kernel_{}.png'.format(target_kernel_idx)))
+                results_dir, 'beta_rotations_performance_kernel_{}.eps'.format(target_kernel_idx)), format='eps')
 
         # -------------------------------------------------------------------------------
         # Enhancement Gain vs Contour Length
@@ -663,7 +663,7 @@ if __name__ == '__main__':
             # Linear contours
             field_1993_routines.contour_gain_vs_length(
                 cont_int_model,
-                test_data_dict_of_dicts,
+                train_data_dict_of_dicts,
                 beta=0,
                 frag_orient=fragment_orientation,
                 n_runs=100,
@@ -673,7 +673,7 @@ if __name__ == '__main__':
             # For inter-fragment rotation of 15 degrees
             field_1993_routines.contour_gain_vs_length(
                 cont_int_model,
-                test_data_dict_of_dicts,
+                train_data_dict_of_dicts,
                 beta=15,
                 frag_orient=fragment_orientation,
                 n_runs=100,
@@ -685,7 +685,7 @@ if __name__ == '__main__':
 
             fig_c_len_perf.set_size_inches(11, 9)
             fig_c_len_perf.savefig(os.path.join(
-                results_dir, 'contour_len_performance_kernel_{}.png'.format(target_kernel_idx)))
+                results_dir, 'contour_len_performance_kernel_{}.eps'.format(target_kernel_idx)), format='eps')
 
         # -------------------------------------------------------------------------------
         # Enhancement Gain vs Fragment Spacing
@@ -698,7 +698,7 @@ if __name__ == '__main__':
             # Linear contours
             field_1993_routines.contour_gain_vs_spacing(
                 cont_int_model,
-                test_data_dict_of_dicts,
+                train_data_dict_of_dicts,
                 beta=0,
                 frag_orient=fragment_orientation,
                 n_runs=100,
@@ -708,7 +708,7 @@ if __name__ == '__main__':
             # For inter-fragment rotation of 15 degrees
             field_1993_routines.contour_gain_vs_spacing(
                 cont_int_model,
-                test_data_dict_of_dicts,
+                train_data_dict_of_dicts,
                 beta=15,
                 frag_orient=fragment_orientation,
                 n_runs=100,
@@ -720,7 +720,7 @@ if __name__ == '__main__':
 
             fig_spacing_perf.set_size_inches(11, 9)
             fig_spacing_perf.savefig(os.path.join(
-                results_dir, 'fragment_spacing_performance_kernel_{}.png'.format(target_kernel_idx)))
+                results_dir, 'fragment_spacing_performance_kernel_{}.eps'.format(target_kernel_idx)), format='eps')
 
         # -------------------------------------------------------------------------------
         # Debug - Plot the performance on a test image
