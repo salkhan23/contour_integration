@@ -70,7 +70,7 @@ def get_l1_and_l2_activations(img, l1_act_cb, l2_act_cb):
     return l1_act, l2_act
 
 
-def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx, show_img=True):
+def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx, show_input_img=True):
     """
     Plot 2 figures:
     [1] the test image,
@@ -80,12 +80,12 @@ def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx, show_img
     :param l1_act_cb:
     :param l2_act_cb:
     :param tgt_filt_idx:
-    :param show_img:
+    :param show_input_img:
 
     :return: Handles of the two images created
     """
     f1 = None
-    if show_img:
+    if show_input_img:
         f1 = plt.figure()
         plt.imshow(img)
 
@@ -105,27 +105,35 @@ def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx, show_img
     f2 = plt.figure()
     f2.add_subplot(2, 2, 1)
     plt.imshow(l1_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
-    plt.title('L1 Conv Layer Activation @ idx %d' % tgt_filt_idx)
+    # plt.title('L1 Conv Layer Activation @ idx %d' % tgt_filt_idx)
+    plt.gca().set_xticks([])
+    plt.gca().set_yticks([])
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
     f2.add_subplot(2, 2, 2)
     plt.imshow(l2_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
-    plt.title('L2 Contour Integration Layer Activation @ idx %d' % tgt_filt_idx)
+    plt.gca().set_xticks([])
+    plt.gca().set_yticks([])
+    # plt.title('L2 Contour Integration Layer Activation @ idx %d' % tgt_filt_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
     f2.add_subplot(2, 2, 3)
     plt.imshow(gain, vmin=-1, vmax=3, cmap='seismic')
     plt.colorbar(orientation='horizontal')
-    plt.title("Enhancement gain")
+    plt.gca().set_xticks([])
+    plt.gca().set_yticks([])
+    # plt.title("Enhancement gain")
     plt.grid()
 
     diff = (l2_act - l1_act)
     max_diff = diff.max()
     f2.add_subplot(2, 2, 4)
     plt.imshow(diff, cmap='seismic', vmin=-max_diff, vmax=max_diff)
-    plt.title("Difference (L2 - L1)")
+    plt.gca().set_xticks([])
+    plt.gca().set_yticks([])
+    # plt.title("Difference (L2 - L1)")
     plt.colorbar(orientation='horizontal')
     return f1, f2
 
