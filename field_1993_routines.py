@@ -78,8 +78,8 @@ def contour_gain_vs_inter_fragment_rotation(
 
     expected_gains = [abs_gains_arr[c_len][alpha][beta] for beta in inter_frag_rotation_arr]
 
-    axis.plot(inter_frag_rotation_arr, expected_gains,
-              label='Fields-1993-c_len_{}'.format(c_len), marker='s', linestyle='--')
+    axis.plot(inter_frag_rotation_arr, expected_gains, linewidth=3,
+              label='Expected Gain-c_len_{}'.format(c_len), marker='s', linestyle='--')
 
     # --------------------------------------
     # Model Results
@@ -128,12 +128,14 @@ def contour_gain_vs_inter_fragment_rotation(
 
     axis.errorbar(
         inter_frag_rotation_arr, avg_gain_per_angle, std_gain_per_angle,
-        marker='o', label='model-c_len_{}'.format(c_len), linestyle='-')
+        marker='o', label='model-c_len_{}'.format(c_len), linestyle='-',linewidth=3,)
 
-    axis.legend()
-    axis.set_xlabel("Inter-fragment rotation (Deg)")
+    axis.legend(prop={'size': 40})
+    axis.set_xlabel(r"Contour Curvature $\beta$")
+    axis.set_xticks([0, 15, 30, 45, 60])
     axis.set_ylabel("Gain")
-    axis.set_title("Enhancement gain vs inter-fragment rotation - Fields -1993 (Exp 1)")
+    axis.set_yticks([1, 1.4, 1.8, 2.2, 2.6])
+    #axis.set_title("Enhancement gain vs inter-fragment rotation - Fields -1993 (Exp 1)")
 
 
 def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_runs=100, axis=None):
@@ -192,7 +194,7 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_r
     # Plot Neurophysiological data
     # --------------------------------------
     axis.plot(c_len_arr, expected_gains,
-              label='Fields1993+Li2006-beta{}'.format(beta), marker='s', linestyle='--')
+              label='Expected Gain-beta{}'.format(beta), marker='s', linestyle='--', linewidth=3)
 
     # --------------------------------------
     # Model Results
@@ -240,13 +242,15 @@ def contour_gain_vs_length(model, data_key, beta, frag_orient=None, alpha=0, n_r
 
     axis.errorbar(
         c_len_arr, avg_gain_per_len, std_gain_per_len,
-        marker='o', label='Model-beta_{}'.format(beta), linestyle='-')
+        marker='o', label='Model-beta_{}'.format(beta), linestyle='-', linewidth=3)
 
-    axis.legend()
-    axis.set_xlabel("Contour Length")
+    axis.legend(prop={'size': 40})
+    axis.set_xlabel(r"Contour Length, $c_{len}$")
+    axis.set_xticks([1, 3, 5, 7, 9])
     axis.set_ylabel("Gain")
-    axis.set_ylim(bottom=0)
-    axis.set_title("Enhancement gain vs Contour Length")
+    axis.set_yticks([1, 1.4, 1.8, 2.2, 2.6])
+    # axis.set_ylim(bottom=0)
+    # axis.set_title("Enhancement gain vs Contour Length")
 
 
 def contour_gain_vs_spacing(model, data_key, beta, frag_orient=None, alpha=0, n_runs=100, axis=None):
@@ -300,7 +304,7 @@ def contour_gain_vs_spacing(model, data_key, beta, frag_orient=None, alpha=0, n_
     # Plot Neurophysiological data
     # --------------------------------------
     axis.plot(f_spacing_arr, expected_gains,
-              label='Fields1993+Li2006-beta{}'.format(beta), marker='s', linestyle='--')
+              label='Expected Gain-beta{}'.format(beta), marker='s', linestyle='--', linewidth=3)
 
     # --------------------------------------
     # Model Results
@@ -348,12 +352,13 @@ def contour_gain_vs_spacing(model, data_key, beta, frag_orient=None, alpha=0, n_
 
     axis.errorbar(
         f_spacing_arr, avg_gain_per_f_spacing, std_gain_per_f_spacing,
-        marker='o', label='Model-beta_{}'.format(beta), linestyle='-')
+        marker='o', label='Model-beta_{}'.format(beta), linestyle='-', linewidth=3)
 
-    axis.legend()
-    axis.set_xlabel("Fragment Spacing")
+    axis.legend(prop={'size': 40})
+    axis.set_xlabel(r"Fragment Spacing $c_{spacing}$")
     axis.set_ylabel("Gain")
-    axis.set_title("Enhancement gain vs Fragment Spacing")
+    axis.set_yticks([1, 1.4, 1.8, 2.2, 2.6])
+    #axis.set_title("Enhancement gain vs Fragment Spacing")
 
 
 def plot_activations(model, img_file, tgt_filt_idx,):
