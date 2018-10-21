@@ -97,8 +97,9 @@ def save_learnt_weights(model, tgt_filt_idx, w_store_file):
             fid.write(str(entry) + '\n')
 
 
-def _get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir):
+def get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir):
     """
+    Retrieves the data from the tgt_filter data_key.pickle file
 
     :param tgt_filt_idx:
     :param data_dir:
@@ -172,7 +173,7 @@ def get_train_n_test_data_keys(
         raise Exception("Invalid f_spacing elements {}. All should be in {}".format(f_spacing, valid_f_spacing))
 
     train_data_dict_of_dict, test_data_dict_of_dict =\
-        _get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir)
+        get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir)
 
     full_set = train_data_dict_of_dict.keys()
     use_set = []
@@ -607,139 +608,20 @@ if __name__ == '__main__':
             results_dir, 'learnt_contour_integration_kernel_{}.eps'.format(target_kernel_idx)), format='eps')
 
         # -------------------------------------------------------------------------------
-        # Todo: Should be moved to another File
-        train_data_dict_of_dicts, test_data_dict_of_dicts = _get_train_n_test_dictionary_of_dictionaries(
-            target_kernel_idx,
-            data_directory,
+        # Check neurophysiological Performance
+        # -------------------------------------------------------------------------------
+        train_data_dict_of_dicts, test_data_dict_of_dicts = \
+            get_train_n_test_dictionary_of_dictionaries(
+                tgt_filt_idx=target_kernel_idx,
+                data_dir=data_directory
+            )
+
+        field_1993_routines.check_all_performance(
+            cont_int_model,
+            tgt_filt_idx=target_kernel_idx,
+            data_dict_of_dicts=train_data_dict_of_dicts,
+            results_dir=results_dir
         )
-        # get list of considered orientations
-        list_of_data_sets = train_data_dict_of_dicts.keys()
-
-        if 'forient' in list_of_data_sets[0]:
-            fragment_orientation_arr = [np.int(item.split("forient_")[1]) for item in list_of_data_sets]
-            fragment_orientation_arr = set(fragment_orientation_arr)
-        else:
-            fragment_orientation_arr = [None]
-
-        # -------------------------------------------------------------------------------
-        #  Fields - 1993 - Experiment 1 - Curvature vs Gain
-        # -------------------------------------------------------------------------------
-        print("Checking gain vs curvature performance ...")
-        for fragment_orientation in fragment_orientation_arr:
-            fig_curvature_perf, ax = plt.subplots()
-
-            field_1993_routines.contour_gain_vs_inter_fragment_rotation(
-                cont_int_model,
-                train_data_dict_of_dicts,
-                c_len=9,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-                axis=ax
-            )
-
-            field_1993_routines.contour_gain_vs_inter_fragment_rotation(
-                cont_int_model,
-                train_data_dict_of_dicts,
-                c_len=7,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-                axis=ax
-            )
-
-            fig_curvature_perf.suptitle(
-                "Contour Curvature (Beta Rotations) Performance. Kernel @ index {0}, Frag orientation {1}".format(
-                    target_kernel_idx, fragment_orientation))
-
-            fig_curvature_perf.set_size_inches(11, 9)
-            fig_curvature_perf.savefig(os.path.join(
-                results_dir, 'beta_rotations_performance_kernel_{}.eps'.format(target_kernel_idx)), format='eps')
-
-        # -------------------------------------------------------------------------------
-        # Enhancement Gain vs Contour Length
-        # -------------------------------------------------------------------------------
-        print("Checking gain vs contour length performance ...")
-        for fragment_orientation in fragment_orientation_arr:
-
-            fig_c_len_perf, ax = plt.subplots()
-
-            # Linear contours
-            field_1993_routines.contour_gain_vs_length(
-                cont_int_model,
-                train_data_dict_of_dicts,
-                beta=0,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-                axis=ax
-            )
-
-            # For inter-fragment rotation of 15 degrees
-            field_1993_routines.contour_gain_vs_length(
-                cont_int_model,
-                train_data_dict_of_dicts,
-                beta=15,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-                axis=ax
-            )
-
-            fig_c_len_perf.suptitle("Contour Length Performance. kernel @ index {0}, Frag orientation {1}".format(
-                target_kernel_idx, fragment_orientation))
-
-            fig_c_len_perf.set_size_inches(11, 9)
-            fig_c_len_perf.savefig(os.path.join(
-                results_dir, 'contour_len_performance_kernel_{}.eps'.format(target_kernel_idx)), format='eps')
-
-        # -------------------------------------------------------------------------------
-        # Enhancement Gain vs Fragment Spacing
-        # -------------------------------------------------------------------------------
-        print("Checking gain vs fragment spacing performance ...")
-        for fragment_orientation in fragment_orientation_arr:
-
-            fig_spacing_perf, ax = plt.subplots()
-
-            # Linear contours
-            field_1993_routines.contour_gain_vs_spacing(
-                cont_int_model,
-                train_data_dict_of_dicts,
-                beta=0,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-                axis=ax
-            )
-
-            # For inter-fragment rotation of 15 degrees
-            field_1993_routines.contour_gain_vs_spacing(
-                cont_int_model,
-                train_data_dict_of_dicts,
-                beta=15,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-                axis=ax
-            )
-
-            fig_spacing_perf.suptitle("Fragment Spacing Performance. kernel @ index {0}, Frag orientation {1}".format(
-                target_kernel_idx, fragment_orientation))
-
-            fig_spacing_perf.set_size_inches(11, 9)
-            fig_spacing_perf.savefig(os.path.join(
-                results_dir, 'fragment_spacing_performance_kernel_{}.eps'.format(target_kernel_idx)), format='eps')
-
-        # -------------------------------------------------------------------------------
-        # Enhancement Gain as alpha Changes
-        # -------------------------------------------------------------------------------
-        print("Checking gain vs alpha rotation performance ...")
-        c_len = 9
-
-        contour_integration_model_3d.update_contour_integration_kernel(cont_int_model, target_kernel_idx)
-        for fragment_orientation in fragment_orientation_arr:
-
-            field_1993_routines.contour_gain_vs_alpha_rotation(
-                cont_int_model,
-                train_data_dict_of_dicts,
-                c_len,
-                frag_orient=fragment_orientation,
-                n_runs=100,
-            )
 
         # -------------------------------------------------------------------------------
         # Debug - Plot the performance on a test image

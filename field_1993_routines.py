@@ -6,12 +6,14 @@
 # -------------------------------------------------------------------------------------------------
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 from keras.preprocessing.image import load_img
 
 import generate_curved_contour_data
 import image_generator_curve
 import alex_net_utils
+import contour_integration_models.alex_net.model_3d as contour_integration_model_3d
 
 reload(image_generator_curve)
 reload(alex_net_utils)
@@ -486,3 +488,144 @@ def plot_activations(model, img_file, tgt_filt_idx,):
 
     alex_net_utils.plot_l1_and_l2_activations(
         d1 / 255.0, feat_extract_act_cb, cont_int_act_cb, tgt_filt_idx)
+
+
+def check_all_performance(model, tgt_filt_idx, data_dict_of_dicts, results_dir):
+    """
+
+    :param model:
+    :param tgt_filt_idx:
+    :param data_dict_of_dicts:
+    :param results_dir:
+    :return:
+    """
+
+    contour_integration_model_3d.update_contour_integration_kernel(model, tgt_filt_idx)
+
+    # get list of considered orientations
+    list_of_data_sets = data_dict_of_dicts.keys()
+
+    if 'forient' in list_of_data_sets[0]:
+        fragment_orientation_arr = [np.int(item.split("forient_")[1]) for item in list_of_data_sets]
+        fragment_orientation_arr = set(fragment_orientation_arr)
+    else:
+        fragment_orientation_arr = [None]
+
+    # -------------------------------------------------------------------------------
+    #  (1) Fields - 1993 - Experiment 1 - Curvature vs Gain
+    # -------------------------------------------------------------------------------
+    print("Checking gain vs curvature performance ...")
+
+    for fragment_orientation in fragment_orientation_arr:
+        fig_curvature_perf, ax = plt.subplots()
+
+        contour_gain_vs_inter_fragment_rotation(
+            model,
+            data_dict_of_dicts,
+            c_len=9,
+            frag_orient=fragment_orientation,
+            n_runs=100,
+            axis=ax
+        )
+
+        contour_gain_vs_inter_fragment_rotation(
+            model,
+            data_dict_of_dicts,
+            c_len=7,
+            frag_orient=fragment_orientation,
+            n_runs=100,
+            axis=ax
+        )
+
+        fig_curvature_perf.suptitle(
+            "Contour Curvature (Beta Rotations) Performance. Kernel @ index {0}, Frag orientation {1}".format(
+                tgt_filt_idx, fragment_orientation))
+
+        fig_curvature_perf.set_size_inches(11, 9)
+        fig_curvature_perf.savefig(os.path.join(
+            results_dir, 'beta_rotations_performance_kernel_{}.eps'.format(tgt_filt_idx)), format='eps')
+
+    # -------------------------------------------------------------------------------
+    # (2) Enhancement Gain vs Contour Length: Li-2006 Experiment 1 + curved contours
+    # -------------------------------------------------------------------------------
+    print("Checking gain vs contour length performance ...")
+
+    for fragment_orientation in fragment_orientation_arr:
+        fig_c_len_perf, ax = plt.subplots()
+
+        # Linear contours
+        contour_gain_vs_length(
+            model,
+            data_dict_of_dicts,
+            beta=0,
+            frag_orient=fragment_orientation,
+            n_runs=100,
+            axis=ax
+        )
+
+        # For inter-fragment rotation of 15 degrees
+        contour_gain_vs_length(
+            model,
+            data_dict_of_dicts,
+            beta=15,
+            frag_orient=fragment_orientation,
+            n_runs=100,
+            axis=ax
+        )
+
+        fig_c_len_perf.suptitle("Contour Length Performance. kernel @ index {0}, Frag orientation {1}".format(
+            tgt_filt_idx, fragment_orientation))
+
+        fig_c_len_perf.set_size_inches(11, 9)
+        fig_c_len_perf.savefig(os.path.join(
+            results_dir, 'contour_len_performance_kernel_{}.eps'.format(tgt_filt_idx)), format='eps')
+
+    # -------------------------------------------------------------------------------
+    # (3) Enhancement Gain vs Fragment Spacing: Li-2006 Experiment 2 with Curved Contours
+    # -------------------------------------------------------------------------------
+    print("Checking gain vs fragment spacing performance ...")
+    for fragment_orientation in fragment_orientation_arr:
+        fig_spacing_perf, ax = plt.subplots()
+
+        # Linear contours
+        contour_gain_vs_spacing(
+            model,
+            data_dict_of_dicts,
+            beta=0,
+            frag_orient=fragment_orientation,
+            n_runs=100,
+            axis=ax
+        )
+
+        # For inter-fragment rotation of 15 degrees
+        contour_gain_vs_spacing(
+            model,
+            data_dict_of_dicts,
+            beta=15,
+            frag_orient=fragment_orientation,
+            n_runs=100,
+            axis=ax
+        )
+
+        fig_spacing_perf.suptitle("Fragment Spacing Performance. kernel @ index {0}, Frag orientation {1}".format(
+            tgt_filt_idx, fragment_orientation))
+
+        fig_spacing_perf.set_size_inches(11, 9)
+        fig_spacing_perf.savefig(os.path.join(
+            results_dir, 'fragment_spacing_performance_kernel_{}.eps'.format(tgt_filt_idx)), format='eps')
+
+    # -------------------------------------------------------------------------------
+    # Enhancement Gain as alpha Changes
+    # -------------------------------------------------------------------------------
+    print("Checking gain vs alpha rotation performance ...")
+    c_len = 9
+
+    contour_integration_model_3d.update_contour_integration_kernel(model, tgt_filt_idx)
+    for fragment_orientation in fragment_orientation_arr:
+        contour_gain_vs_alpha_rotation(
+            model,
+            data_dict_of_dicts,
+            c_len,
+            frag_orient=fragment_orientation,
+            n_runs=100,
+        )
