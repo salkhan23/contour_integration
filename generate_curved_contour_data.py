@@ -254,7 +254,7 @@ def generate_data_set(
                 # Save the images to file & create a dictionary key of (Image, Expected gain)
                 # that can be used by a python generator / keras sequence object
                 curr_set_dict = {}
-                set_base_filename = "c_len_{0}_beta_{1}_alpha_{2}_forient_{3}".format(
+                set_base_filename = "clen_{0}_beta_{1}_alpha_{2}_forient_{3}".format(
                     c_len, beta, alpha, frag_params[0]['theta_deg'])
 
                 for img_idx in range(img_arr.shape[0]):
