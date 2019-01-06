@@ -663,6 +663,7 @@ class DataGenerator(keras.utils.Sequence):
         for idx, list_id in enumerate(list_ids_temp):
 
             temp = load_img(list_id)
+            # print("{} Loading Image {}".format(idx, list_id))
 
             in_img = np.transpose(temp, axes=(2, 0, 1))
             in_img = in_img / 255.0
