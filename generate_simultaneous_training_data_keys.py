@@ -122,12 +122,15 @@ def generate_simultaneous_training_pickle_files(l1_act_cb, g_params_dict, data_d
 
         new_dict_of_dict = {}
 
+        # Old dictionary = {image_name: expected gain}
+        # New Dictionary = {image_name: [expected_gain, 1, 1, 1, expected_gain, 1, 1] (96 times)}
         for folder in list_of_folders:
             # print("Processing folder {}".format(folder))
             folder_dict = single_gain_pickle_dict_of_dict[folder]
 
-            new_folder_dict = {k: v * mask for k, v in folder_dict.iteritems()}
-            new_dict_of_dict[folder] = new_folder_dict
+            for k, v in folder_dict.iteritems():
+                new_v = v * mask
+                new_v[new_v == 0] = 1
 
         full_training_data_key_file = os.path.join(filt_dir_path, FULL_TRAINING_DATA_KEY_FILE_NAME)
         with open(full_training_data_key_file, 'wb') as h:
