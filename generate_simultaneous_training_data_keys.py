@@ -128,9 +128,13 @@ def generate_simultaneous_training_pickle_files(l1_act_cb, g_params_dict, data_d
             # print("Processing folder {}".format(folder))
             folder_dict = single_gain_pickle_dict_of_dict[folder]
 
+            new_folder_dict = {}
             for k, v in folder_dict.iteritems():
                 new_v = v * mask
                 new_v[new_v == 0] = 1
+
+                new_folder_dict[k] = new_v
+                new_dict_of_dict[folder] = new_folder_dict
 
         full_training_data_key_file = os.path.join(filt_dir_path, FULL_TRAINING_DATA_KEY_FILE_NAME)
         with open(full_training_data_key_file, 'wb') as h:
