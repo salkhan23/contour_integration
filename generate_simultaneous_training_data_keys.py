@@ -111,8 +111,11 @@ def generate_simultaneous_training_pickle_files(l1_act_cb, g_params_dict, data_d
 
         # Create a mask for all neurons above threshold
         # ---------------------------------------------
-        mask = center_neuron_act > MIN_ACT_THRESHOLD
-        mask = mask.astype(int)
+        mask_above_thres = center_neuron_act > MIN_ACT_THRESHOLD
+        mask_above_thres = mask_above_thres.astype(int)
+
+        mask_non_zero = center_neuron_act > 0
+        mask_non_zero = mask_non_zero.astype(int)
 
         # Create a new data_key pickle file for full training
         with open(filt_dir_pickle_file, 'rb') as h:
@@ -130,8 +133,11 @@ def generate_simultaneous_training_pickle_files(l1_act_cb, g_params_dict, data_d
 
             new_folder_dict = {}
             for k, v in folder_dict.iteritems():
-                new_v = v * mask
-                new_v[new_v == 0] = 1
+                new_v = v * mask_above_thres
+                # new_v[new_v == 0] = 1
+
+                # set all non zero activations (below threshold) to 1
+                new_v = np.maximum(new_v, mask_non_zero)
 
                 new_folder_dict[k] = new_v
                 new_dict_of_dict[folder] = new_folder_dict
