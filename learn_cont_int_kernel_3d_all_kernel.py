@@ -201,9 +201,9 @@ if __name__ == '__main__':
     # Debug
     # -------------------------------------------------------------------------------------
     # 1. Display learnt kernels
-    list_of_target_kernels = [5, 10, 19, 20, 21, 22]
+    filter_idxs = [np.int(x.split('/')[-1].split('_')[1]) for x in train_list_of_pickle_file_paths]
 
-    for kernel_idx in list_of_target_kernels:
+    for kernel_idx in filter_idxs:
         learn_cont_int_kernel_3d_model.plot_start_n_learnt_contour_integration_kernels(
             model,
             kernel_idx,
