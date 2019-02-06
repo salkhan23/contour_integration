@@ -613,7 +613,7 @@ def get_mean_pixel_value_at_boundary(frag, width=1):
 
 
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, data_key_dict, batch_size=32, img_size=(227, 227, 3), shuffle=True):
+    def __init__(self, data_key_dict, batch_size=32, img_size=(227, 227, 3), shuffle=True, labels_per_image=1):
         """
         A Python generator (actually a keras sequencer object) that can be used to
         dynamically load images when the batch is run. Saves a lot on memory.
@@ -628,12 +628,15 @@ class DataGenerator(keras.utils.Sequence):
         :param batch_size:
         :param img_size:
         :param shuffle: [default=True]
+        self.labels_per_image = labels_per_image. If training multiple kernels simultaneously, set to 96.
+                                Specifies the dimensions of the expected labels per image.
 
         """
         self.shuffle = shuffle
         self.img_size = img_size
         self.batch_size = batch_size
         self.data_key_dict = data_key_dict
+        self.labels_per_image = labels_per_image
 
         self.list_ids = self.data_key_dict.keys()
         self.on_epoch_end()
@@ -656,7 +659,7 @@ class DataGenerator(keras.utils.Sequence):
         :return:
         """
         x_arr = np.zeros((self.batch_size, self.img_size[2], self.img_size[1], self.img_size[0]))
-        y_arr = np.zeros(self.batch_size)
+        y_arr = np.zeros((self.batch_size, self.labels_per_image))
 
         # print("Loading a new batch")
 
@@ -669,7 +672,7 @@ class DataGenerator(keras.utils.Sequence):
             in_img = in_img / 255.0
 
             x_arr[idx, ] = in_img
-            y_arr[idx] = self.data_key_dict[list_id]
+            y_arr[idx, ] = self.data_key_dict[list_id]
 
         return x_arr, y_arr
 
