@@ -21,8 +21,6 @@ reload(model_3d_all_kernels)
 reload(learn_cont_int_kernel_3d_model)
 reload(alex_net_utils)
 
-PICKLE_FILE_NAME = 'all_kernels_data_key_2.pickle'
-
 
 def create_data_generator(list_pickle_file_paths, b_size=1, shuffle=True):
     """
@@ -36,7 +34,7 @@ def create_data_generator(list_pickle_file_paths, b_size=1, shuffle=True):
 
     for pkl_file_path in list_pickle_file_paths:
 
-        pkl_file = os.path.join(pkl_file_path, PICKLE_FILE_NAME)
+        pkl_file = os.path.join(pkl_file_path, data_key_file_name)
         if not os.path.exists(pkl_file):
             raise Exception("{} does not exist".format(pkl_file))
 
@@ -59,6 +57,7 @@ def create_data_generator(list_pickle_file_paths, b_size=1, shuffle=True):
         data_dict,
         batch_size=b_size,
         shuffle=shuffle,
+        labels_per_image=96
     )
 
     return data_generator, n_data_pts
@@ -110,40 +109,47 @@ if __name__ == '__main__':
 
     batch_size = 128
     num_test_points = 7500
-    num_epochs = 20
+    num_epochs = 10
 
-    weights_store_file = './results/simultaneous_training/contour_integration_layer_weights.hf'
+    results_dir = './results/simultaneous_training'
 
-    if not os.path.exists(weights_store_file):
-        os.mkdir(weights_store_file)
+    # Immutable
+    if not os.path.exists(results_dir):
+        os.mkdir(results_dir)
+
+    weights_store_name = 'contour_integration_layer_weights.hf'
+    weights_store_file = os.path.join(results_dir, weights_store_name)
+
+    data_key_file_name = 'all_kernels_data_key.pickle'
 
     # -----------------------------------------------------------------------------------
     print("Creating Data Generators ...")
 
     # # Manually by explicitly stating
-    # train_list_of_pickle_file_paths = [
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_5',
+    train_list_of_pickle_file_paths = [
+         './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_5',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_10',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_19',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_20',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_21',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_22',
-    # ]
+     ]
     #
-    # test_list_of_pickle_file_paths = [
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_5',
+    test_list_of_pickle_file_paths = [
+         './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_5',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_10',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_19',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_20',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_21',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_22',
-    # ]
+     ]
 
-    # # All filters in a base directory directory
-    base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
-    train_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'train'))
-    test_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'test'))
+    # # # All filters in a base directory directory
+    # base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
+    # train_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'train'))
+    # test_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'test'))
 
+    # ------------------------------------------------------
     train_data_generator, num_training_points = \
         create_data_generator(train_list_of_pickle_file_paths, b_size=batch_size)
 
@@ -155,17 +161,19 @@ if __name__ == '__main__':
     gen_out = iter(test_data_generator)
     X, y = gen_out.next()
 
+    filter_idxs = [np.int(x.split('/')[-1].split('_')[1]) for x in train_list_of_pickle_file_paths]
+
     # -----------------------------------------------------------------------------------
     print("Building the model ...")
     model = model_3d_all_kernels.training_model(
         rf_size=35,
         inner_leaky_relu_alpha=0.9,
         outer_leaky_relu_alpha=1.,
-        l1_reg_loss_weight=0.00001,
+        l1_reg_loss_weight=0.0002/len(filter_idxs),
     )
 
     model.compile(
-        optimizer=keras.optimizers.Adam(lr=0.0000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
+        optimizer=keras.optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
         loss=keras.losses.mean_squared_error
     )
 
@@ -218,14 +226,16 @@ if __name__ == '__main__':
     # Debug
     # -------------------------------------------------------------------------------------
     # 1. Display learnt kernels
-    filter_idxs = [np.int(x.split('/')[-1].split('_')[1]) for x in train_list_of_pickle_file_paths]
-
     for kernel_idx in filter_idxs:
         learn_cont_int_kernel_3d_model.plot_start_n_learnt_contour_integration_kernels(
             model,
             kernel_idx,
             start_weights,
         )
+
+        learnt_kernel_fig = plt.gcf()
+        learnt_kernel_fig.savefig(os.path.join(
+            results_dir, 'learnt_contour_integration_kernel_{}.eps'.format(kernel_idx)), format='eps')
 
     # For a Sample Image plot the expected gain vs actual gain
     image_idx = 7
