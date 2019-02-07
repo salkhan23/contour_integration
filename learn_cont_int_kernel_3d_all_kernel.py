@@ -112,6 +112,11 @@ if __name__ == '__main__':
     num_test_points = 7500
     num_epochs = 20
 
+    weights_store_file = './results/simultaneous_training/contour_integration_layer_weights.hf'
+
+    if not os.path.exists(weights_store_file):
+        os.mkdir(weights_store_file)
+
     # -----------------------------------------------------------------------------------
     print("Creating Data Generators ...")
 
@@ -171,7 +176,17 @@ if __name__ == '__main__':
 
     # -----------------------------------------------------------------------------------
     print("Training the model ...")
+
     start_time = datetime.now()
+
+    checkpoint = keras.callbacks.ModelCheckpoint(
+        weights_store_file,
+        monitor='val_loss',
+        verbose=0,
+        save_best_only=True,
+        mode='min',
+        save_weights_only=True,
+    )
 
     tensorboard = keras.callbacks.TensorBoard(
         log_dir='logs/{}'.format(time()),
@@ -181,7 +196,8 @@ if __name__ == '__main__':
         # batch_size=1,  # For histogram
     )
 
-    callbacks = [tensorboard]
+    callbacks = [tensorboard, checkpoint]
+
     steps_per_epoch = num_training_points / batch_size
 
     history = model.fit_generator(
@@ -230,6 +246,6 @@ if __name__ == '__main__':
     plt.stem(y_hat.T, 'sb', label='Predicted')
     plt.legend()
 
-    # 3. PLot Max Enhancement
+    # 3. Plot Max Enhancement
     z = np.transpose(test_image, axes=(1, 2, 0))
     plot_max_contour_enhancement(z, feat_extract_act_cb, cont_int_act_cb)
