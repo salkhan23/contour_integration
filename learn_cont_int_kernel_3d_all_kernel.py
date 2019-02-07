@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
     batch_size = 128
     num_test_points = 7500
-    num_epochs = 10
+    num_epochs = 20
 
     results_dir = './results/simultaneous_training'
 
@@ -126,28 +126,28 @@ if __name__ == '__main__':
     print("Creating Data Generators ...")
 
     # # Manually by explicitly stating
-    train_list_of_pickle_file_paths = [
-         './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_5',
+    # train_list_of_pickle_file_paths = [
+    #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_5',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_10',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_19',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_20',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_21',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_22',
-     ]
+    # ]
     #
-    test_list_of_pickle_file_paths = [
-         './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_5',
+    # test_list_of_pickle_file_paths = [
+    #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_5',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_10',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_19',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_20',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_21',
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_22',
-     ]
+    # ]
 
-    # # # All filters in a base directory directory
-    # base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
-    # train_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'train'))
-    # test_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'test'))
+    # # All filters in a base directory directory
+    base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
+    train_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'train'))
+    test_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'test'))
 
     # ------------------------------------------------------
     train_data_generator, num_training_points = \
