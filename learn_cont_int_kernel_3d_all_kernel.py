@@ -114,6 +114,7 @@ if __name__ == '__main__':
 
     # -----------------------------------------------------------------------------------
     print("Creating Data Generators ...")
+
     # # Manually by explicitly stating
     # train_list_of_pickle_file_paths = [
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_5',
@@ -133,7 +134,7 @@ if __name__ == '__main__':
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_22',
     # ]
 
-    # # All Filters in a directory
+    # # All filters in a base directory directory
     base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
     train_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'train'))
     test_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'test'))
@@ -141,7 +142,7 @@ if __name__ == '__main__':
     train_data_generator, num_training_points = \
         create_data_generator(train_list_of_pickle_file_paths, b_size=batch_size)
 
-    # Get All Test Data points in one iteration.
+    # Get all test data points in one iteration.
     # Tensorboard does not like a generator for validation data
     test_data_generator, num_test_points = \
         create_data_generator(test_list_of_pickle_file_paths, b_size=num_test_points)
@@ -150,16 +151,16 @@ if __name__ == '__main__':
     X, y = gen_out.next()
 
     # -----------------------------------------------------------------------------------
-    print("Building the model ... ")
+    print("Building the model ...")
     model = model_3d_all_kernels.training_model(
         rf_size=35,
         inner_leaky_relu_alpha=0.9,
         outer_leaky_relu_alpha=1.,
-        l1_reg_loss_weight=0.0001,
+        l1_reg_loss_weight=0.00001,
     )
 
     model.compile(
-        optimizer=keras.optimizers.Adam(lr=0.000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
+        optimizer=keras.optimizers.Adam(lr=0.0000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
         loss=keras.losses.mean_squared_error
     )
 
