@@ -192,7 +192,8 @@ def build_contour_integration_model(
 
     model.layers[1].trainable = False  # Set the feature extracting layer as untrainable.
 
-    model.load_weights("trained_models/AlexNet/alexnet_weights.h5", by_name=True)
+    alex_net_weights = './trained_models/alexnet/alexnet_weights.h5'
+    model.load_weights(alex_net_weights, by_name=True)
     model.compile(optimizer='Adam', loss='mse')
 
     return model
