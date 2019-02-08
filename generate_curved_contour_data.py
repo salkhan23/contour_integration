@@ -745,9 +745,7 @@ if __name__ == '__main__':
     # cont_int_kernel_arr = np.array([5, 10, 19, 20, 21, 79])
     # cont_int_kernel_arr = np.array([5, 10])
 
-    # gabor_params_dict_file = None
-    gabor_params_dict_file = "/home/salman/workspace/keras/my_projects/contour_integration/data/curved_contours/" \
-        "frag_11x11_full_18x18_param_search/best_fit_params.pickle"
+    gabor_params_dict_file = "./data/curved_contours/frag_11x11_full_18x18_param_search/best_fit_params.pickle"
     # -----------------------------------------------------------------------------------
     # Contour Integration Model
     # -----------------------------------------------------------------------------------
