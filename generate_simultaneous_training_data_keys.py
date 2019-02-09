@@ -153,7 +153,7 @@ if __name__ == '__main__':
     plt.ion()
 
     # Base Model
-    alex_net_model = alex_net_module.alex_net("trained_models/AlexNet/alexnet_weights.h5")
+    alex_net_model = alex_net_module.alex_net("trained_models/alexnet/alexnet_weights.h5")
     feature_extract_act_cb = alex_net_utils.get_activation_cb(alex_net_model, 1)
 
     # Gabor Params
