@@ -109,9 +109,9 @@ if __name__ == '__main__':
 
     batch_size = 128
     num_test_points = 7500
-    num_epochs = 20
+    num_epochs = 1
 
-    results_dir = './results/simultaneous_training'
+    results_dir = './results/test'
 
     # Immutable
     if not os.path.exists(results_dir):
@@ -121,6 +121,11 @@ if __name__ == '__main__':
     weights_store_file = os.path.join(results_dir, weights_store_name)
 
     data_key_file_name = 'all_kernels_data_key.pickle'
+
+    display_figures = False
+
+    if display_figures:
+        plt.ioff()
 
     # -----------------------------------------------------------------------------------
     print("Creating Data Generators ...")
