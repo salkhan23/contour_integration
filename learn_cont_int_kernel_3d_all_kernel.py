@@ -115,7 +115,7 @@ if __name__ == '__main__':
 
     # Immutable
     if not os.path.exists(results_dir):
-        os.mkdir(results_dir)
+        os.makedirs(results_dir)
 
     weights_store_name = 'contour_integration_layer_weights.hf'
     weights_store_file = os.path.join(results_dir, weights_store_name)
