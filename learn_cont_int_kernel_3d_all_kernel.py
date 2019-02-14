@@ -2,11 +2,11 @@
 # Training Script for the new contour integration model that works on all contour
 # integration kernels simultaneously
 # ---------------------------------------------------------------------------------------
-
 import pickle
 import keras
 import os
 from time import time
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
@@ -20,6 +20,8 @@ reload(image_generator_curve)
 reload(model_3d_all_kernels)
 reload(learn_cont_int_kernel_3d_model)
 reload(alex_net_utils)
+
+DISPLAY_FIGURES = False
 
 
 def create_data_generator(list_pickle_file_paths, b_size=1, shuffle=True):
@@ -104,7 +106,6 @@ def plot_max_contour_enhancement(img, feat_extract_cb, cont_int_cb):
 
 
 if __name__ == '__main__':
-    plt.ion()
     keras.backend.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
 
     batch_size = 128
@@ -113,7 +114,7 @@ if __name__ == '__main__':
 
     results_dir = './results/test'
 
-    # Immutable
+    # Immutable ---------------------------------------------------------
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
 
@@ -124,8 +125,10 @@ if __name__ == '__main__':
 
     display_figures = False
 
-    if display_figures:
-        plt.ioff()
+    if DISPLAY_FIGURES:
+        matplotlib.use('Agg')
+    else:
+        plt.ion()
 
     # -----------------------------------------------------------------------------------
     print("Creating Data Generators ...")
@@ -178,7 +181,7 @@ if __name__ == '__main__':
     )
 
     model.compile(
-        optimizer=keras.optimizers.Adam(lr=0.0000005, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
+        optimizer=keras.optimizers.Adam(lr=0.000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
         loss=keras.losses.mean_squared_error
     )
 
