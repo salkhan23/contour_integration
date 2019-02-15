@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     batch_size = 128
     num_test_points = 7500
-    num_epochs = 1
+    num_epochs = 20
 
     results_dir = './results/test'
 
@@ -123,12 +123,15 @@ if __name__ == '__main__':
 
     data_key_file_name = 'all_kernels_data_key.pickle'
 
+    # If running over ssh
     display_figures = False
 
-    if DISPLAY_FIGURES:
+    if not DISPLAY_FIGURES:
         matplotlib.use('Agg')
-    else:
-        plt.ion()
+
+    import matplotlib.pyplot as plt
+
+    plt.ion()
 
     # -----------------------------------------------------------------------------------
     print("Creating Data Generators ...")
