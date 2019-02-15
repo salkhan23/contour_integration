@@ -64,7 +64,7 @@ def plot_contour_enhancement_individual_kernels(img, feat_extract_cb, cont_int_c
             feat_extract_cb,
             cont_int_cb,
             f_idx,
-            show_img=False,
+            show_input_img=False,
         )
         plt.suptitle("Kernel {}".format(f_idx))
 
@@ -78,15 +78,18 @@ if __name__ == '__main__':
     keras_backend.set_image_dim_ordering('th')
 
     learnt_weights_file = \
-        "./trained_models/ContourIntegrationModel3d/orientation_matched/contour_integration_weights.hf"
-
-    # learnt_weights_file = \
-    #     "./trained_models/ContourIntegrationModel3d/filt_matched_frag/contour_integration_weights.hf"
+        "./results/beta_rotations_upt30_alpha_upto30/trained_weights.hf"
 
     # -----------------------------------------------------------------------------------
     # Build Contour Integration Model
     # -----------------------------------------------------------------------------------
-    cont_int_model = contour_integration_model_3d.build_contour_integration_model(5)
+    cont_int_model = contour_integration_model_3d.build_contour_integration_model(
+        tgt_filt_idx=0,
+        rf_size=35,
+        inner_leaky_relu_alpha=0.9,
+        outer_leaky_relu_alpha=1.,
+        l1_reg_loss_weight=0.0005,
+    )
     # cont_int_model.summary()
 
     # load pretrained weights
@@ -114,7 +117,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Base Gabor Fragment
     # -----------------------------------------------------------------------------------
-    frag_orient = 0
+    frag_orient = 90
     gabor_params = {
         'x0': 0,
         'y0': 0,
@@ -140,9 +143,10 @@ if __name__ == '__main__':
     img_arr = image_generator_curve.generate_contour_images(
         n_images=1,
         frag=fragment,
-        frag_params=gabor_params,
+        frag_params=[gabor_params],
         c_len=c_len,
         beta=beta,
+        alpha=0,
         f_tile_size=np.array((17, 17)),
         rand_inter_frag_direction_change=False
     )
@@ -165,9 +169,10 @@ if __name__ == '__main__':
     img_arr = image_generator_curve.generate_contour_images(
         n_images=1,
         frag=fragment,
-        frag_params=gabor_params,
+        frag_params=[gabor_params],
         c_len=c_len,
         beta=beta,
+        alpha=0,
         f_tile_size=np.array((17, 17)),
         center_frag_start=np.array([180, 120]),
         rand_inter_frag_direction_change=True
@@ -191,9 +196,10 @@ if __name__ == '__main__':
     img_arr = image_generator_curve.generate_contour_images(
         n_images=1,
         frag=fragment,
-        frag_params=gabor_params,
+        frag_params=[gabor_params],
         c_len=c_len,
         beta=beta,
+        alpha=0,
         f_tile_size=np.array((17, 17)),
         center_frag_start=np.array([10, 75]),
         rand_inter_frag_direction_change=False,
