@@ -7,6 +7,7 @@ import keras
 import os
 from time import time
 import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
@@ -46,7 +47,10 @@ def create_data_generator(list_pickle_file_paths, b_size=1, shuffle=True):
             curr_dict_of_dicts = pickle.load(h)
 
         for k, v in curr_dict_of_dicts.iteritems():
-            data_dict.update(curr_dict_of_dicts[k])
+
+            if 'alpha_0' in k:
+                # print("Adding {}".format(k))
+                data_dict.update(curr_dict_of_dicts[k])
 
     n_data_pts = len(data_dict)
     print("Number of data points {}".format(n_data_pts))
@@ -112,7 +116,7 @@ if __name__ == '__main__':
     num_test_points = 7500
     num_epochs = 20
 
-    results_dir = './results/test'
+    results_dir = './results/all_kernels_no_alpha_rotations'
 
     # Immutable ---------------------------------------------------------
     if not os.path.exists(results_dir):
@@ -122,14 +126,6 @@ if __name__ == '__main__':
     weights_store_file = os.path.join(results_dir, weights_store_name)
 
     data_key_file_name = 'all_kernels_data_key.pickle'
-
-    # If running over ssh
-    display_figures = False
-
-    if not DISPLAY_FIGURES:
-        matplotlib.use('Agg')
-
-    import matplotlib.pyplot as plt
 
     plt.ion()
 
