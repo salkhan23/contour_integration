@@ -118,8 +118,8 @@ if __name__ == '__main__':
     keras.backend.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
 
     batch_size = 128
-    num_test_points = 7500
-    num_epochs = 2
+    num_test_points = 10000
+    num_epochs = 20
 
     # results_dir = './results/all_kernels_no_alpha_rotations'
     results_dir = './results/all_kernels_alpha_0_beta_upto30'
@@ -312,9 +312,9 @@ if __name__ == '__main__':
         f_id.write("\n")
 
         f_id.write("Training Parameters : --------------------------------------\n")
-        f_id.write("Trained Filters: [{} Total]\n".format(len(filter_idxs)))
+        f_id.write("Trained Filters: [{} Total]: ".format(len(filter_idxs)))
         for filter_idx in filter_idxs:
-            f_id.write("\t{}".format(filter_idx))
+            f_id.write("{},".format(filter_idx))
         f_id.write("\n")
 
         f_id.write("Data set: training {}, test {} out of {}\n".format(
