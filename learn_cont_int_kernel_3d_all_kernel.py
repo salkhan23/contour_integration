@@ -5,6 +5,7 @@
 import pickle
 import keras
 import os
+import shutil
 from time import time
 import matplotlib
 matplotlib.use('Agg')
@@ -49,8 +50,12 @@ def create_data_generator(list_pickle_file_paths, b_size=1, shuffle=True):
         for k, v in curr_dict_of_dicts.iteritems():
 
             if 'alpha_0' in k:
-                # print("Adding {}".format(k))
-                data_dict.update(curr_dict_of_dicts[k])
+                if 'beta_0' in k or 'beta_15' in k or 'beta_30:' in k:
+                    # print("Adding {}".format(k))
+                    data_dict.update(curr_dict_of_dicts[k])
+                    # print("beta_0 in dict {}".format('beta_0' in k))
+                    # print("beta_15 in dict {}".format('beta_15' in k))
+                    # print("beta_30 in dict {}".format('beta_30' in k))
 
     n_data_pts = len(data_dict)
     print("Number of data points {}".format(n_data_pts))
@@ -114,16 +119,20 @@ if __name__ == '__main__':
 
     batch_size = 128
     num_test_points = 7500
-    num_epochs = 20
+    num_epochs = 2
 
-    results_dir = './results/all_kernels_no_alpha_rotations'
+    # results_dir = './results/all_kernels_no_alpha_rotations'
+    results_dir = './results/all_kernels_alpha_0_beta_upto30'
 
     # Immutable ---------------------------------------------------------
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir)
+    if os.path.exists(results_dir):
+        shutil.rmtree(results_dir)
+    os.makedirs(results_dir)
 
     weights_store_name = 'contour_integration_layer_weights.hf'
     weights_store_file = os.path.join(results_dir, weights_store_name)
+
+    summary_file_name = 'summary.txt'
 
     data_key_file_name = 'all_kernels_data_key.pickle'
 
@@ -162,7 +171,7 @@ if __name__ == '__main__':
 
     # Get all test data points in one iteration.
     # Tensorboard does not like a generator for validation data
-    test_data_generator, num_test_points = \
+    test_data_generator, total_test_points = \
         create_data_generator(test_list_of_pickle_file_paths, b_size=num_test_points)
 
     gen_out = iter(test_data_generator)
@@ -176,11 +185,12 @@ if __name__ == '__main__':
         rf_size=35,
         inner_leaky_relu_alpha=0.9,
         outer_leaky_relu_alpha=1.,
-        l1_reg_loss_weight=0.00015/96,
+        l1_reg_loss_weight=0.0001/96,
     )
 
+    optimizer = keras.optimizers.Adam(lr=0.000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
     model.compile(
-        optimizer=keras.optimizers.Adam(lr=0.000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
+        optimizer=optimizer,
         loss=keras.losses.mean_squared_error
     )
 
@@ -227,12 +237,25 @@ if __name__ == '__main__':
         callbacks=callbacks
     )
 
-    print("Training took {}".format(datetime.now() - start_time))
+    # Plot Losses
+    fig, axis = plt.subplots()
+    axis.plot(history.history['loss'], label='train_loss')
+    axis.plot(history.history['val_loss'], label='validation_loss')
+    axis.set_xlabel("Epoch")
+    axis.set_ylabel("Loss")
+    fig.savefig(os.path.join(results_dir, 'loss_vs_epoch.eps'), format='eps')
+
+    training_time = datetime.now() - start_time
+    print("Training took {}".format(training_time))
 
     # -------------------------------------------------------------------------------------
     # Debug
     # -------------------------------------------------------------------------------------
     # 1. Display learnt kernels
+    learnt_weights_visualize_dir = os.path.join(results_dir, 'filter_visualizations')
+    if not os.path.exists(learnt_weights_visualize_dir):
+        os.mkdir(learnt_weights_visualize_dir)
+
     for kernel_idx in filter_idxs:
         learn_cont_int_kernel_3d_model.plot_start_n_learnt_contour_integration_kernels(
             model,
@@ -241,8 +264,9 @@ if __name__ == '__main__':
         )
 
         learnt_kernel_fig = plt.gcf()
+
         learnt_kernel_fig.savefig(os.path.join(
-            results_dir, 'learnt_contour_integration_kernel_{}.eps'.format(kernel_idx)), format='eps')
+            learnt_weights_visualize_dir, 'learnt_contour_integration_kernel_{}.eps'.format(kernel_idx)), format='eps')
 
     # For a Sample Image plot the expected gain vs actual gain
     image_idx = 7
@@ -266,3 +290,43 @@ if __name__ == '__main__':
     # 3. Plot Max Enhancement
     z = np.transpose(test_image, axes=(1, 2, 0))
     plot_max_contour_enhancement(z, feat_extract_act_cb, cont_int_act_cb)
+
+    # -----------------------------------------------------------------------------------
+    # End
+    # -----------------------------------------------------------------------------------
+    # Write Summary File
+    with open(os.path.join(results_dir, summary_file_name), 'wb') as f_id:
+
+        f_id.write("Final training Loss: {} @ Epoch {}\n".format(
+            np.min(history.history['loss']),  np.argmin(history.history['loss'])))
+        f_id.write("Final Validation Loss: {} @ Epoch {}\n".format(
+            np.min(history.history['val_loss']), np.argmin(history.history['val_loss'])))
+        f_id.write("Training Duration: {}\n".format(training_time))
+        f_id.write("\n")
+
+        f_id.write("Model Hyper-Parameters : --------------------------------------\n")
+        f_id.write("L1 Loss Weight {}\n".format(model.layers[2].l1_reg_loss_weight))
+        f_id.write("Contour Integration rf size {}\n".format(model.layers[2].n))
+        f_id.write("Outer Relu alpha {}\n".format(model.layers[2].outer_leaky_relu_alpha))
+        f_id.write("Inner Relu alpha {}\n".format(model.layers[2].inner_leaky_relu_alpha))
+        f_id.write("\n")
+
+        f_id.write("Training Parameters : --------------------------------------\n")
+        f_id.write("Trained Filters: [{} Total]\n".format(len(filter_idxs)))
+        for filter_idx in filter_idxs:
+            f_id.write("\t{}".format(filter_idx))
+        f_id.write("\n")
+
+        f_id.write("Data set: training {}, test {} out of {}\n".format(
+            num_training_points, num_test_points, total_test_points
+        ))
+
+        f_id.write("Number of Epochs: {}.\n".format(num_epochs))
+        f_id.write("Batch Size: {}.\n".format(batch_size))
+        f_id.write("Learning Rate: {}.\n".format(keras.backend.eval(optimizer.lr)))
+        f_id.write("Optimizer Type: {}\n".format(optimizer.__class__))
+        f_id.write("\n")
+
+        f_id.write("Data Directories : --------------------------------------\n")
+        for idx, folder in enumerate(train_list_of_pickle_file_paths):
+            f_id.write('\t{}: {}\n'.format(idx, folder))
