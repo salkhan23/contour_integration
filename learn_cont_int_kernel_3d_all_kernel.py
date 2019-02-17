@@ -185,7 +185,7 @@ if __name__ == '__main__':
         rf_size=35,
         inner_leaky_relu_alpha=0.9,
         outer_leaky_relu_alpha=1.,
-        l1_reg_loss_weight=0.0001/96,
+        l1_reg_loss_weight=0.0001,
     )
 
     optimizer = keras.optimizers.Adam(lr=0.000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
