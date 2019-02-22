@@ -93,47 +93,53 @@ def plot_l1_and_l2_activations(img, l1_act_cb, l2_act_cb, tgt_filt_idx, show_inp
 
     l1_act = l1_act[0, tgt_filt_idx, :, :]
     l2_act = l2_act[0, tgt_filt_idx, :, :]
-    # diff = l2_act - l1_act
 
-    min_l2_act = l1_act.min()
+    min_l2_act = l2_act.min()
     max_l2_act = l2_act.max()
-    # max_diff = np.max(abs(diff))
 
-    gain = l2_act / (l1_act + 1e-4)
-    max_gain = np.max(abs(gain))
-
+    # Plot enhancement gain plots
     f2 = plt.figure()
+
+    # Plot L1 activation
     f2.add_subplot(2, 2, 1)
     plt.imshow(l1_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
-    # plt.title('L1 Conv Layer Activation @ idx %d' % tgt_filt_idx)
+    plt.title('L1 Conv Layer Activation @ idx %d' % tgt_filt_idx)
     plt.gca().set_xticks([])
     plt.gca().set_yticks([])
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
+    # Plot L2 (contour integration) activation
     f2.add_subplot(2, 2, 2)
     plt.imshow(l2_act, cmap='seismic', vmin=min_l2_act, vmax=max_l2_act)
     plt.gca().set_xticks([])
     plt.gca().set_yticks([])
-    # plt.title('L2 Contour Integration Layer Activation @ idx %d' % tgt_filt_idx)
+    plt.title('L2 Contour Integration Layer Activation @ idx %d' % tgt_filt_idx)
     plt.colorbar(orientation='horizontal')
     plt.grid()
 
+    # Plot Enhancement gain
     f2.add_subplot(2, 2, 3)
+
+    gain = l2_act / (l1_act + 1e-4)
+    gain[l1_act == 0] = 1  # set the gain value to 1 for all places where l1act was zero
+
     plt.imshow(gain, vmin=-1, vmax=3, cmap='seismic')
     plt.colorbar(orientation='horizontal')
     plt.gca().set_xticks([])
     plt.gca().set_yticks([])
-    # plt.title("Enhancement gain")
+    plt.title("Enhancement gain")
     plt.grid()
 
+    # Plot max difference between L1 and L2 activations
     diff = (l2_act - l1_act)
     max_diff = diff.max()
     f2.add_subplot(2, 2, 4)
+
     plt.imshow(diff, cmap='seismic', vmin=-max_diff, vmax=max_diff)
     plt.gca().set_xticks([])
     plt.gca().set_yticks([])
-    # plt.title("Difference (L2 - L1)")
+    plt.title("Difference (L2 - L1)")
     plt.colorbar(orientation='horizontal')
     return f1, f2
 
