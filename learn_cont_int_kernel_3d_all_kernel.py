@@ -26,21 +26,17 @@ reload(alex_net_utils)
 DISPLAY_FIGURES = False
 
 
-def create_data_generator(list_pickle_file_paths, b_size=1, shuffle=True):
+def create_data_generator(list_pickle_files, b_size=1, shuffle=True):
     """
 
     :param shuffle:
     :param b_size:
-    :param list_pickle_file_paths:
+    :param list_pickle_files:
     :return:
     """
     data_dict = {}
 
-    for pkl_file_path in list_pickle_file_paths:
-
-        pkl_file = os.path.join(pkl_file_path, data_key_file_name)
-        if not os.path.exists(pkl_file):
-            raise Exception("{} does not exist".format(pkl_file))
+    for pkl_file in list_pickle_files:
 
         print("Loading Data from {}".format(pkl_file))
 
@@ -74,19 +70,24 @@ def create_data_generator(list_pickle_file_paths, b_size=1, shuffle=True):
     return data_generator, n_data_pts
 
 
-def get_list_pf_pickle_files(data_dir):
+def get_list_pf_pickle_files(data_dir, pickle_filename):
     """
 
     :return:
     """
-    print("Getting all pickles in {}".format(data_dir))
+    print("Getting all '{}' in {}".format(pickle_filename, data_dir))
 
     filters_list = os.listdir(data_dir)
     list_of_pickle_files = []
 
     for filter_dir in filters_list:
+
         filter_dir_path = os.path.join(data_dir, filter_dir)
-        list_of_pickle_files.append(filter_dir_path)
+
+        if pickle_filename in os.listdir(filter_dir_path):
+            list_of_pickle_files.append(os.path.join(filter_dir_path, pickle_filename))
+        else:
+            print("WARN: pickle file {} not found in {}".format(pickle_filename, data_dir))
 
     return list_of_pickle_files
 
@@ -119,22 +120,33 @@ if __name__ == '__main__':
 
     batch_size = 128
     num_test_points = 10000
-    num_epochs = 20
+    num_epochs = 40
 
-    # results_dir = './results/all_kernels_no_alpha_rotations'
-    results_dir = './results/all_kernels_alpha_0_beta_upto30'
+    results_dir = './results/test'
+
+    # base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
+    base_data_directory = './data/curved_contours/optimal_gabors_trials'
+
+    #data_key_file_name = 'data_key_matching_orientation.pickle'
+    data_key_file_name = 'data_key_above_threshold.pickle'
+    # data_key_file_name = 'data_key_max_active.pickle'
+
+    # Store Learnt contour integration kernels @ these indices post training
+    display_kernel_idxs = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 60, 62, 64, 65, 66, 68, 69, 72, 73, 74, 76, 77, 79]
 
     # Immutable ---------------------------------------------------------
     if os.path.exists(results_dir):
-        shutil.rmtree(results_dir)
+        ans = raw_input("{} directory already exists. Overwrite? y/n".format(results_dir))
+        if 'y' in ans.lower():
+            shutil.rmtree(results_dir)
+        else:
+            raise SystemExit
     os.makedirs(results_dir)
 
     weights_store_name = 'contour_integration_layer_weights.hf'
     weights_store_file = os.path.join(results_dir, weights_store_name)
 
     summary_file_name = 'summary.txt'
-
-    data_key_file_name = 'all_kernels_data_key.pickle'
 
     plt.ion()
 
@@ -160,24 +172,25 @@ if __name__ == '__main__':
     #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_22',
     # ]
 
-    # # All filters in a base directory directory
-    base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
-    train_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'train'))
-    test_list_of_pickle_file_paths = get_list_pf_pickle_files(os.path.join(base_data_directory, 'test'))
+    train_list_of_pickle_files = \
+        get_list_pf_pickle_files(os.path.join(base_data_directory, 'train'), data_key_file_name)
+    test_list_of_pickle_files = \
+        get_list_pf_pickle_files(os.path.join(base_data_directory, 'test'), data_key_file_name)
+
+    print("{} Training and {} pickle files".format(
+        len(train_list_of_pickle_files), len(test_list_of_pickle_files)))
 
     # ------------------------------------------------------
     train_data_generator, num_training_points = \
-        create_data_generator(train_list_of_pickle_file_paths, b_size=batch_size)
+        create_data_generator(train_list_of_pickle_files, b_size=batch_size)
 
     # Get all test data points in one iteration.
     # Tensorboard does not like a generator for validation data
     test_data_generator, total_test_points = \
-        create_data_generator(test_list_of_pickle_file_paths, b_size=num_test_points)
+        create_data_generator(test_list_of_pickle_files, b_size=num_test_points)
 
     gen_out = iter(test_data_generator)
     X, y = gen_out.next()
-
-    filter_idxs = [np.int(x.split('/')[-1].split('_')[1]) for x in train_list_of_pickle_file_paths]
 
     # -----------------------------------------------------------------------------------
     print("Building the model ...")
@@ -188,7 +201,7 @@ if __name__ == '__main__':
         l1_reg_loss_weight=0.0001,
     )
 
-    optimizer = keras.optimizers.Adam(lr=0.000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
+    optimizer = keras.optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
     model.compile(
         optimizer=optimizer,
         loss=keras.losses.mean_squared_error
@@ -248,53 +261,9 @@ if __name__ == '__main__':
     training_time = datetime.now() - start_time
     print("Training took {}".format(training_time))
 
-    # -------------------------------------------------------------------------------------
-    # Debug
-    # -------------------------------------------------------------------------------------
-    # 1. Display learnt kernels
-    learnt_weights_visualize_dir = os.path.join(results_dir, 'filter_visualizations')
-    if not os.path.exists(learnt_weights_visualize_dir):
-        os.mkdir(learnt_weights_visualize_dir)
-
-    for kernel_idx in filter_idxs:
-        learn_cont_int_kernel_3d_model.plot_start_n_learnt_contour_integration_kernels(
-            model,
-            kernel_idx,
-            start_weights,
-        )
-
-        learnt_kernel_fig = plt.gcf()
-
-        learnt_kernel_fig.savefig(os.path.join(
-            learnt_weights_visualize_dir, 'learnt_contour_integration_kernel_{}.eps'.format(kernel_idx)), format='eps')
-
-    # For a Sample Image plot the expected gain vs actual gain
-    image_idx = 7
-
-    # 2. predict output on a single image
-    test_image = X[image_idx, ]
-    test_label = y[image_idx, ]
-
-    input_image = np.expand_dims(test_image, axis=0)
-    y_hat = model.predict(input_image)
-
-    display_image = np.transpose(test_image, axes=(1, 2, 0))
-    plt.figure()
-    plt.imshow(display_image)
-
-    plt.figure()
-    plt.stem(test_label.T, 'r', label='Expected')
-    plt.stem(y_hat.T, 'sb', label='Predicted')
-    plt.legend()
-
-    # 3. Plot Max Enhancement
-    z = np.transpose(test_image, axes=(1, 2, 0))
-    plot_max_contour_enhancement(z, feat_extract_act_cb, cont_int_act_cb)
-
     # -----------------------------------------------------------------------------------
-    # End
+    #  Write Summary File
     # -----------------------------------------------------------------------------------
-    # Write Summary File
     with open(os.path.join(results_dir, summary_file_name), 'wb') as f_id:
 
         f_id.write("Final training Loss: {} @ Epoch {}\n".format(
@@ -311,22 +280,66 @@ if __name__ == '__main__':
         f_id.write("Inner Relu alpha {}\n".format(model.layers[2].inner_leaky_relu_alpha))
         f_id.write("\n")
 
-        f_id.write("Training Parameters : --------------------------------------\n")
-        f_id.write("Trained Filters: [{} Total]: ".format(len(filter_idxs)))
-        for filter_idx in filter_idxs:
-            f_id.write("{},".format(filter_idx))
-        f_id.write("\n")
-
-        f_id.write("Data set: training {}, test {} out of {}\n".format(
-            num_training_points, num_test_points, total_test_points
-        ))
-
+        f_id.write("Training Details : --------------------------------------\n")
         f_id.write("Number of Epochs: {}.\n".format(num_epochs))
         f_id.write("Batch Size: {}.\n".format(batch_size))
         f_id.write("Learning Rate: {}.\n".format(keras.backend.eval(optimizer.lr)))
         f_id.write("Optimizer Type: {}\n".format(optimizer.__class__))
         f_id.write("\n")
 
-        f_id.write("Data Directories : --------------------------------------\n")
-        for idx, folder in enumerate(train_list_of_pickle_file_paths):
-            f_id.write('\t{}: {}\n'.format(idx, folder))
+        f_id.write("Data Details : ..............................................\n")
+        f_id.write("Data key filename: '{}'\n".format(data_key_file_name))
+        f_id.write("Data points: training {}, test {} out of {}\n".format(
+            num_training_points, num_test_points, total_test_points
+        ))
+        f_id.write("Training pickle files: \n")
+        for idx, pkl_file in enumerate(train_list_of_pickle_files):
+            f_id.write('\t{}: {}\n'.format(idx, pkl_file))
+        f_id.write("Test pickle files: \n")
+        for idx, pkl_file in enumerate(test_list_of_pickle_files):
+            f_id.write('\t{}: {}\n'.format(idx, pkl_file))
+
+    # -------------------------------------------------------------------------------------
+    # Debug
+    # -------------------------------------------------------------------------------------
+    # 1. Display learnt kernels
+    learnt_weights_visualize_dir = os.path.join(results_dir, 'filter_visualizations')
+    if not os.path.exists(learnt_weights_visualize_dir):
+        os.mkdir(learnt_weights_visualize_dir)
+
+    for kernel_idx in display_kernel_idxs:
+        learn_cont_int_kernel_3d_model.plot_start_n_learnt_contour_integration_kernels(
+            model,
+            kernel_idx,
+            start_weights,
+        )
+
+        learnt_kernel_fig = plt.gcf()
+
+        learnt_kernel_fig.savefig(os.path.join(
+            learnt_weights_visualize_dir, 'learnt_contour_integration_kernel_{}.eps'.format(kernel_idx)), format='eps')
+    #
+    # # For a Sample Image plot the expected gain vs actual gain
+    # image_idx = 7
+    #
+    # # 2. predict output on a single image
+    # test_image = X[image_idx, ]
+    # test_label = y[image_idx, ]
+    #
+    # input_image = np.expand_dims(test_image, axis=0)
+    # y_hat = model.predict(input_image)
+    #
+    # display_image = np.transpose(test_image, axes=(1, 2, 0))
+    # plt.figure()
+    # plt.imshow(display_image)
+    #
+    # plt.figure()
+    # plt.stem(test_label.T, 'r', label='Expected')
+    # plt.stem(y_hat.T, 'sb', label='Predicted')
+    # plt.legend()
+    #
+    # # 3. Plot Max Enhancement
+    # z = np.transpose(test_image, axes=(1, 2, 0))
+    # plot_max_contour_enhancement(z, feat_extract_act_cb, cont_int_act_cb)
+    #
+
