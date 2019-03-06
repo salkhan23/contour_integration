@@ -25,105 +25,6 @@ reload(contour_integration_model_3d)
 reload(li_2006_routines)
 
 
-def plot_contour_integration_weights_in_channels(weights, out_chan_idx, margin=1, axis=None):
-    """
-    Plot all input channels weights connected to a particular output channel
-    All channels are plotted individually in a tiled image.
-
-    :param weights:
-    :param out_chan_idx:
-    :param margin:
-    :param axis:
-
-    :return:
-    """
-    r, c, in_ch, out_ch = weights.shape
-
-    n = np.int(np.round(np.sqrt(in_ch)))  # Single dimension of tiled image
-
-    width = (n * r) + ((n - 1) * margin)
-    height = (n * c) + ((n - 1) * margin)
-
-    tiled_img = np.zeros((width, height))
-
-    # Fill in in composite image with the filters
-    for r_idx in range(n):
-        for c_idx in range(n):
-
-            in_chan_idx = (r_idx * n) + c_idx
-
-            if in_chan_idx >= in_ch:
-                break
-
-            # print("Processing filter %d" % in_chan_idx)
-
-            tiled_img[
-                (r + margin) * r_idx: (r + margin) * r_idx + r,
-                (c + margin) * c_idx: (c + margin) * c_idx + c,
-            ] = weights[:, :, in_chan_idx, out_chan_idx]
-
-    if axis is None:
-        f, axis = plt.subplots()
-    else:
-        f = plt.gcf()
-
-    cax = axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
-    f.colorbar(cax, orientation='vertical', ax=axis)
-
-    # Put borders between tiles
-    for r_idx in range(n):
-        margin_lines = np.arange((r_idx * (r + margin)) + r, (r_idx * (r + margin)) + (r + margin))
-        for line in margin_lines:
-            axis.axvline(line, color='k')
-            axis.axhline(line, color='k')
-
-
-def plot_contour_integration_weights_out_channels(weights, in_chan_idx, margin=1, axis=None):
-    """
-    Plot all output channels weights connected to a particular input channel
-    All channels are plotted individually in a tiled image.
-
-    :param weights:
-    :param in_chan_idx:
-    :param margin:
-    :param axis:
-
-    :return:
-    """
-    r, c, in_ch, out_ch = weights.shape
-
-    n = np.int(np.round(np.sqrt(in_ch)))  # Single dimension of tiled image
-
-    width = (n * r) + ((n - 1) * margin)
-    height = (n * c) + ((n - 1) * margin)
-
-    tiled_img = np.zeros((width, height))
-
-    # Fill in in composite image with the filters
-    for r_idx in range(n):
-        for c_idx in range(n):
-
-            out_chan_idx = (r_idx * n) + c_idx
-
-            if out_chan_idx >= in_ch:
-                break
-
-            print("Processing filter %d" % out_chan_idx)
-
-            tiled_img[
-                (r + margin) * r_idx: (r + margin) * r_idx + r,
-                (c + margin) * c_idx: (c + margin) * c_idx + c,
-            ] = weights[:, :, in_chan_idx, out_chan_idx]
-
-    if axis is None:
-        f, axis = plt.subplots()
-    else:
-        f = plt.gcf()
-
-    cax = axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
-    f.colorbar(cax, orientation='horizontal', ax=axis)
-
-
 if __name__ == '__main__':
     plt.ion()
     K.clear_session()
@@ -286,21 +187,21 @@ if __name__ == '__main__':
     # ----------------------------------------------------------------------------------
     # 1. PLot all feature maps that feed into output mask at index tgt_filter_idx
     fig, ax_arr = plt.subplots(1, 2)
-    plot_contour_integration_weights_in_channels(
+    alex_net_utils.plot_contour_integration_weights_in_channels(
         start_weights, tgt_filter_idx, axis=ax_arr[0])
 
     learnt_weights, _ = cont_int_model.layers[2].get_weights()
-    plot_contour_integration_weights_in_channels(
+    alex_net_utils.plot_contour_integration_weights_in_channels(
         learnt_weights, tgt_filter_idx, axis=ax_arr[1])
     fig.suptitle('Input channel of filter @ {}'.format(tgt_filter_idx))
 
     # 2. Plot all output feature maps that receive from input channel at index tgt_filter_idx
     fig, ax_arr = plt.subplots(1, 2)
-    plot_contour_integration_weights_out_channels(
+    alex_net_utils.plot_contour_integration_weights_out_channels(
         start_weights, tgt_filter_idx, axis=ax_arr[0])
 
     learnt_weights, _ = cont_int_model.layers[2].get_weights()
-    plot_contour_integration_weights_out_channels(
+    alex_net_utils.plot_contour_integration_weights_out_channels(
         learnt_weights, tgt_filter_idx, axis=ax_arr[1])
     fig.suptitle('Output channel of filter @ {}'.format(tgt_filter_idx))
 

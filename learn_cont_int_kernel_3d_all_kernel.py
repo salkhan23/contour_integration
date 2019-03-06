@@ -310,7 +310,7 @@ if __name__ == '__main__':
         os.mkdir(learnt_weights_visualize_dir)
 
     for kernel_idx in display_kernel_idxs:
-        learn_cont_int_kernel_3d_model.plot_start_n_learnt_contour_integration_kernels(
+        alex_net_utils.plot_start_n_learnt_contour_integration_kernels(
             model,
             kernel_idx,
             start_weights,

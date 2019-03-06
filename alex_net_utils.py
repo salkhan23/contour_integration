@@ -620,3 +620,148 @@ def get_layer_idx_by_name(m, layer_name):
             layer_idx = l_idx
 
     return layer_idx
+
+
+def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w=None):
+    """
+
+    :param model:
+    :param tgt_filt_idx:
+    :param start_w: complete set of weights at star of training [Optional]
+    :return:
+    """
+    plt.figure()
+    ax0 = plt.subplot2grid((3, 4), (0, 0), colspan=3, rowspan=3)
+
+    cont_int_layer_idx = get_layer_idx_by_name(model, 'contour_integration_layer')
+
+    learnt_w, _ = model.layers[cont_int_layer_idx].get_weights()
+    plot_contour_integration_weights_in_channels(
+        learnt_w,
+        tgt_filt_idx,
+        axis=ax0,
+    )
+    ax0.set_title("Learnt Contour Int")
+
+    if start_w is not None:
+
+        ax1 = plt.subplot2grid((3, 4), (0, 3))
+        plot_contour_integration_weights_in_channels(
+            start_w,
+            tgt_filt_idx,
+            axis=ax1
+        )
+        ax1.set_title("Initial Contour Int")
+
+    feat_extract_w, _ = model.layers[1].get_weights()
+    tgt_feat_extract_w = feat_extract_w[:, :, :, tgt_filt_idx]
+
+    normalized_tgt_feat_extract_w = (tgt_feat_extract_w - tgt_feat_extract_w.min()) / \
+        (tgt_feat_extract_w.max() - tgt_feat_extract_w.min())
+
+    ax2 = plt.subplot2grid((3, 4), (2, 3))
+    ax2.imshow(normalized_tgt_feat_extract_w)
+    ax2.set_title("Feature Extract")
+
+    f = plt.gcf()
+    f.suptitle("Input channels feeding of contour integration kernel @ index {}".format(tgt_filt_idx))
+    f.set_size_inches(18, 9)
+
+
+def plot_contour_integration_weights_in_channels(weights, out_chan_idx, margin=1, axis=None):
+    """
+    Plot all input channels weights connected to a particular output channel
+    All channels are plotted individually in a tiled image.
+
+    :param weights:
+    :param out_chan_idx:
+    :param margin:
+    :param axis:
+
+    :return:
+    """
+    r, c, in_ch, out_ch = weights.shape
+
+    n = np.int(np.round(np.sqrt(in_ch)))  # Single dimension of tiled image
+
+    width = (n * r) + ((n - 1) * margin)
+    height = (n * c) + ((n - 1) * margin)
+
+    tiled_img = np.zeros((width, height))
+
+    # Fill in in composite image with the filters
+    for r_idx in range(n):
+        for c_idx in range(n):
+
+            in_chan_idx = (r_idx * n) + c_idx
+
+            if in_chan_idx >= in_ch:
+                break
+
+            # print("Processing filter %d" % in_chan_idx)
+
+            tiled_img[
+                (r + margin) * r_idx: (r + margin) * r_idx + r,
+                (c + margin) * c_idx: (c + margin) * c_idx + c,
+            ] = weights[:, :, in_chan_idx, out_chan_idx]
+
+    if axis is None:
+        f, axis = plt.subplots()
+    else:
+        f = plt.gcf()
+
+    cax = axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
+    f.colorbar(cax, orientation='vertical', ax=axis)
+
+    # Put borders between tiles
+    for r_idx in range(n):
+        margin_lines = np.arange((r_idx * (r + margin)) + r, (r_idx * (r + margin)) + (r + margin))
+        for line in margin_lines:
+            axis.axvline(line, color='k')
+            axis.axhline(line, color='k')
+
+
+def plot_contour_integration_weights_out_channels(weights, in_chan_idx, margin=1, axis=None):
+    """
+    Plot all output channels weights connected to a particular input channel
+    All channels are plotted individually in a tiled image.
+
+    :param weights:
+    :param in_chan_idx:
+    :param margin:
+    :param axis:
+
+    :return:
+    """
+    r, c, in_ch, out_ch = weights.shape
+
+    n = np.int(np.round(np.sqrt(in_ch)))  # Single dimension of tiled image
+
+    width = (n * r) + ((n - 1) * margin)
+    height = (n * c) + ((n - 1) * margin)
+
+    tiled_img = np.zeros((width, height))
+
+    # Fill in in composite image with the filters
+    for r_idx in range(n):
+        for c_idx in range(n):
+
+            out_chan_idx = (r_idx * n) + c_idx
+
+            if out_chan_idx >= in_ch:
+                break
+
+            print("Processing filter %d" % out_chan_idx)
+
+            tiled_img[
+                (r + margin) * r_idx: (r + margin) * r_idx + r,
+                (c + margin) * c_idx: (c + margin) * c_idx + c,
+            ] = weights[:, :, in_chan_idx, out_chan_idx]
+
+    if axis is None:
+        f, axis = plt.subplots()
+    else:
+        f = plt.gcf()
+
+    cax = axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
+    f.colorbar(cax, orientation='horizontal', ax=axis)

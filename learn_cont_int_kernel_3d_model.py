@@ -325,52 +325,6 @@ def train_contour_integration_kernel(
     return min_loss_train, min_loss_test, n_train_imgs, n_test_imgs
 
 
-def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w=None):
-    """
-
-    :param model:
-    :param tgt_filt_idx:
-    :param start_w: complete set of weights at star of training [Optional]
-    :return:
-    """
-    plt.figure()
-    ax0 = plt.subplot2grid((3, 4), (0, 0), colspan=3, rowspan=3)
-
-    cont_int_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'contour_integration_layer')
-
-    learnt_w, _ = model.layers[cont_int_layer_idx].get_weights()
-    linear_contour_training.plot_contour_integration_weights_in_channels(
-        learnt_w,
-        tgt_filt_idx,
-        axis=ax0,
-    )
-    ax0.set_title("Learnt Contour Int")
-
-    if start_w is not None:
-
-        ax1 = plt.subplot2grid((3, 4), (0, 3))
-        linear_contour_training.plot_contour_integration_weights_in_channels(
-            start_w,
-            tgt_filt_idx,
-            axis=ax1
-        )
-        ax1.set_title("Initial Contour Int")
-
-    feat_extract_w, _ = model.layers[1].get_weights()
-    tgt_feat_extract_w = feat_extract_w[:, :, :, tgt_filt_idx]
-
-    normalized_tgt_feat_extract_w = (tgt_feat_extract_w - tgt_feat_extract_w.min()) / \
-        (tgt_feat_extract_w.max() - tgt_feat_extract_w.min())
-
-    ax2 = plt.subplot2grid((3, 4), (2, 3))
-    ax2.imshow(normalized_tgt_feat_extract_w)
-    ax2.set_title("Feature Extract")
-
-    f = plt.gcf()
-    f.suptitle("Input channels feeding of contour integration kernel @ index {}".format(tgt_filt_idx))
-    f.set_size_inches(18, 9)
-
-
 def clear_unlearnt_contour_integration_kernels(model, trained_kernels):
     """
 
