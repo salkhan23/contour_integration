@@ -201,6 +201,7 @@ if __name__ == '__main__':
         outer_leaky_relu_alpha=1.,
         l1_reg_loss_weight=0.0001,
     )
+    model.summary()
 
     optimizer = keras.optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
     model.compile(
@@ -208,10 +209,14 @@ if __name__ == '__main__':
         loss=keras.losses.mean_squared_error
     )
 
-    start_weights, _ = model.layers[2].get_weights()
+    cont_int_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'contour_integration_layer')
+    feat_extract_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'conv_1')
+
+    start_weights, _ = model.layers[cont_int_layer_idx].get_weights()
+
     # Callbacks
-    feat_extract_act_cb = alex_net_utils.get_activation_cb(model, 1)
-    cont_int_act_cb = alex_net_utils.get_activation_cb(model, 2)
+    feat_extract_act_cb = alex_net_utils.get_activation_cb(model, feat_extract_layer_idx)
+    cont_int_act_cb = alex_net_utils.get_activation_cb(model, cont_int_layer_idx)
 
     # -----------------------------------------------------------------------------------
     print("Training the model ...")
@@ -275,10 +280,10 @@ if __name__ == '__main__':
         f_id.write("\n")
 
         f_id.write("Model Hyper-Parameters : --------------------------------------\n")
-        f_id.write("L1 Loss Weight {}\n".format(model.layers[2].l1_reg_loss_weight))
-        f_id.write("Contour Integration rf size {}\n".format(model.layers[2].n))
-        f_id.write("Outer Relu alpha {}\n".format(model.layers[2].outer_leaky_relu_alpha))
-        f_id.write("Inner Relu alpha {}\n".format(model.layers[2].inner_leaky_relu_alpha))
+        f_id.write("L1 Loss Weight {}\n".format(model.layers[cont_int_layer_idx].l1_reg_loss_weight))
+        f_id.write("Contour Integration rf size {}\n".format(model.layers[cont_int_layer_idx].n))
+        f_id.write("Outer Relu alpha {}\n".format(model.layers[cont_int_layer_idx].outer_leaky_relu_alpha))
+        f_id.write("Inner Relu alpha {}\n".format(model.layers[cont_int_layer_idx].inner_leaky_relu_alpha))
         f_id.write("\n")
 
         f_id.write("Training Details : --------------------------------------\n")
