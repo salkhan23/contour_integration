@@ -336,7 +336,9 @@ def plot_start_n_learnt_contour_integration_kernels(model, tgt_filt_idx, start_w
     plt.figure()
     ax0 = plt.subplot2grid((3, 4), (0, 0), colspan=3, rowspan=3)
 
-    learnt_w, _ = model.layers[2].get_weights()
+    cont_int_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'contour_integration_layer')
+
+    learnt_w, _ = model.layers[cont_int_layer_idx].get_weights()
     linear_contour_training.plot_contour_integration_weights_in_channels(
         learnt_w,
         tgt_filt_idx,
