@@ -606,3 +606,17 @@ def plot_l2_visual_field(location, l2_kernel_mask, img, margin=4):
     plt.figure()
     plt.imshow(tiled_image)
     plt.title("Visual Field of neuron @ (%d,%d)" % (location[0], location[1]))
+
+
+def get_layer_idx_by_name(m, layer_name):
+    """
+    :param m: model
+    :param layer_name:
+    :return:
+    """
+    layer_idx = None
+    for l_idx, layer in enumerate(m.layers):
+        if layer.name == layer_name:
+            layer_idx = l_idx
+
+    return layer_idx
