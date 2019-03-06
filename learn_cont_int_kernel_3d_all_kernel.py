@@ -122,17 +122,18 @@ if __name__ == '__main__':
     num_test_points = 10000
     num_epochs = 40
 
-    results_dir = './results/test'
+    results_dir = './results/optimal_gabors_5_10_with_rotations_threshold'
 
     # base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
-    base_data_directory = './data/curved_contours/optimal_gabors_trials'
+    base_data_directory = './data/curved_contours/optimal_gabors_with_rotations_5_10'
 
-    #data_key_file_name = 'data_key_matching_orientation.pickle'
+    # data_key_file_name = 'data_key_matching_orientation.pickle'
     data_key_file_name = 'data_key_above_threshold.pickle'
     # data_key_file_name = 'data_key_max_active.pickle'
 
     # Store Learnt contour integration kernels @ these indices post training
-    display_kernel_idxs = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 60, 62, 64, 65, 66, 68, 69, 72, 73, 74, 76, 77, 79]
+    # display_kernel_idxs = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 60, 62, 64, 65, 66, 68, 69, 72, 73, 74, 76, 77, 79]
+    display_kernel_idxs = [5, 10]
 
     # Immutable ---------------------------------------------------------
     if os.path.exists(results_dir):
@@ -288,16 +289,17 @@ if __name__ == '__main__':
         f_id.write("\n")
 
         f_id.write("Data Details : ..............................................\n")
+        f_id.write("Base Data Directory: {}\n".format(base_data_directory))
         f_id.write("Data key filename: '{}'\n".format(data_key_file_name))
         f_id.write("Data points: training {}, test {} out of {}\n".format(
             num_training_points, num_test_points, total_test_points
         ))
         f_id.write("Training pickle files: \n")
-        for idx, pkl_file in enumerate(train_list_of_pickle_files):
-            f_id.write('\t{}: {}\n'.format(idx, pkl_file))
+        for idx, pickle_file in enumerate(train_list_of_pickle_files):
+            f_id.write('\t{}: {}\n'.format(idx, pickle_file))
         f_id.write("Test pickle files: \n")
-        for idx, pkl_file in enumerate(test_list_of_pickle_files):
-            f_id.write('\t{}: {}\n'.format(idx, pkl_file))
+        for idx, pickle_file in enumerate(test_list_of_pickle_files):
+            f_id.write('\t{}: {}\n'.format(idx, pickle_file))
 
     # -------------------------------------------------------------------------------------
     # Debug
@@ -342,4 +344,3 @@ if __name__ == '__main__':
     # z = np.transpose(test_image, axes=(1, 2, 0))
     # plot_max_contour_enhancement(z, feat_extract_act_cb, cont_int_act_cb)
     #
-
