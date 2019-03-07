@@ -325,26 +325,6 @@ def train_contour_integration_kernel(
     return min_loss_train, min_loss_test, n_train_imgs, n_test_imgs
 
 
-def clear_unlearnt_contour_integration_kernels(model, trained_kernels):
-    """
-
-    :param model:
-    :param trained_kernels:
-    :return:
-    """
-    w, b = model.layers[2].get_weights()
-    n_kernels = w.shape[3]
-
-    print("All Contour Integration Kernels other than {} will be cleared".format(trained_kernels))
-
-    for i in range(n_kernels):
-        if i not in trained_kernels:
-            w[:, :, :, i] = np.zeros_like(w[:, :, :, i])
-            b[i] = 0
-
-    model.layers[2].set_weights([w, b])
-
-
 def test_sample_output(data_dir, tgt_filt_idx, feat_extract_cb, cont_int_cb, rslt_dir, c_len, beta, alpha, img_idx=0):
     """
 
@@ -553,7 +533,7 @@ if __name__ == '__main__':
         # -------------------------------------------------------------------------------
         # Plot Learnt Kernels
         # -------------------------------------------------------------------------------
-        plot_start_n_learnt_contour_integration_kernels(
+        alex_net_utils.plot_start_n_learnt_contour_integration_kernels(
             cont_int_model,
             target_kernel_idx,
             start_weights,
@@ -657,4 +637,4 @@ if __name__ == '__main__':
     trained_kernel_idxes = np.concatenate((prev_trained_idxes, np.array(target_kernel_idx_arr)))
     trained_kernel_idxes = set(trained_kernel_idxes)
 
-    clear_unlearnt_contour_integration_kernels(cont_int_model, trained_kernel_idxes)
+    alex_net_utils.clear_unlearnt_contour_integration_kernels(cont_int_model, trained_kernel_idxes)

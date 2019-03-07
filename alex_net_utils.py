@@ -765,3 +765,25 @@ def plot_contour_integration_weights_out_channels(weights, in_chan_idx, margin=1
 
     cax = axis.imshow(tiled_img, cmap='seismic', vmax=np.max(abs(tiled_img)), vmin=-np.max(abs(tiled_img)))
     f.colorbar(cax, orientation='horizontal', ax=axis)
+
+
+def clear_unlearnt_contour_integration_kernels(model, trained_kernels):
+    """
+
+    :param model:
+    :param trained_kernels:
+    :return:
+    """
+    cont_int_layer_idx = get_layer_idx_by_name(model, 'contour_integration_layer')
+
+    w, b = model.layers[cont_int_layer_idx].get_weights()
+    n_kernels = w.shape[3]
+
+    print("All Contour Integration Kernels other than {} will be cleared".format(trained_kernels))
+
+    for i in range(n_kernels):
+        if i not in trained_kernels:
+            w[:, :, :, i] = np.zeros_like(w[:, :, :, i])
+            b[i] = 0
+
+    model.layers[cont_int_layer_idx].set_weights([w, b])
