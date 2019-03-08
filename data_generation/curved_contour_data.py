@@ -217,15 +217,15 @@ def generate_data_set(
     # -----------------------------------------------------------------------------------
     # find all kernels with similar orientations
     similar_orient_k_idxs = np.where(
-        (k_orient_arr >= (g_params['theta_deg'] - delta_orient)) &
-        (k_orient_arr <= (g_params['theta_deg'] + delta_orient))
+        (k_orient_arr >= (frag_params[0]['theta_deg'] - delta_orient)) &
+        (k_orient_arr <= (frag_params[0]['theta_deg'] + delta_orient))
     )
 
     mask_similar_orient = np.zeros(96)
     mask_similar_orient[similar_orient_k_idxs] = 1
     mask_similar_orient = mask_similar_orient.astype(int)
     print("Fragment orientation: {}. kernels with similar orientations @ {}".format(
-        g_params['theta_deg'], similar_orient_k_idxs))
+        frag_params[0]['theta_deg'], similar_orient_k_idxs))
 
     # find all kernels above threshold
     center_neuron_act = get_center_neuron_feature_extract_act(frag, l1_act_cb)
@@ -233,20 +233,20 @@ def generate_data_set(
     mask_above_thres = center_neuron_act > thres
     mask_above_thres = mask_above_thres.astype(int)
     print("Fragment orientation: {}. kernels above threshold @ {}".format(
-        g_params['theta_deg'], np.nonzero(mask_above_thres)))
+        frag_params[0]['theta_deg'], np.nonzero(mask_above_thres)))
 
     # Find max active kernel index
     max_active_k = np.argmax(center_neuron_act)
     mask_max_active = np.zeros(96)
     mask_max_active[max_active_k] = 1
     print("Fragment orientation: {}. Max Active kernel at @ {}".format(
-        g_params['theta_deg'], max_active_k))
+        frag_params[0]['theta_deg'], max_active_k))
 
     # Find all kernels with activation above 0
     mask_non_zero = center_neuron_act > 0
     mask_non_zero = mask_non_zero.astype(int)
     print("Fragment orientation: {}. kernels non zero @ {}".format(
-        g_params['theta_deg'], np.nonzero(mask_non_zero)))
+        frag_params[0]['theta_deg'], np.nonzero(mask_non_zero)))
 
     # ----------------------------------------------------------------------------
     # Create Filter directory
@@ -448,7 +448,7 @@ if __name__ == '__main__':
     target_kernels = []
 
     # where the data should be stored
-    data_store_dir = "./data/curved_contours/optimal_gabors_with_rotations"
+    data_store_dir = "./data/curved_contours/test"
 
     # Optimal Gabor Fits for all kernels
     gabor_params_file = "./data_generation/gabor_fits_feature_extract_kernels.pickle"
