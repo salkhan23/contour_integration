@@ -43,15 +43,25 @@ def create_data_generator(list_pickle_files, b_size=1, shuffle=True):
         with open(pkl_file, 'rb') as h:
             curr_dict_of_dicts = pickle.load(h)
 
+        list_of_used_data_keys = []
+
         for k, v in curr_dict_of_dicts.iteritems():
 
             if 'alpha_0' in k:
                 if 'beta_0' in k or 'beta_15' in k or 'beta_30:' in k:
+
                     # print("Adding {}".format(k))
+                    list_of_used_data_keys.append(k)
+
                     data_dict.update(curr_dict_of_dicts[k])
                     # print("beta_0 in dict {}".format('beta_0' in k))
                     # print("beta_15 in dict {}".format('beta_15' in k))
                     # print("beta_30 in dict {}".format('beta_30' in k))
+
+        # # print the list of data_keys that will be used
+        # print("List of data sets that will be used:")
+        # for i_item, item in sorted(list_of_used_data_keys):
+        #     print("[{}]: {}".format(i_item, item))
 
     n_data_pts = len(data_dict)
     print("Number of data points {}".format(n_data_pts))
@@ -119,8 +129,8 @@ if __name__ == '__main__':
     keras.backend.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
 
     batch_size = 128
-    num_test_points = 10000
-    num_epochs = 40
+    num_test_points = 1000
+    num_epochs = 20
 
     results_dir = './results/optimal_gabors_5_10_with_rotations_threshold'
 
