@@ -20,7 +20,7 @@ reload(contour_integration_model_3d)
 reload(alex_net_utils)
 
 
-def gabor_2d((x, y), x0, y0, theta_deg, amp, sigma, lambda1, psi, gamma):
+def gabor_2d(inputs, x0, y0, theta_deg, amp, sigma, lambda1, psi, gamma):
     """
     2D Spatial Gabor Filter (Real Component only).
 
@@ -33,6 +33,7 @@ def gabor_2d((x, y), x0, y0, theta_deg, amp, sigma, lambda1, psi, gamma):
     (theta=0, corresponds to the x axis.). Note also that this is the angle of the gaussian envelop with
     is orthogonal to the direction of the stripes.
 
+    :param inputs: (tuple of x, y) to consider
     :param x0: x-coordinate of center of Gaussian
     :param y0: y-coordinate of center of Gaussian
     :param theta_deg: Orientation of the Gaussian or the orientation of the normal to the sinusoid (carrier)
@@ -47,6 +48,9 @@ def gabor_2d((x, y), x0, y0, theta_deg, amp, sigma, lambda1, psi, gamma):
     :return: 1D vector of 2D spatial gabor function over (x, y). Note it needs to be reshaped to get the 2D
         version. It is done this way because curve fit function, expect a single vector of inputs to optimize over
     """
+    x = inputs[0]
+    y = inputs[1]
+
     sigma = np.float(sigma)
 
     theta = theta_deg * np.pi / 180.0
@@ -412,6 +416,11 @@ def plot_fragment_rotations(frag, frag_params, delta_rot=15):
         for c_idx, rot_frag_params in enumerate(rotated_frag_params_list):
             rot_frag_params["theta_deg"] = rot_ang + frag_params[c_idx]['theta_deg']
 
+            if rot_frag_params["theta_deg"] > 180:
+                rot_frag_params["theta_deg"] -= 360
+            if rot_frag_params["theta_deg"] < -180:
+                rot_frag_params["theta_deg"] += 360
+
             rot_frag = get_gabor_fragment(rotated_frag_params_list, frag.shape[0:2])
 
             row_idx = np.int(idx / n_cols)
@@ -420,6 +429,8 @@ def plot_fragment_rotations(frag, frag_params, delta_rot=15):
 
             ax_arr[row_idx][col_idx].imshow(rot_frag)
             ax_arr[row_idx][col_idx].set_title("Angle = {}".format(rot_ang))
+            ax_arr[row_idx][col_idx].set_xticks([])
+            ax_arr[row_idx][col_idx].set_yticks([])
 
 
 if __name__ == "__main__":
@@ -433,7 +444,7 @@ if __name__ == "__main__":
     # -----------------------------------------------------------------------------------
     # Model
     # -----------------------------------------------------------------------------------
-    print("Building Contour Integration Model...")
+    print("Loading Contour Integration Model {}".format('*' * 80))
 
     cont_int_model = contour_integration_model_3d.build_contour_integration_model(
         tgt_filt_idx=0,
@@ -449,7 +460,10 @@ if __name__ == "__main__":
     # -----------------------------------------------------------------------------------
     #  Single Kernel Gabor Fit
     # -----------------------------------------------------------------------------------
-    tgt_filter_idx = 0
+    tgt_filter_idx = 5
+
+    print("Finding Best Fit Gabor Parameters for kernel {}".format(tgt_filter_idx))
+
     tgt_filter = feat_extract_kernels[:, :, :, tgt_filter_idx]
 
     gabor_params = find_best_fit_2d_gabor(tgt_filter, verbose=1)
@@ -473,7 +487,7 @@ if __name__ == "__main__":
 
         gabor_params_dict_list.append(params)
 
-    fragment = get_gabor_fragment(gabor_params_dict_list[0], (11, 11))
+    fragment = get_gabor_fragment(gabor_params_dict_list, (11, 11))
 
     fig, ax_array = plt.subplots(1, 2)
 
@@ -487,23 +501,29 @@ if __name__ == "__main__":
     # ----------------------------------
     plot_fragment_rotations(fragment, gabor_params_dict_list)
 
-    # -----------------------------------------------------------------------------------
-    #  Gabor Fits all kernels
-    # -----------------------------------------------------------------------------------
-    n_filters = feat_extract_kernels.shape[-1]
-    optimum_orientation_list = []
 
-    for tgt_filter_idx in np.arange(n_filters):
-        tgt_filter = feat_extract_kernels[:, :, :, tgt_filter_idx]
 
-        optimal_params = find_best_fit_2d_gabor(tgt_filter)
 
-        # plot_kernel_and_best_fit_gabors(tgt_filter_idx, tgt_filter_idx, optimal_params)
-        # raw_input()
 
-        orientation, offset = get_l1_filter_orientation_and_offset(
-            tgt_filter, tgt_filter_idx, show_plots=False)
 
-        optimum_orientation_list.append(orientation)
 
-        print('kernel @ %d: %s' % (tgt_filter_idx, orientation))
+    # # -----------------------------------------------------------------------------------
+    # #  Gabor Fits all kernels
+    # # -----------------------------------------------------------------------------------
+    # n_filters = feat_extract_kernels.shape[-1]
+    # optimum_orientation_list = []
+    #
+    # for tgt_filter_idx in np.arange(n_filters):
+    #     tgt_filter = feat_extract_kernels[:, :, :, tgt_filter_idx]
+    #
+    #     optimal_params = find_best_fit_2d_gabor(tgt_filter)
+    #
+    #     # plot_kernel_and_best_fit_gabors(tgt_filter_idx, tgt_filter_idx, optimal_params)
+    #     # raw_input()
+    #
+    #     orientation, offset = get_l1_filter_orientation_and_offset(
+    #         tgt_filter, tgt_filter_idx, show_plots=False)
+    #
+    #     optimum_orientation_list.append(orientation)
+    #
+    #     print('kernel @ %d: %s' % (tgt_filter_idx, orientation))
