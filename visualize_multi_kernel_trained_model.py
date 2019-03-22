@@ -7,7 +7,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import keras.backend as keras_backend
 import keras
 
 import contour_integration_models.alex_net.model_3d_all_kernels as model_3d_all_kernels
@@ -95,21 +94,10 @@ def plot_contour_enhancement_individual_kernels(img, input_cb, cont_int_cb, filt
         plt.suptitle("Kernel {}".format(f_idx))
 
 
-def load_and_preprocess_image(img_file):
-
-    img = keras.preprocessing.image.load_img(img_file, target_size=(227, 227, 3))
-
-    # Normalize image to range [0, 1]
-    # Also specify image dimensions as channel_last, subsequent functions should change it
-    # to channel first format
-    img = keras.preprocessing.image.img_to_array(img, data_format='channels_last') / 255.0
-
-    return img
-
-
-def main(model, g_params, learnt_kernels):
+def main(model, g_params, preprocessing_cb, learnt_kernels):
     """
 
+    :param preprocessing_cb:
     :param learnt_kernels:
     :param g_params:
     :param model:
@@ -148,7 +136,7 @@ def main(model, g_params, learnt_kernels):
         f_tile_size=np.array((18, 18)),
         rand_inter_frag_direction_change=False
     )
-    test_image = img_arr[0, ] / 255.0
+    test_image = preprocessing_cb(img_arr[0, ])
 
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
     # plot_contour_enhancement_individual_kernels(
@@ -171,8 +159,7 @@ def main(model, g_params, learnt_kernels):
         center_frag_start=np.array([180, 120]),
         rand_inter_frag_direction_change=True
     )
-
-    test_image = img_arr[0, ] / 255.0
+    test_image = preprocessing_cb(img_arr[0, ])
 
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
     # plot_contour_enhancement_individual_kernels(
@@ -196,8 +183,7 @@ def main(model, g_params, learnt_kernels):
         rand_inter_frag_direction_change=False,
         base_contour='circle'
     )
-
-    test_image = img_arr[0, ] / 255.0
+    test_image = preprocessing_cb(img_arr[0, ])
 
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
     # plot_contour_enhancement_individual_kernels(
@@ -207,9 +193,18 @@ def main(model, g_params, learnt_kernels):
     # 4. Irregular shape shape
     # ----------------------------------------------------------------------------------
     image_file = './data/sample_images/irregular_shape.jpg'
-    test_image = load_and_preprocess_image(image_file)
+
+    temp = keras.preprocessing.image.load_img(image_file, target_size=(227, 227, 3))
+    in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_first')
+    test_image = preprocessing_cb(in_img)
+
+    print(test_image.shape)
+
+    # Below Fcns expect channel last format
+    test_image = np.transpose(test_image, axes=(1, 2, 0))
 
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
+
     # plot_contour_enhancement_individual_kernels(
     #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
 
@@ -226,7 +221,12 @@ def main(model, g_params, learnt_kernels):
 
     for image_file in list_of_images:
 
-        test_image = load_and_preprocess_image(image_file)
+        temp = keras.preprocessing.image.load_img(image_file, target_size=(227, 227, 3))
+        in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_first')
+        test_image = preprocessing_cb(in_img)
+
+        # Below Fcns expect channel last format
+        test_image = np.transpose(test_image, axes=(1, 2, 0))
 
         plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
         # plot_contour_enhancement_individual_kernels(
@@ -239,8 +239,8 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # immutable
     plt.ion()
-    keras_backend.clear_session()
-    keras_backend.set_image_dim_ordering('th')
+    keras.backend.clear_session()
+    keras.backend.set_image_dim_ordering('th')
 
     np.random.seed(20)
 
@@ -274,11 +274,12 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Model
     # -----------------------------------------------------------------------------------
-    # print("Loading Model")
+    print("Loading Model ...")
 
     # # OLD INDIVIDUALLY trained model
     # # ------------------------------
     # contour_int_weights = "./results/beta_rotations_upt30_alpha_upto30/trained_weights.hf"
+    #
     # cont_int_model = model_3d_individually_trained.build_contour_integration_model(
     #     tgt_filt_idx=5,
     #     rf_size=35,
@@ -293,7 +294,8 @@ if __name__ == '__main__':
     # contour_int_weights = \
     #     "./results/optimal_gabors_with_rotations_5_10_orientation/contour_integration_layer_weights.hf"
     contour_int_weights = \
-        "./results/all_kernels_alpha_0_beta_upto30/contour_integration_layer_weights.hf"
+        "./results/divide_255_preprocessing/contour_integration_layer_weights.hf"
+
     cont_int_model = model_3d_all_kernels.training_model(
         rf_size=35,
         inner_leaky_relu_alpha=0.9,
@@ -310,6 +312,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # main routine
     # -----------------------------------------------------------------------------------
+
     # #  Plot All learnt kernels
     # # -------------------------
     # for kernels_idx in trained_kernels:
@@ -319,7 +322,12 @@ if __name__ == '__main__':
     #     )
     #     raw_input('Next?')
 
-    main(cont_int_model, gabor_params, trained_kernels)
+    main(
+        model=cont_int_model,
+        preprocessing_cb=alex_net_utils.preprocessing_divide_255,
+        g_params=gabor_params,
+        learnt_kernels=trained_kernels
+    )
 
     # -----------------------------------------------------------------------------------
     # End

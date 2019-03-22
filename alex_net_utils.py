@@ -787,3 +787,35 @@ def clear_unlearnt_contour_integration_kernels(model, trained_kernels):
             b[i] = 0
 
     model.layers[cont_int_layer_idx].set_weights([w, b])
+
+
+def preprocessing_imagenet(x):
+    """
+    This is the image preprocessing used when the alexnet model was trained on imagenet.
+    Expected input is channel first.
+    Channel-wise means are subtracted from pixels
+
+    """
+    x[:, :, 2] -= 123.68
+    x[:, :, 1] -= 116.779
+    x[:, :, 0] -= 103.939
+    return x
+
+
+def preprocessing_divide_255(x):
+    """
+    Image preprocessing where each pixels is divided vy 255.0
+    :param x:
+    :return:
+    """
+    x = x / 255.0
+    return x
+
+
+def preprocessing_zero_one_normalization(x):
+    """
+    Input image pixels are normalized to range (0, 1)
+
+    """
+    x = (x - x.min()) / (x.max() - x.min())
+    return x

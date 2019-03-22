@@ -26,9 +26,10 @@ reload(alex_net_utils)
 DISPLAY_FIGURES = False
 
 
-def create_data_generator(list_pickle_files, b_size=1, shuffle=True):
+def create_data_generator(list_pickle_files, preprocessing_cb, b_size=1, shuffle=True):
     """
 
+    :param preprocessing_cb:
     :param shuffle:
     :param b_size:
     :param list_pickle_files:
@@ -74,7 +75,8 @@ def create_data_generator(list_pickle_files, b_size=1, shuffle=True):
         data_dict,
         batch_size=b_size,
         shuffle=shuffle,
-        labels_per_image=96
+        labels_per_image=96,
+        preprocessing_cb =preprocessing_cb
     )
 
     return data_generator, n_data_pts
@@ -132,18 +134,20 @@ if __name__ == '__main__':
     num_test_points = 1000
     num_epochs = 20
 
-    results_dir = './results/optimal_gabors_5_10_with_rotations_threshold'
+    results_dir = './results/test'
 
-    # base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
-    base_data_directory = './data/curved_contours/optimal_gabors_with_rotations_5_10'
+    base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
 
     # data_key_file_name = 'data_key_matching_orientation.pickle'
     data_key_file_name = 'data_key_above_threshold.pickle'
     # data_key_file_name = 'data_key_max_active.pickle'
 
     # Store Learnt contour integration kernels @ these indices post training
-    # display_kernel_idxs = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 60, 62, 64, 65, 66, 68, 69, 72, 73, 74, 76, 77, 79]
-    display_kernel_idxs = [5, 10]
+    display_kernel_idxs = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 60, 62, 64, 65, 66, 68, 69, 72, 73, 74, 76, 77, 79]
+    # display_kernel_idxs = [5, 10]
+
+    print("{}\nData Directory {}".format('*' * 80, base_data_directory))
+    print("Results @      {}.\n {}".format(results_dir, '*' * 80))
 
     # Immutable ---------------------------------------------------------
     if os.path.exists(results_dir):
@@ -192,13 +196,18 @@ if __name__ == '__main__':
         len(train_list_of_pickle_files), len(test_list_of_pickle_files)))
 
     # ------------------------------------------------------
-    train_data_generator, num_training_points = \
-        create_data_generator(train_list_of_pickle_files, b_size=batch_size)
+    train_data_generator, num_training_points = create_data_generator(
+        train_list_of_pickle_files,
+        preprocessing_cb=alex_net_utils.preprocessing_divide_255,
+        b_size=batch_size
+    )
 
     # Get all test data points in one iteration.
     # Tensorboard does not like a generator for validation data
-    test_data_generator, total_test_points = \
-        create_data_generator(test_list_of_pickle_files, b_size=num_test_points)
+    test_data_generator, total_test_points = create_data_generator(
+        test_list_of_pickle_files,
+        preprocessing_cb=alex_net_utils.preprocessing_divide_255,
+        b_size=num_test_points)
 
     gen_out = iter(test_data_generator)
     X, y = gen_out.next()
@@ -213,7 +222,7 @@ if __name__ == '__main__':
     )
     model.summary()
 
-    optimizer = keras.optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
+    optimizer = keras.optimizers.Adam(lr=0.000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
     model.compile(
         optimizer=optimizer,
         loss=keras.losses.mean_squared_error

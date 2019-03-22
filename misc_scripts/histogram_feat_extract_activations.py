@@ -14,30 +14,6 @@ reload(alex_net_utils)
 IMAGE_NET_TRAIN_DIR = "./data/imagenet-data/train"
 
 
-def imagenet_training_preprocessing(x):
-    """ This preprocessing is for the case the image is already loaded by another function
-        Per channel mean values are subtracted
-        Expected input is channel first.
-    """
-
-    # # Normalize image to range [0, 1]
-    # x = keras.preprocessing.image.img_to_array(x, data_format='channels_first') / 255.0
-
-    x[:, :, 2] -= 123.68
-    x[:, :, 1] -= 116.779
-    x[:, :, 0] -= 103.939
-    return x
-
-
-def zero_one_normalization_preprocessing(x):
-    """ This preprocessing is for the case the image is already loaded by another function
-        Input image pixels are normalized to range (0, 1)
-            Expected input is channel first.
-        """
-    x = (x - x.min()) / (x.max() - x.min())
-    return x
-
-
 def load_image(img_file):
     """
 
@@ -45,8 +21,7 @@ def load_image(img_file):
     :return:
     """
     img = keras.preprocessing.image.load_img(img_file, target_size=(227, 227, 3))
-
-    img = keras.preprocessing.image.img_to_array(img, data_format='channels_first')
+    img = keras.preprocessing.image.img_to_array(img,  dtype='float64', data_format='channels_first')
 
     return img
 
@@ -86,8 +61,8 @@ if __name__ == '__main__':
 
     train_datagen = keras.preprocessing.image.ImageDataGenerator(
         data_format='channels_first',
-        preprocessing_function=imagenet_training_preprocessing
-        # preprocessing_function = zero_one_normalization_preprocessing
+        preprocessing_function=alex_net_utils.preprocessing_imagenet
+        # preprocessing_function=alex_net_utils.preprocessing_divide_255
     )
 
     train_generator = train_datagen.flow_from_directory(
@@ -134,7 +109,8 @@ if __name__ == '__main__':
     # Manually load an image and check activations
     image_file = './data/sample_images/irregular_shape.jpg'
     test_image = load_image(image_file)
-    test_image = zero_one_normalization_preprocessing(test_image)
+    test_image = alex_net_utils.preprocessing_divide_255(test_image)
+    test_image = np.expand_dims(test_image, axis=0)
 
     activations = np.array(feat_extract_layer_cb([test_image, 0]))
     center_neuron_act = activations[0, :, :, 27, 27]

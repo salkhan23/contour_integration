@@ -613,7 +613,8 @@ def get_mean_pixel_value_at_boundary(frag, width=1):
 
 
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, data_key_dict, batch_size=32, img_size=(227, 227, 3), shuffle=True, labels_per_image=1):
+    def __init__(self, data_key_dict, batch_size=32, img_size=(227, 227, 3), shuffle=True, labels_per_image=1,
+                 preprocessing_cb=alex_net_utils.preprocessing_divide_255):
         """
         A Python generator (actually a keras sequencer object) that can be used to
         dynamically load images when the batch is run. Saves a lot on memory.
@@ -641,6 +642,8 @@ class DataGenerator(keras.utils.Sequence):
         self.list_ids = self.data_key_dict.keys()
         self.on_epoch_end()
 
+        self.image_preprocessing = preprocessing_cb
+
     def on_epoch_end(self):
         """
         Routines to run at the end of each epoch
@@ -665,11 +668,11 @@ class DataGenerator(keras.utils.Sequence):
 
         for idx, list_id in enumerate(list_ids_temp):
 
-            temp = load_img(list_id)
-            # print("{} Loading Image {}".format(idx, list_id))
+            # # print("{} Loading Image {}".format(idx, list_id))
 
-            in_img = np.transpose(temp, axes=(2, 0, 1))
-            in_img = in_img / 255.0
+            temp = load_img(list_id)
+            in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_first')
+            in_img = self.image_preprocessing(in_img)
 
             x_arr[idx, ] = in_img
             y_arr[idx, ] = self.data_key_dict[list_id]
