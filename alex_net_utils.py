@@ -792,13 +792,13 @@ def clear_unlearnt_contour_integration_kernels(model, trained_kernels):
 def preprocessing_imagenet(x):
     """
     This is the image preprocessing used when the alexnet model was trained on imagenet.
-    Expected input is channel first.
+    Expected input is channel LAST
     Channel-wise means are subtracted from pixels
 
     """
-    x[:, :, 2] -= 123.68
+    x[:, :, 0] -= 123.68
     x[:, :, 1] -= 116.779
-    x[:, :, 0] -= 103.939
+    x[:, :, 2] -= 103.939
     return x
 
 
@@ -818,4 +818,8 @@ def preprocessing_zero_one_normalization(x):
 
     """
     x = (x - x.min()) / (x.max() - x.min())
+    return x
+
+
+def preprocessing_none(x):
     return x
