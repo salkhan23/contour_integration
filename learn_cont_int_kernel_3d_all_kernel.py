@@ -7,23 +7,25 @@ import keras
 import os
 import shutil
 from time import time
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
+# Import this to run without displaying figures
+# import matplotlib
+# matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 import image_generator_curve
 from contour_integration_models.alex_net import model_3d_all_kernels
 import learn_cont_int_kernel_3d_model
 import alex_net_utils
+import visualize_multi_kernel_trained_model
+
 
 reload(image_generator_curve)
 reload(model_3d_all_kernels)
 reload(learn_cont_int_kernel_3d_model)
 reload(alex_net_utils)
-
-DISPLAY_FIGURES = False
+reload(visualize_multi_kernel_trained_model)
 
 
 def create_data_generator(list_pickle_files, preprocessing_cb, b_size=1, shuffle=True):
@@ -76,7 +78,7 @@ def create_data_generator(list_pickle_files, preprocessing_cb, b_size=1, shuffle
         batch_size=b_size,
         shuffle=shuffle,
         labels_per_image=96,
-        preprocessing_cb =preprocessing_cb
+        preprocessing_cb=preprocessing_cb
     )
 
     return data_generator, n_data_pts
@@ -134,7 +136,7 @@ if __name__ == '__main__':
     num_test_points = 1000
     num_epochs = 20
 
-    results_dir = './results/test'
+    results_dir = './results/divide_255_preprocessing_square_log_loss'
 
     base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
 
@@ -145,6 +147,8 @@ if __name__ == '__main__':
     # Store Learnt contour integration kernels @ these indices post training
     display_kernel_idxs = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 60, 62, 64, 65, 66, 68, 69, 72, 73, 74, 76, 77, 79]
     # display_kernel_idxs = [5, 10]
+
+    preprocessing_function = alex_net_utils.preprocessing_divide_255
 
     print("{}\nData Directory {}".format('*' * 80, base_data_directory))
     print("Results @      {}.\n {}".format(results_dir, '*' * 80))
@@ -198,7 +202,7 @@ if __name__ == '__main__':
     # ------------------------------------------------------
     train_data_generator, num_training_points = create_data_generator(
         train_list_of_pickle_files,
-        preprocessing_cb=alex_net_utils.preprocessing_divide_255,
+        preprocessing_cb=preprocessing_function,
         b_size=batch_size
     )
 
@@ -206,7 +210,7 @@ if __name__ == '__main__':
     # Tensorboard does not like a generator for validation data
     test_data_generator, total_test_points = create_data_generator(
         test_list_of_pickle_files,
-        preprocessing_cb=alex_net_utils.preprocessing_divide_255,
+        preprocessing_cb=preprocessing_function,
         b_size=num_test_points)
 
     gen_out = iter(test_data_generator)
@@ -218,14 +222,14 @@ if __name__ == '__main__':
         rf_size=35,
         inner_leaky_relu_alpha=0.9,
         outer_leaky_relu_alpha=1.,
-        l1_reg_loss_weight=0.0001,
+        l1_reg_loss_weight=0.00001,
     )
     model.summary()
 
     optimizer = keras.optimizers.Adam(lr=0.000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
     model.compile(
         optimizer=optimizer,
-        loss=keras.losses.mean_squared_error
+        loss=keras.losses.mean_squared_logarithmic_error
     )
 
     cont_int_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'contour_integration_layer')
@@ -326,9 +330,9 @@ if __name__ == '__main__':
             f_id.write('\t{}: {}\n'.format(idx, pickle_file))
 
     # -------------------------------------------------------------------------------------
-    # Debug
+    # Save Learnt Contour Integration kernels
     # -------------------------------------------------------------------------------------
-    # 1. Display learnt kernels
+    print("Plotting Learnt Contour Integration kernels")
     learnt_weights_visualize_dir = os.path.join(results_dir, 'filter_visualizations')
     if not os.path.exists(learnt_weights_visualize_dir):
         os.mkdir(learnt_weights_visualize_dir)
@@ -344,27 +348,33 @@ if __name__ == '__main__':
 
         learnt_kernel_fig.savefig(os.path.join(
             learnt_weights_visualize_dir, 'learnt_contour_integration_kernel_{}.eps'.format(kernel_idx)), format='eps')
-    #
-    # # For a Sample Image plot the expected gain vs actual gain
-    # image_idx = 7
-    #
-    # # 2. predict output on a single image
-    # test_image = X[image_idx, ]
-    # test_label = y[image_idx, ]
-    #
-    # input_image = np.expand_dims(test_image, axis=0)
-    # y_hat = model.predict(input_image)
-    #
-    # display_image = np.transpose(test_image, axes=(1, 2, 0))
-    # plt.figure()
-    # plt.imshow(display_image)
-    #
-    # plt.figure()
-    # plt.stem(test_label.T, 'r', label='Expected')
-    # plt.stem(y_hat.T, 'sb', label='Predicted')
-    # plt.legend()
-    #
-    # # 3. Plot Max Enhancement
-    # z = np.transpose(test_image, axes=(1, 2, 0))
-    # plot_max_contour_enhancement(z, feat_extract_act_cb, cont_int_act_cb)
-    #
+    plt.close('all')
+
+    # -----------------------------------------------------------------------------------
+    # Save Sample Results
+    # -----------------------------------------------------------------------------------
+    print("Getting Sample Image Results")
+
+    sample_results_dir = os.path.join(results_dir, 'sample_results')
+
+    gabor_params = {
+        'x0': 0,
+        'y0': 0,
+        'theta_deg': -90.0,
+        'amp': 1,
+        'sigma': 2.75,
+        'lambda1': 15.0,
+        'psi': 1.5,
+        'gamma': 0.8
+    }
+
+    if not os.path.exists(sample_results_dir):
+        os.mkdir(sample_results_dir)
+
+    visualize_multi_kernel_trained_model.main(
+        model=model,
+        g_params=gabor_params,
+        preprocessing_cb=preprocessing_function,
+        learnt_kernels=display_kernel_idxs,
+        results_dir=sample_results_dir
+    )
