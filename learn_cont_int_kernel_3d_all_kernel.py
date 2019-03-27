@@ -130,11 +130,13 @@ def plot_max_contour_enhancement(img, feat_extract_cb, cont_int_cb):
 
 
 if __name__ == '__main__':
-    keras.backend.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
-
+    # -----------------------------------------------------------------------------------
+    # Initialization
+    # -----------------------------------------------------------------------------------
     batch_size = 128
     num_test_points = 1000
     num_epochs = 20
+    random_seed = 10
 
     results_dir = './results/divide_255_preprocessing_square_log_loss'
 
@@ -154,6 +156,9 @@ if __name__ == '__main__':
     print("Results @      {}.\n {}".format(results_dir, '*' * 80))
 
     # Immutable ---------------------------------------------------------
+    keras.backend.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
+    np.random.seed(random_seed)
+
     if os.path.exists(results_dir):
         ans = raw_input("{} directory already exists. Overwrite? y/n".format(results_dir))
         if 'y' in ans.lower():
@@ -169,6 +174,8 @@ if __name__ == '__main__':
 
     plt.ion()
 
+    # -----------------------------------------------------------------------------------
+    # Data Generators
     # -----------------------------------------------------------------------------------
     print("Creating Data Generators ...")
 
@@ -217,6 +224,8 @@ if __name__ == '__main__':
     X, y = gen_out.next()
 
     # -----------------------------------------------------------------------------------
+    # Model
+    # -----------------------------------------------------------------------------------
     print("Building the model ...")
     model = model_3d_all_kernels.training_model(
         rf_size=35,
@@ -241,6 +250,8 @@ if __name__ == '__main__':
     feat_extract_act_cb = alex_net_utils.get_activation_cb(model, feat_extract_layer_idx)
     cont_int_act_cb = alex_net_utils.get_activation_cb(model, cont_int_layer_idx)
 
+    # -----------------------------------------------------------------------------------
+    # Training
     # -----------------------------------------------------------------------------------
     print("Training the model ...")
 
