@@ -51,9 +51,9 @@ def plot_max_contour_enhancement(img, input_cb, cont_int_cb):
 
     # Plots
     f = plt.figure(figsize=(20, 5))
-
+    display_image = (img - img.min())/(img.max() - img.min()) * 255.0
     f.add_subplot(1, 4, 1)
-    plt.imshow(img.astype('uint8'), cmap='Greys')
+    plt.imshow(display_image.astype('uint8'), cmap='Greys')
     plt.colorbar(orientation='horizontal')
 
     f.add_subplot(1, 4, 2)
@@ -366,7 +366,7 @@ if __name__ == '__main__':
 
     main(
         model=cont_int_model,
-        preprocessing_cb=alex_net_utils.preprocessing_imagenet,
+        preprocessing_cb=alex_net_utils.preprocessing_zero_one_normalization,
         g_params=gabor_params,
         learnt_kernels=trained_kernels
     )
