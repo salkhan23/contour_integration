@@ -6,6 +6,7 @@
 # -------------------------------------------------------------------------------------------------
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 import keras
 
@@ -52,7 +53,7 @@ def plot_max_contour_enhancement(img, input_cb, cont_int_cb):
     f = plt.figure(figsize=(20, 5))
 
     f.add_subplot(1, 4, 1)
-    plt.imshow(img, cmap='Greys')
+    plt.imshow(img.astype('uint8'), cmap='Greys')
     plt.colorbar(orientation='horizontal')
 
     f.add_subplot(1, 4, 2)
@@ -94,9 +95,10 @@ def plot_contour_enhancement_individual_kernels(img, input_cb, cont_int_cb, filt
         plt.suptitle("Kernel {}".format(f_idx))
 
 
-def main(model, g_params, preprocessing_cb, learnt_kernels):
+def main(model, g_params, preprocessing_cb, learnt_kernels, results_dir=None):
     """
 
+    :param results_dir:
     :param preprocessing_cb:
     :param learnt_kernels:
     :param g_params:
@@ -126,7 +128,7 @@ def main(model, g_params, preprocessing_cb, learnt_kernels):
     c_len = 9
     beta = 15
 
-    img_arr = image_generator_curve.generate_contour_images(
+    img = image_generator_curve.generate_contour_images(
         n_images=1,
         frag=frag,
         frag_params=g_params,
@@ -136,9 +138,19 @@ def main(model, g_params, preprocessing_cb, learnt_kernels):
         f_tile_size=np.array((18, 18)),
         rand_inter_frag_direction_change=False
     )
-    test_image = preprocessing_cb(img_arr[0, ])
+    # returns a numpy array of shape (b, r, c, ch) of dtype = uint8.
+    # Note format is channel last here
 
+    img = np.squeeze(img, axis=0)
+    img = img.astype(dtype='float64')
+    test_image = preprocessing_cb(img)
+
+    # functions below expect channel last format
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
+    if results_dir is not None:
+        fig = plt.gcf()
+        fig.savefig(os.path.join(results_dir, 'curved_contour_at_center_loc.eps'), format='eps')
+
     # plot_contour_enhancement_individual_kernels(
     #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
 
@@ -148,7 +160,7 @@ def main(model, g_params, preprocessing_cb, learnt_kernels):
     c_len = 12
     beta = 15
 
-    img_arr = image_generator_curve.generate_contour_images(
+    img = image_generator_curve.generate_contour_images(
         n_images=1,
         frag=frag,
         frag_params=g_params,
@@ -159,9 +171,19 @@ def main(model, g_params, preprocessing_cb, learnt_kernels):
         center_frag_start=np.array([180, 120]),
         rand_inter_frag_direction_change=True
     )
-    test_image = preprocessing_cb(img_arr[0, ])
+    # returns a numpy array of shape (b, r, c, ch) of dtype = uint8.
+    # Note format is channel last here
 
+    img = np.squeeze(img, axis=0)
+    img = img.astype(dtype='float64')
+    test_image = preprocessing_cb(img)
+
+    # functions below expect channel last format
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
+    if results_dir is not None:
+        fig = plt.gcf()
+        fig.savefig(os.path.join(results_dir, 'curved_contour_at_different_loc.eps'), format='eps')
+
     # plot_contour_enhancement_individual_kernels(
     #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
 
@@ -171,7 +193,7 @@ def main(model, g_params, preprocessing_cb, learnt_kernels):
     c_len = 21
     beta = 15
 
-    img_arr = image_generator_curve.generate_contour_images(
+    img = image_generator_curve.generate_contour_images(
         n_images=1,
         frag=frag,
         frag_params=g_params,
@@ -183,9 +205,19 @@ def main(model, g_params, preprocessing_cb, learnt_kernels):
         rand_inter_frag_direction_change=False,
         base_contour='circle'
     )
-    test_image = preprocessing_cb(img_arr[0, ])
+    # returns a numpy array of shape (b, r, c, ch) of dtype = uint8.
+    # Note format is channel last here
 
+    img = np.squeeze(img, axis=0)
+    img = img.astype(dtype='float64')
+    test_image = preprocessing_cb(img)
+
+    # functions below expect channel last format
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
+    if results_dir is not None:
+        fig = plt.gcf()
+        fig.savefig(os.path.join(results_dir, 'circle.eps'), format='eps')
+
     # plot_contour_enhancement_individual_kernels(
     #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
 
@@ -195,15 +227,16 @@ def main(model, g_params, preprocessing_cb, learnt_kernels):
     image_file = './data/sample_images/irregular_shape.jpg'
 
     temp = keras.preprocessing.image.load_img(image_file, target_size=(227, 227, 3))
-    in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_first')
+    in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_last')
+
+    img = img.astype(dtype='float64')
     test_image = preprocessing_cb(in_img)
 
-    print(test_image.shape)
-
-    # Below Fcns expect channel last format
-    test_image = np.transpose(test_image, axes=(1, 2, 0))
-
+    # functions below expect channel last format
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
+    if results_dir is not None:
+        fig = plt.gcf()
+        fig.savefig(os.path.join(results_dir, 'irregular_shape.eps'), format='eps')
 
     # plot_contour_enhancement_individual_kernels(
     #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
@@ -222,13 +255,22 @@ def main(model, g_params, preprocessing_cb, learnt_kernels):
     for image_file in list_of_images:
 
         temp = keras.preprocessing.image.load_img(image_file, target_size=(227, 227, 3))
-        in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_first')
+        in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_last')
+
+        img = img.astype(dtype='float64')
         test_image = preprocessing_cb(in_img)
 
-        # Below Fcns expect channel last format
-        test_image = np.transpose(test_image, axes=(1, 2, 0))
-
+        # functions below expect channel last format
         plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
+
+        if results_dir is not None:
+            fig = plt.gcf()
+
+            fig_name = image_file.replace('/', '_')
+            fig_name = fig_name.replace('.', '_')
+
+            fig.savefig(os.path.join(results_dir, '{}.eps'.format(fig_name)), format='eps')
+
         # plot_contour_enhancement_individual_kernels(
         #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
 
@@ -294,7 +336,7 @@ if __name__ == '__main__':
     # contour_int_weights = \
     #     "./results/optimal_gabors_with_rotations_5_10_orientation/contour_integration_layer_weights.hf"
     contour_int_weights = \
-        "./results/divide_255_preprocessing/contour_integration_layer_weights.hf"
+        "./results/imagenet_preprocessing/contour_integration_layer_weights.hf"
 
     cont_int_model = model_3d_all_kernels.training_model(
         rf_size=35,
@@ -324,7 +366,7 @@ if __name__ == '__main__':
 
     main(
         model=cont_int_model,
-        preprocessing_cb=alex_net_utils.preprocessing_divide_255,
+        preprocessing_cb=alex_net_utils.preprocessing_imagenet,
         g_params=gabor_params,
         learnt_kernels=trained_kernels
     )
