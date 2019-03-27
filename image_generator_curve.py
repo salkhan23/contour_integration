@@ -671,8 +671,11 @@ class DataGenerator(keras.utils.Sequence):
             # # print("{} Loading Image {}".format(idx, list_id))
 
             temp = load_img(list_id)
-            in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_first')
-            in_img = self.image_preprocessing(in_img)
+            in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_last')
+
+            in_img = self.image_preprocessing(in_img)  # channel first format
+
+            in_img = np.transpose(in_img, axes=[2, 0, 1])  # channel to channel first format
 
             x_arr[idx, ] = in_img
             y_arr[idx, ] = self.data_key_dict[list_id]
