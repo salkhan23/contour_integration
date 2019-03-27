@@ -795,6 +795,9 @@ def preprocessing_imagenet(x):
     Expected input is channel LAST
     Channel-wise means are subtracted from pixels
 
+    REf: https://github.com/heuritech/convnets-keras/blob/master/convnetskeras/convnets.py
+    function preprocess_image_batch
+
     """
     x[:, :, 0] -= 123.68
     x[:, :, 1] -= 116.779
@@ -815,7 +818,6 @@ def preprocessing_divide_255(x):
 def preprocessing_zero_one_normalization(x):
     """
     Input image pixels are normalized to range (0, 1)
-
     """
     x = (x - x.min()) / (x.max() - x.min())
     return x
