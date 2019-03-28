@@ -728,6 +728,7 @@ if __name__ == '__main__':
         match=['theta_deg']
     )
     fragment_gabor_params['theta_deg'] = np.int(fragment_gabor_params['theta_deg'])
+    fragment_gabor_params = [fragment_gabor_params]
 
     fragment = gabor_fits.get_gabor_fragment(
         fragment_gabor_params, tgt_filter.shape[0:2])
