@@ -119,6 +119,7 @@ def _add_single_side_of_contour_constant_separation(
 
         # Find the location of the next fragment
         # --------------------------------------
+        # TODO: Should this be gabor params of the chan with the highest amplitude
         loc_angle = rotated_frag_params_list[0]['theta_deg'] - alpha
 
         # Note
@@ -173,7 +174,7 @@ def _add_single_side_of_contour_constant_separation(
 
 def add_contour_path_constant_separation(
         img, frag, frag_params, c_len, beta, alpha, d, center_frag_start=None,
-        rand_inter_frag_direction_change=True, random_alpha_rot=True, base_contour='sigmoid'):
+        rand_inter_frag_direction_change=True, random_alpha_rot=True, base_contour='random'):
     """
     Add curved contours to the test image as added in the ref. a constant separation (d)
     is projected from the previous tile to find the location of the next tile.
@@ -197,7 +198,7 @@ def add_contour_path_constant_separation(
     :return:
     """
 
-    if base_contour.lower() not in ['sigmoid', 'circle']:
+    if base_contour.lower() not in ['sigmoid', 'circle', 'random']:
         raise Exception("Invalid base contour. Should be [sigmoid or circle]")
 
     frag_size = np.array(frag.shape[0:2])
@@ -242,6 +243,8 @@ def add_contour_path_constant_separation(
 
     if base_contour == 'circle':
         beta = -beta
+    elif base_contour == 'random':
+        beta = np.random.choice((-1, 1), size=1) * beta
 
     img, tiles = _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, alpha, -d, -d_delta, frag_size,
