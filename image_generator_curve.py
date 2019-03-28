@@ -68,7 +68,7 @@ def do_tiles_overlap(l1, r1, l2, r2):
 
 def _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, alpha, d, d_delta, frag_size,
-        random_frag_direction=False, random_alpha_rot=True, base_contour='sigmoid'):
+        random_beta_rot=False, random_alpha_rot=True):
     """
 
     :param img:
@@ -81,11 +81,7 @@ def _add_single_side_of_contour_constant_separation(
     :param d:
     :param d_delta:
     :param frag_size:
-    :param random_frag_direction: [False]
-    :param base_contour: this determines the shape of the base contour. If set to sigmoid (default), the
-        generated contour (2 calls to this function with d and -d) are symmetric about the origin, if set to
-        circle, they are mirror symmetric about the vertical axis. This is for the case random_frag_direction
-        is set to false.
+    :param random_beta_rot: [False]
     :param random_alpha_rot:
 
     :return:
@@ -93,58 +89,49 @@ def _add_single_side_of_contour_constant_separation(
     if type(frag_params) is not list:
         frag_params = [frag_params]
 
-    if base_contour.lower() not in ['sigmoid', 'circle']:
-        raise Exception("Invalid base contour. Should be [sigmoid or circle]")
-
     tile_offset = np.zeros((2,), dtype=np.int)
     prev_tile_start = center_frag_start
 
     tile_starts = []
 
-    acc_angle = frag_params[0]["theta_deg"]
+    acc_angle = 0
 
     for i in range(c_len // 2):
 
-        if random_frag_direction:
-            frag_direction = np.random.choice((-1, 1), size=1)
-        else:
-            frag_direction = 1
+        if random_beta_rot:
+            beta = np.random.choice((-1, 1), size=1) * beta
 
-        acc_angle += beta * frag_direction
+        acc_angle += beta
         # acc_angle = np.mod(acc_angle, 360)
         # print("fragment idx {} acc_angle {}".format(i, acc_angle))
 
         rotated_frag_params_list = copy.deepcopy(frag_params)
-        if random_alpha_rot:
-            frag_from_contour_rot = np.random.choice((-alpha, alpha), size=1)
-        else:
-            frag_from_contour_rot = alpha
 
+        if random_alpha_rot:
+            alpha = np.random.choice((-1, 1), size=1) * alpha
+
+        # Rotate the next fragment
+        # ------------------------
         for c_params in rotated_frag_params_list:
-            if base_contour == 'circle' and d > 0:
-                c_params["theta_deg"] = c_params["theta_deg"] + (-acc_angle - frag_params[0]["theta_deg"]) + \
-                    frag_from_contour_rot
-            else:  # sigmoid
-                c_params["theta_deg"] = c_params["theta_deg"] + (acc_angle - frag_params[0]["theta_deg"]) + \
-                    frag_from_contour_rot
+            c_params["theta_deg"] += (acc_angle + alpha)
 
         rotated_frag = gabor_fits.get_gabor_fragment(rotated_frag_params_list, frag.shape[0:2])
 
-        # Different from conventional (x, y) co-ordinates, the origin of the displayed
-        # array starts in the top left corner. x increases in the vertically down
-        # direction while y increases in the horizontally right direction.
+        # Find the location of the next fragment
+        # --------------------------------------
+        loc_angle = rotated_frag_params_list[0]['theta_deg'] - alpha
 
-        # In Addition, Gabor angles are specified with respect to y-axis (0 orientation) is vertical
-        # for position we need the angles to be relative to the x-axis.
-        if base_contour == 'circle' and d > 0:
-            tile_offset[0] = -d * np.cos(acc_angle / 180.0 * np.pi)
-        else:  # sigmoid
-            tile_offset[0] = d * np.cos(acc_angle / 180.0 * np.pi)
-        tile_offset[1] = d * np.sin(acc_angle / 180.0 * np.pi)
+        # Note
+        # [1] Origin of (x, y) top left corner
+        # [2] Dim 0 increases downward direction, Dim 1 increases in the right direction
+        # [3] Gabor angles are specified wrt y-axis i.e. 0 orientation is vertical. For position
+        #     we need the angles to be relative to the x-axis.
+        tile_offset[0] = d * np.cos(loc_angle / 180.0 * np.pi)
+        tile_offset[1] = d * np.sin(loc_angle / 180.0 * np.pi)
 
         curr_tile_start = prev_tile_start + tile_offset
-        # print("Current tile start {0}. (offsets {1}, previous {2}, acc_angle={3})".format(
-        #     curr_tile_start, tile_offset, prev_tile_start, acc_angle))
+        # print("Current tile start {0}. (offsets {1}, previous {2}, loc_angle={3})".format(
+        #     curr_tile_start, tile_offset, prev_tile_start, loc_angle))
 
         # check if the current tile overlaps with the previous tile
         # TODO: Check if current tile overlaps with ANY previous one.
@@ -155,26 +142,12 @@ def _add_single_side_of_contour_constant_separation(
         is_overlapping = do_tiles_overlap(l1, r1, l2, r2)
 
         while is_overlapping:
-            # print("Tile {0} overlaps with tile at location {1}".format(curr_tile_start, prev_tile_start))
-
-            if base_contour == 'circle' and d > 0:
-                if abs(d_delta) > 1:
-                    tile_offset[0] += -d_delta * np.cos(acc_angle / 180.0 * np.pi)
-                else:
-                    tile_offset[0] += -d_delta
-            else:  # sigmoid
-                if abs(d_delta) > 1:
-                    tile_offset[0] += d_delta * np.cos(acc_angle / 180.0 * np.pi)
-                else:
-                    tile_offset[0] += d_delta
-
-            if abs(d_delta) > 1:
-                tile_offset[1] += d_delta * np.sin(acc_angle / 180.0 * np.pi)
-            else:
-                tile_offset[1] += d_delta
+            print("Tile {0} overlaps with tile at location {1}".format(curr_tile_start, prev_tile_start))
+            tile_offset[0] += d_delta * np.cos(loc_angle / 180.0 * np.pi)
+            tile_offset[1] += d_delta * np.sin(loc_angle / 180.0 * np.pi)
 
             curr_tile_start = prev_tile_start + tile_offset
-            # print("Current tile relocated to {0}. (offsets {1})".format(curr_tile_start, tile_offset))
+            print("Current tile relocated to {0}. (offsets {1})".format(curr_tile_start, tile_offset))
 
             l1 = curr_tile_start
             r1 = l1 + frag_size
@@ -217,9 +190,16 @@ def add_contour_path_constant_separation(
     :param center_frag_start:
     :param rand_inter_frag_direction_change:
     :param random_alpha_rot:[True]
-    :param base_contour:
+    :param base_contour: this determines the shape of the base contour. If set to sigmoid (default), the
+        generated contour (2 calls to this function with d and -d) are symmetric about the origin, if set to
+        circle, they are mirror symmetric about the vertical axis. This is for the case random_frag_direction
+        is set to false.
     :return:
     """
+
+    if base_contour.lower() not in ['sigmoid', 'circle']:
+        raise Exception("Invalid base contour. Should be [sigmoid or circle]")
+
     frag_size = np.array(frag.shape[0:2])
 
     if center_frag_start is None:
@@ -256,17 +236,17 @@ def add_contour_path_constant_separation(
 
     img, tiles = _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, alpha, d, d_delta, frag_size,
-        random_frag_direction=rand_inter_frag_direction_change,
-        random_alpha_rot=random_alpha_rot,
-        base_contour=base_contour)
+        random_beta_rot=rand_inter_frag_direction_change,
+        random_alpha_rot=random_alpha_rot)
     c_tile_starts.extend(tiles)
+
+    if base_contour == 'circle':
+        beta = -beta
 
     img, tiles = _add_single_side_of_contour_constant_separation(
         img, center_frag_start, frag, frag_params, c_len, beta, alpha, -d, -d_delta, frag_size,
-        random_frag_direction=rand_inter_frag_direction_change,
-        random_alpha_rot=random_alpha_rot,
-        base_contour=base_contour)
-
+        random_beta_rot=rand_inter_frag_direction_change,
+        random_alpha_rot=random_alpha_rot)
     c_tile_starts.extend(tiles)
 
     # ---------------------------
@@ -344,9 +324,10 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, delta_rotati
 
     # Displace the stimulus fragment in each full tile
     max_displace = f_tile_size[0] - frag.shape[0]
+    bg_frag_starts = f_tile_starts
 
-    bg_frag_starts = f_tile_starts + \
-        np.random.randint(0, max_displace, f_tile_starts.shape)
+    if max_displace != 0:
+        bg_frag_starts += np.random.randint(0, max_displace, f_tile_starts.shape)
 
     # Remove or replace all tiles that overlap with contour path fragments
     # --------------------------------------------------------------------
@@ -733,10 +714,10 @@ if __name__ == '__main__':
     fragment = gabor_fits.get_gabor_fragment(
         fragment_gabor_params, tgt_filter.shape[0:2])
 
-    # Display the contour fragment
-    plt.figure()
-    plt.imshow(fragment)
-    plt.title("Contour Fragment")
+    # # Display the contour fragment
+    # plt.figure()
+    # plt.imshow(fragment)
+    # plt.title("Contour Fragment")
 
     # # Plot rotations of the fragment
     # gabor_fits.plot_fragment_rotations(fragment, fragment_gabor_params, delta_rot=15)
@@ -759,7 +740,7 @@ if __name__ == '__main__':
     # In the Ref, the visible portion of the fragment moves around inside large tiles.
     # Here, full tile refers to the large tile & fragment tile refers to the visible stimulus
     fragment_size = np.array(fragment.shape[0:2])
-    full_tile_size = np.array([17, 17])
+    full_tile_size = np.array([18, 18])
 
     # -----------------------------------------------------------------------------------
     #  Add the Contour Path
@@ -772,7 +753,8 @@ if __name__ == '__main__':
         beta=beta_rotation,
         alpha=alpha_rotation,
         d=full_tile_size[0],
-        rand_inter_frag_direction_change=True
+        rand_inter_frag_direction_change=False,
+        base_contour='sigmoid'
     )
 
     plt.figure()
