@@ -36,6 +36,8 @@ if __name__ == '__main__':
     np.random.seed(random_seed)
     keras.backend.set_image_dim_ordering('th')
 
+    preprocessing_fcn = alex_net_utils.preprocessing_divide_255
+
     batch_size = 1024
 
     # -----------------------------------------------------------------------------------
@@ -61,8 +63,7 @@ if __name__ == '__main__':
 
     train_datagen = keras.preprocessing.image.ImageDataGenerator(
         data_format='channels_first',
-        preprocessing_function=alex_net_utils.preprocessing_imagenet
-        # preprocessing_function=alex_net_utils.preprocessing_divide_255
+        preprocessing_function=preprocessing_fcn
     )
 
     train_generator = train_datagen.flow_from_directory(
@@ -97,6 +98,19 @@ if __name__ == '__main__':
             center_neuron_act[:, chan_idx],
             label='chan {}'.format(chan_idx), bins=100)  # bins=np.arange(0, max_act, 0.1))
         ax_arr[fig_axis_idx].legend()
+    
+    # Print & Plot Average activation
+    avg_act = np.mean(center_neuron_act, axis=0)
+
+    print("Average Activations: ")
+    for k_idx in np.arange(center_neuron_act.shape[1]):
+        print("{}: {}".format(k_idx, avg_act[k_idx]))
+
+    plt.figure()
+    plt.plot(avg_act)
+    plt.title("Average activation. Preprocessing {}".format(str(preprocessing_fcn)))
+    plt.xlabel("kernel_idx")
+    plt.ylabel("Avg Activation")
 
     # # Plot sorted activations in a single plot
     # plt.figure()
