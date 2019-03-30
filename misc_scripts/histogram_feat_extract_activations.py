@@ -117,6 +117,15 @@ if __name__ == '__main__':
     # for chan_idx in np.arange(center_neuron_act.shape[1]):
     #     plt.plot(sorted(center_neuron_act[:, chan_idx]))
 
+    # # -----------------------------------------------------------------------------------
+    # # Save average activation
+    # # -----------------------------------------------------------------------------------
+    # results_file = './data_generation/average_activation_divide_255_preprocessing.pickle'
+    # import pickle
+    #
+    # with open(results_file, 'wb') as handle:
+    #     pickle.dump(avg_act, handle)
+
     # -----------------------------------------------------------------------------------
     # Debug
     # -----------------------------------------------------------------------------------
