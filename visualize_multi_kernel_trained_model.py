@@ -284,6 +284,8 @@ if __name__ == '__main__':
     keras.backend.clear_session()
     keras.backend.set_image_dim_ordering('th')
 
+    preprocessing_fcn = alex_net_utils.preprocessing_divide_255
+
     np.random.seed(20)
 
     # -----------------------------------------------------------------------------------
@@ -336,7 +338,7 @@ if __name__ == '__main__':
     # contour_int_weights = \
     #     "./results/optimal_gabors_with_rotations_5_10_orientation/contour_integration_layer_weights.hf"
     contour_int_weights = \
-        "./results/imagenet_preprocessing/contour_integration_layer_weights.hf"
+        "./results/loss_square/preprocessing_divide255_beta_30_alpha_0_l1loss_00001_newPickle/contour_integration_layer_weights.hf"
 
     cont_int_model = model_3d_all_kernels.training_model(
         rf_size=35,
@@ -366,7 +368,7 @@ if __name__ == '__main__':
 
     main(
         model=cont_int_model,
-        preprocessing_cb=alex_net_utils.preprocessing_zero_one_normalization,
+        preprocessing_cb=preprocessing_fcn,
         g_params=gabor_params,
         learnt_kernels=trained_kernels
     )
