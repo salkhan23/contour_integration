@@ -135,16 +135,20 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     batch_size = 128
     num_test_points = 1000
-    num_epochs = 20
+    num_epochs = 100
     random_seed = 10
 
-    results_dir = './results/divide_255_preprocessing_square_log_loss'
+    learning_rate = 0.00001
+    l1_weight_loss = 0.00001
+
+    results_dir = './results/loss_square/preprocessing_divide255_beta_30_alpha_30_l1loss_00001_newPickle'
 
     base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
 
     # data_key_file_name = 'data_key_matching_orientation.pickle'
     data_key_file_name = 'data_key_above_threshold.pickle'
     # data_key_file_name = 'data_key_max_active.pickle'
+    data_key_file_name = 'data_key_sigmoid_mean_activation_preprocessing_divide255.pickle'
 
     # Store Learnt contour integration kernels @ these indices post training
     display_kernel_idxs = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 60, 62, 64, 65, 66, 68, 69, 72, 73, 74, 76, 77, 79]
@@ -231,14 +235,15 @@ if __name__ == '__main__':
         rf_size=35,
         inner_leaky_relu_alpha=0.9,
         outer_leaky_relu_alpha=1.,
-        l1_reg_loss_weight=0.00001,
+        l1_reg_loss_weight=l1_weight_loss,
     )
     model.summary()
 
-    optimizer = keras.optimizers.Adam(lr=0.000001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
+    optimizer = keras.optimizers.Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
     model.compile(
         optimizer=optimizer,
-        loss=keras.losses.mean_squared_logarithmic_error
+        # loss=keras.losses.mean_squared_logarithmic_error
+        loss=keras.losses.mean_squared_error
     )
 
     cont_int_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'contour_integration_layer')
@@ -323,7 +328,8 @@ if __name__ == '__main__':
         f_id.write("Training Details : --------------------------------------\n")
         f_id.write("Number of Epochs: {}.\n".format(num_epochs))
         f_id.write("Batch Size: {}.\n".format(batch_size))
-        f_id.write("Learning Rate: {}.\n".format(keras.backend.eval(optimizer.lr)))
+        f_id.write("Start Learning rate: {}.\n".format(learning_rate))
+        f_id.write("Final Learning Rate: {}.\n".format(keras.backend.eval(optimizer.lr)))
         f_id.write("Optimizer Type: {}\n".format(optimizer.__class__))
         f_id.write("\n")
 
