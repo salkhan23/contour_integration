@@ -439,8 +439,8 @@ if __name__ == '__main__':
 
     # A set is defined as one combination of clen/fspacing, beta, alpha.
     # There are (2*5) * 5 * 3 = 150 sets
-    n_train_images_per_set = 32*8
-    n_test_images_per_set = 8*8
+    n_train_images_per_set = 100
+    n_test_images_per_set = 20
 
     full_tile_size = np.array((18, 18))
     frag_tile_size = np.array((11, 11))
@@ -448,10 +448,11 @@ if __name__ == '__main__':
     target_kernels = []
 
     # where the data should be stored
-    data_store_dir = "./data/curved_contours/test"
+    data_store_dir = "./data/curved_contours/coloured_gabors_dataset"
 
     # Optimal Gabor Fits for all kernels
-    gabor_params_file = "./data_generation/gabor_fits_feature_extract_kernels.pickle"
+    gabor_params_file = './data_generation/gabor_best_fit_coloured.pickle'
+    # gabor_params_file = "./data_generation/gabor_fits_feature_extract_kernels.pickle"
 
     # Generate data for rotated fragments as well
     rotations_array = np.arange(0, 360, 45)
@@ -528,41 +529,35 @@ if __name__ == '__main__':
         kernel_data_gen_start_time = datetime.now()
         g_params = gabor_params_dict[kernel_idx]['gabor_params']
 
-        for rot in rotations_array:
-            rot_g_params = g_params.copy()
-            rot_g_params['theta_deg'] += rot
-            if rot_g_params['theta_deg'] > 180:
-                rot_g_params['theta_deg'] -= 360
+        print("Generated data for kernel {0} ]...".format(kernel_idx))
 
-            print("Generated data for kernel {0}, rotation {1} ]...".format(kernel_idx, rot))
+        fragment = gabor_fits.get_gabor_fragment(g_params, frag_tile_size)
 
-            fragment = gabor_fits.get_gabor_fragment(g_params, frag_tile_size)
+        sub_folder_name = 'filter_{}'.format(kernel_idx)
 
-            sub_folder_name = 'filter_{}_rot_{}'.format(kernel_idx, rot)
+        print("Generating Train Data Set")
+        generate_data_set(
+            base_dir=os.path.join(data_store_dir, 'train'),
+            subfolder_name=sub_folder_name,
+            n_img_per_set=n_train_images_per_set,
+            frag=fragment,
+            frag_params=g_params,
+            f_tile_size=full_tile_size,
+            l1_act_cb=feature_extract_act_cb,
+            k_orient_arr=kernel_orient_arr
+        )
 
-            print("Generating Train Data Set")
-            generate_data_set(
-                base_dir=os.path.join(data_store_dir, 'train'),
-                subfolder_name=sub_folder_name,
-                n_img_per_set=n_train_images_per_set // len(rotations_array),
-                frag=fragment,
-                frag_params=rot_g_params,
-                f_tile_size=full_tile_size,
-                l1_act_cb=feature_extract_act_cb,
-                k_orient_arr=kernel_orient_arr
-            )
-
-            print("Generating Test Data Set")
-            generate_data_set(
-                base_dir=os.path.join(data_store_dir, 'test'),
-                subfolder_name=sub_folder_name,
-                n_img_per_set=n_train_images_per_set // len(rotations_array),
-                frag=fragment,
-                frag_params=rot_g_params,
-                f_tile_size=full_tile_size,
-                l1_act_cb=feature_extract_act_cb,
-                k_orient_arr=kernel_orient_arr
-            )
+        print("Generating Test Data Set")
+        generate_data_set(
+            base_dir=os.path.join(data_store_dir, 'test'),
+            subfolder_name=sub_folder_name,
+            n_img_per_set=n_train_images_per_set,
+            frag=fragment,
+            frag_params=g_params,
+            f_tile_size=full_tile_size,
+            l1_act_cb=feature_extract_act_cb,
+            k_orient_arr=kernel_orient_arr
+        )
 
         print("Generating data for kernel {} took {}".format(
             kernel_idx, datetime.now() - kernel_data_gen_start_time))
