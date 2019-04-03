@@ -49,7 +49,7 @@ def generate_simultaneous_training_pickle_files(l1_act_cb, g_params_dict, data_d
     # will be generated
     # data_key_max_active_filename = 'data_key_max_active.pickle'
 
-    data_key_above_thres_filename = 'data_key_threshold_squared_gain.pickle'
+    data_key_above_thres_filename = 'data_key_sigmoid_mean_activation_preprocessing_divide255.pickle'
     thres = 2.5
 
     # data_key_match_orient_filename = 'data_key_matching_orientation.pickle'
@@ -74,6 +74,11 @@ def generate_simultaneous_training_pickle_files(l1_act_cb, g_params_dict, data_d
 
         # Gabor Params of Filter
         g_params = g_params_dict[filt_idx]['gabor_params']
+
+        avg_activations_files = './data_generation/average_activation_divide_255_preprocessing.pickle'
+        import pickle
+        with open(avg_activations_files, 'rb') as h:
+            avg_acts = pickle.load(h)
 
         # Create a test image
         # -------------------
@@ -114,6 +119,17 @@ def generate_simultaneous_training_pickle_files(l1_act_cb, g_params_dict, data_d
         # ----------------------------------------------
         center_neuron_act = first_layer_act[0, :, first_layer_act.shape[2] // 2, first_layer_act.shape[3] // 2]
 
+        # plt.figure()
+        # plt.plot(avg_acts, label='avg_act')
+        # plt.plot(center_neuron_act, label='for image')
+        # plt.legend()
+        # plt.title("{}".format(filt_dir_name))
+        #
+        #
+        # if filt_dir_name == 'filter_48':
+        #     import pdb
+        #     pdb.set_trace()
+
         # # find all kernels with similar orientations
         # similar_orient_k_idxs = np.where(
         #     (k_orient_arr >= (g_params['theta_deg'] - delta_orient)) &
@@ -126,8 +142,10 @@ def generate_simultaneous_training_pickle_files(l1_act_cb, g_params_dict, data_d
 
         # find all kernels above threshold
 
-        norm_center_neuron_act = 1 / (1 + np.exp(-3 * center_neuron_act + 3))
-        mask_thres = norm_center_neuron_act
+        norm_center_neuron_act = 1.0 / (1 + np.exp(-3 * center_neuron_act + 2*avg_acts))
+        mask_thres = center_neuron_act > avg_acts
+
+        # mask_thres = norm_center_neuron_act
 
         # max_active_k = np.argmax(center_neuron_act)
         # mask_max_active = np.zeros(96)
@@ -166,10 +184,28 @@ def generate_simultaneous_training_pickle_files(l1_act_cb, g_params_dict, data_d
                 # print("New label Max active : {}".format(new_v_max))
 
                 # Above Threshold
-                new_v_thres = (v**2) * mask_thres
+                new_v_thres = v * mask_thres
                 # new_v_thres = np.maximum(new_v_thres, mask_non_zero)
                 thres_folder_dict[k] = new_v_thres
                 # print("New Label above Threshold: {}".format(new_v_thres))
+
+                # if v >= 2:
+                #     plt.figure()
+                #     plt.plot(avg_acts, label='avg_act')
+                #     plt.plot(center_neuron_act, label='raw_center_act')
+                #     plt.plot(new_v_thres, label='gain')
+                #     plt.title("Gain={}".format(v))
+                #     plt.legend()
+                #     plt.grid()
+                #
+                #     plt.plot(mask_thres, label='mask')
+                #
+                #     import pdb
+                #     pdb.set_trace()
+                #
+                #     plt.close()
+
+
 
                 # # Orientation
                 # new_v_orient = v * mask_similar_orient
@@ -195,7 +231,7 @@ def generate_simultaneous_training_pickle_files(l1_act_cb, g_params_dict, data_d
 
         # with open(data_key_max_active_pkl_file, 'wb') as h:
         #     pickle.dump(max_active_dict_of_dict, h)
-
+        #
         with open(data_key_above_thres_pkl_file, 'wb') as h:
             pickle.dump(thres_dict_of_dict, h)
 
