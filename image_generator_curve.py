@@ -34,7 +34,7 @@ def normalize_fragment(frag):
     return (frag - frag.min()) / (frag.max() - frag.min())
 
 
-def do_tiles_overlap(l1, r1, l2, r2):
+def do_tiles_overlap(l1, r1, l2, r2, border_can_overlap=True):
     """
     Rectangles are specified by two points, the (x,y) coordinates of the top left corner (l1)
     and bottom right corner
@@ -48,6 +48,7 @@ def do_tiles_overlap(l1, r1, l2, r2):
     Different from Ref, and more aligned with the coordinates system in the rest of the file, x
     controls vertical while y controls horizontal
 
+    :param border_can_overlap:
     :param l1: top left corner of tile 1
     :param r1: bottom right corner of tile 1
     :param l2:
@@ -56,12 +57,20 @@ def do_tiles_overlap(l1, r1, l2, r2):
     :return:  True of the input tiles overlap, false otherwise
     """
     # Does one square lie to the Left of the other
-    if l1[1] >= r2[1] or l2[1] >= r1[1]:
-        return False
+    if border_can_overlap:
+        if l1[1] >= r2[1] or l2[1] >= r1[1]:
+            return False
+    else:
+        if l1[1] > r2[1] or l2[1] > r1[1]:
+            return False
 
-        # Does one square lie above the other
-    if l1[0] >= r2[0] or l2[0] >= r1[0]:
-        return False
+    # Does one square lie above the other
+    if border_can_overlap:
+        if l1[0] >= r2[0] or l2[0] >= r1[0]:
+            return False
+    else:
+        if l1[0] > r2[0] or l2[0] > r1[0]:
+            return False
 
     return True
 
@@ -258,37 +267,46 @@ def add_contour_path_constant_separation(
     return img, c_tile_starts
 
 
-def get_nonoverlapping_bg_fragment(f_tile_start, c_tile_starts, c_tile_size, max_offset):
+def get_nonoverlapping_bg_fragment(f_tile_start, f_tile_size, c_tile_starts, c_tile_size, max_offset):
     """
 
+    :param f_tile_size:
     :param f_tile_start:
     :param c_tile_starts:
     :param c_tile_size:
     :param max_offset:
     :return:
     """
+    # print("get_nonoverlapping_bg_fragment: full tile start: {}".format(f_tile_start))
+
     for r_idx in range(max_offset):
         for c_idx in range(max_offset):
 
-            l1 = f_tile_start + np.array([r_idx, c_idx])
-            r1 = l1 + c_tile_size
+            l1 = f_tile_start + np.array([r_idx, c_idx])  # top left corner of new bg tile
+            r1 = l1 + c_tile_size   # lower right corner of new bg tile
 
             is_overlapping = False
 
+            # print("Checking start location {}".format(l1))
+
+            if (r1[0] > f_tile_start[0] + f_tile_size[0]) or (r1[1] > f_tile_start[1] + f_tile_size[1]):
+                # new bg tile is outside the full tile
+                continue
+
             for c_tile in c_tile_starts:
 
-                l2 = c_tile
-                r2 = c_tile + c_tile_size
-
+                l2 = c_tile  # contour tile top left corner
+                r2 = c_tile + c_tile_size  # bottom right corner of new bg tile
                 # print("checking bg tile @ start {0} with contour tile @ start {1}".format(l1, l2))
 
-                if do_tiles_overlap(l1, r1, l2, r2):
+                if do_tiles_overlap(l1, r1, l2, r2, border_can_overlap=False):
                     # print('overlaps!')
                     is_overlapping = True
+                    break
 
             if not is_overlapping:
+                # print("Found non-overlapping")
                 return l1
-
     return None
 
 
@@ -327,7 +345,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, delta_rotati
 
     # Displace the stimulus fragment in each full tile
     max_displace = f_tile_size[0] - frag.shape[0]
-    bg_frag_starts = f_tile_starts
+    bg_frag_starts = np.copy(f_tile_starts)
 
     if max_displace != 0:
         bg_frag_starts += np.random.randint(0, max_displace, f_tile_starts.shape)
@@ -361,10 +379,11 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, delta_rotati
             if relocate_allowed:
                 # Is relocation possible?
                 novlp_bg_frag = get_nonoverlapping_bg_fragment(
-                    np.squeeze(f_tile_start, axis=0),
-                    c_frag_starts,
-                    frag.shape[0:2],
-                    max_displace
+                    f_tile_start=np.squeeze(f_tile_start, axis=0),
+                    f_tile_size=f_tile_size,
+                    c_tile_starts=c_frag_starts,
+                    c_tile_size=frag.shape[0:2],
+                    max_offset=max_displace,
                 )
 
             if novlp_bg_frag is not None:
@@ -423,7 +442,7 @@ def add_background_fragments(img, frag, c_frag_starts, f_tile_size, delta_rotati
 
 def generate_contour_images(
         n_images, frag, frag_params, c_len, beta, alpha, f_tile_size, img_size=None, bg_frag_relocate=True,
-        rand_inter_frag_direction_change=True, random_alpha_rot=True, center_frag_start=None, base_contour='sigmoid'):
+        rand_inter_frag_direction_change=True, random_alpha_rot=True, center_frag_start=None, base_contour='random'):
     """
     Generate n_images with the specified fragment parameters.
 
@@ -487,16 +506,18 @@ def generate_contour_images(
 
         images[img_idx, ] = img
 
-        # Highlight Contour tiles
-        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], c_frag_starts)
+        # # Debug
+        # # ------
+        # # Highlight Contour tiles - Red
+        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], c_frag_starts,  edge_color=(255, 0, 0))
         #
-        # # Highlight Background Fragment tiles
-        # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], bg_frag_starts, edge_color=(0, 255, 0))
+        # # # Highlight Background Fragment tiles - Green
+        # # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], bg_frag_starts, edge_color=(0, 255, 0))
         #
-        # # Highlight Removed tiles
+        # # Highlight Removed tiles - Blue
         # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], removed_tiles, edge_color=(0, 0, 255))
         #
-        # # Highlight Relocated tiles
+        # # Highlight Relocated tiles - Teal
         # img = alex_net_utils.highlight_tiles(img, frag.shape[0:2], relocated_tiles, edge_color=(0, 255, 255))
         #
         # # highlight full tiles
