@@ -439,23 +439,21 @@ if __name__ == '__main__':
 
     # A set is defined as one combination of clen/fspacing, beta, alpha.
     # There are (2*5) * 5 * 3 = 150 sets
-    n_train_images_per_set = 100
+    n_train_images_per_set = 200
     n_test_images_per_set = 20
 
     full_tile_size = np.array((18, 18))
     frag_tile_size = np.array((11, 11))
 
-    target_kernels = []
+    # target_kernels = []
+    target_kernels = [0, 2, 5, 10]
 
     # where the data should be stored
-    data_store_dir = "./data/curved_contours/coloured_gabors_dataset"
+    data_store_dir = "./data/curved_contours/test"
 
     # Optimal Gabor Fits for all kernels
     gabor_params_file = './data_generation/gabor_best_fit_coloured.pickle'
     # gabor_params_file = "./data_generation/gabor_fits_feature_extract_kernels.pickle"
-
-    # Generate data for rotated fragments as well
-    rotations_array = np.arange(0, 360, 45)
 
     # Immutable ----------------------------------
     plt.ion()
@@ -477,13 +475,6 @@ if __name__ == '__main__':
         else:
             raise SystemExit()
     os.makedirs(data_store_dir)
-
-    # Handle empty rotation array:
-    if type(rotations_array) is np.ndarray:
-        if rotations_array.size == 0:
-            rotations_array = [0]
-    elif type(rotations_array) is list:
-        rotations_array = [0]
 
     if not os.path.exists(gabor_params_file):
         raise Exception("Gabor params files not found")
