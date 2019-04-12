@@ -135,25 +135,35 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     batch_size = 128
     num_test_points = 1000
-    num_epochs = 100
+    num_epochs = 1
     random_seed = 10
 
     learning_rate = 0.00001
     l1_weight_loss = 0.00001
 
-    results_dir = './results/loss_square/preprocessing_divide255_beta_30_alpha_30_l1loss_00001_newPickle'
+    results_dir = 'random'
 
+    # Data
     base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
+    display_kernel_idxs = [
+        5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
+        60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
+        76, 77, 79
+    ]
 
-    # data_key_file_name = 'data_key_matching_orientation.pickle'
+    # base_data_directory = './data/curved_contours/coloured_gabors_dataset'
+    # display_kernel_idxs = [
+    #     0, 2, 5, 10, 13, 19, 20, 21, 22, 23,
+    #     25, 27, 30, 33, 34, 35, 39, 48, 49, 51,
+    #     52, 54, 55, 56, 59, 62, 64, 65, 66, 68,
+    #     69, 70, 72, 73, 74, 77, 78, 79, 80, 81,
+    #     83, 89
+    # ]
+
+    # Which data key to use ?
     data_key_file_name = 'data_key_above_threshold.pickle'
-    # data_key_file_name = 'data_key_max_active.pickle'
-    data_key_file_name = 'data_key_sigmoid_mean_activation_preprocessing_divide255.pickle'
 
-    # Store Learnt contour integration kernels @ these indices post training
-    display_kernel_idxs = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 60, 62, 64, 65, 66, 68, 69, 72, 73, 74, 76, 77, 79]
-    # display_kernel_idxs = [5, 10]
-
+    # Which Preprocessing function to use?
     preprocessing_function = alex_net_utils.preprocessing_divide_255
 
     print("{}\nData Directory {}".format('*' * 80, base_data_directory))
@@ -240,11 +250,10 @@ if __name__ == '__main__':
     model.summary()
 
     optimizer = keras.optimizers.Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
-    model.compile(
-        optimizer=optimizer,
-        # loss=keras.losses.mean_squared_logarithmic_error
-        loss=keras.losses.mean_squared_error
-    )
+    loss_fcn = keras.losses.mean_squared_error
+    # loss_fcn = keras.losses.mean_squared_logarithmic_error
+
+    model.compile(optimizer=optimizer, loss=loss_fcn)
 
     cont_int_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'contour_integration_layer')
     feat_extract_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'conv_1')
@@ -331,6 +340,7 @@ if __name__ == '__main__':
         f_id.write("Start Learning rate: {}.\n".format(learning_rate))
         f_id.write("Final Learning Rate: {}.\n".format(keras.backend.eval(optimizer.lr)))
         f_id.write("Optimizer Type: {}\n".format(optimizer.__class__))
+        f_id.write("Loss Function: {}\n".format(str(loss_fcn).split(' ')[1]))
         f_id.write("\n")
 
         f_id.write("Data Details : ..............................................\n")
@@ -339,6 +349,7 @@ if __name__ == '__main__':
         f_id.write("Data points: training {}, test {} out of {}\n".format(
             num_training_points, num_test_points, total_test_points
         ))
+        f_id.write("Preprocessing Function: {}\n".format(str(preprocessing_function).split(' ')[1]))
         f_id.write("Training pickle files: \n")
         for idx, pickle_file in enumerate(train_list_of_pickle_files):
             f_id.write('\t{}: {}\n'.format(idx, pickle_file))
@@ -373,25 +384,45 @@ if __name__ == '__main__':
     print("Getting Sample Image Results")
 
     sample_results_dir = os.path.join(results_dir, 'sample_results')
-
-    gabor_params = {
-        'x0': 0,
-        'y0': 0,
-        'theta_deg': -90.0,
-        'amp': 1,
-        'sigma': 2.75,
-        'lambda1': 15.0,
-        'psi': 1.5,
-        'gamma': 0.8
-    }
-
     if not os.path.exists(sample_results_dir):
         os.mkdir(sample_results_dir)
 
-    visualize_multi_kernel_trained_model.main(
+    gabor_params_list = [
+
+        # Gabor Params for Filter @ index 5
+        {
+            'x0': 0,
+            'y0': 0,
+            'theta_deg': -90.0,
+            'amp': 1,
+            'sigma': 2.75,
+            'lambda1': 15.0,
+            'psi': 1.5,
+            'gamma': 0.8
+        },
+        # Gabor Params for Filter @ index 10
+        {
+            'x0': 0,
+            'y0': 0,
+            'theta_deg': 0.0,
+            'amp': 1,
+            'sigma': 2.75,
+            'lambda1': 5.5,
+            'psi': 1.25,
+            'gamma': 0.8
+        }
+    ]
+
+    for gabor_params in gabor_params_list:
+        visualize_multi_kernel_trained_model.main_contour_images(
+            model=model,
+            preprocessing_cb=preprocessing_function,
+            g_params=gabor_params,
+            learnt_kernels=display_kernel_idxs
+        )
+
+    visualize_multi_kernel_trained_model.main_natural_images(
         model=model,
-        g_params=gabor_params,
         preprocessing_cb=preprocessing_function,
-        learnt_kernels=display_kernel_idxs,
-        results_dir=sample_results_dir
+        learnt_kernels=display_kernel_idxs
     )
