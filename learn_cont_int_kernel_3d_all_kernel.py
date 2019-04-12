@@ -141,7 +141,7 @@ if __name__ == '__main__':
     learning_rate = 0.00001
     l1_weight_loss = 0.00001
 
-    results_dir = 'random'
+    results_dir = './results/random'
 
     # Data
     base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
@@ -318,6 +318,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Write Summary File
     # -----------------------------------------------------------------------------------
+    print("Writing Summary File ")
     with open(os.path.join(results_dir, summary_file_name), 'wb') as f_id:
 
         f_id.write("Final training Loss: {} @ Epoch {}\n".format(
@@ -361,6 +362,7 @@ if __name__ == '__main__':
     # Save Learnt Contour Integration kernels
     # -------------------------------------------------------------------------------------
     print("Plotting Learnt Contour Integration kernels")
+
     learnt_weights_visualize_dir = os.path.join(results_dir, 'filter_visualizations')
     if not os.path.exists(learnt_weights_visualize_dir):
         os.mkdir(learnt_weights_visualize_dir)
@@ -418,11 +420,13 @@ if __name__ == '__main__':
             model=model,
             preprocessing_cb=preprocessing_function,
             g_params=gabor_params,
-            learnt_kernels=display_kernel_idxs
+            learnt_kernels=display_kernel_idxs,
+            results_dir=sample_results_dir
         )
 
     visualize_multi_kernel_trained_model.main_natural_images(
         model=model,
         preprocessing_cb=preprocessing_function,
-        learnt_kernels=display_kernel_idxs
+        learnt_kernels=display_kernel_idxs,
+        results_dir=sample_results_dir
     )

@@ -149,7 +149,8 @@ def main_contour_images(model, g_params, preprocessing_cb, learnt_kernels, resul
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
     if results_dir is not None:
         fig = plt.gcf()
-        fig.savefig(os.path.join(results_dir, 'curved_contour_at_center_loc.eps'), format='eps')
+        fig_file = os.path.join(results_dir, 'curved_contour_at_center_loc.eps')
+        fig.savefig(fig_file, format='eps')
 
     # plot_contour_enhancement_individual_kernels(
     #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
@@ -182,7 +183,8 @@ def main_contour_images(model, g_params, preprocessing_cb, learnt_kernels, resul
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
     if results_dir is not None:
         fig = plt.gcf()
-        fig.savefig(os.path.join(results_dir, 'curved_contour_at_different_loc.eps'), format='eps')
+        fig_file = os.path.join(results_dir, 'curved_contour_at_different_loc.eps')
+        fig.savefig(fig_file, format='eps')
 
     # plot_contour_enhancement_individual_kernels(
     #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
@@ -216,63 +218,11 @@ def main_contour_images(model, g_params, preprocessing_cb, learnt_kernels, resul
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
     if results_dir is not None:
         fig = plt.gcf()
-        fig.savefig(os.path.join(results_dir, 'circle.eps'), format='eps')
+        fig_file = os.path.join(results_dir, 'circle.eps')
+        fig.savefig(fig_file, format='eps')
 
     # plot_contour_enhancement_individual_kernels(
     #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
-
-    # ----------------------------------------------------------------------------------
-    # 4. Irregular shape shape
-    # ----------------------------------------------------------------------------------
-    image_file = './data/sample_images/irregular_shape.jpg'
-
-    temp = keras.preprocessing.image.load_img(image_file, target_size=(227, 227, 3))
-    in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_last')
-
-    img = img.astype(dtype='float64')
-    test_image = preprocessing_cb(in_img)
-
-    # functions below expect channel last format
-    plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
-    if results_dir is not None:
-        fig = plt.gcf()
-        fig.savefig(os.path.join(results_dir, 'irregular_shape.eps'), format='eps')
-
-    # plot_contour_enhancement_individual_kernels(
-    #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
-
-    # ----------------------------------------------------------------------------------
-    # 4. Natural Images
-    # ----------------------------------------------------------------------------------
-    list_of_images = [
-        './data/sample_images/cat.23.jpg',
-        './data/sample_images/cat.7.jpg',
-        './data/sample_images/dog.12447.jpg',
-        './data/sample_images/zahra.jpg',
-        # './data/sample_images/square.png',
-    ]
-
-    for image_file in list_of_images:
-
-        temp = keras.preprocessing.image.load_img(image_file, target_size=(227, 227, 3))
-        in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_last')
-
-        img = img.astype(dtype='float64')
-        test_image = preprocessing_cb(in_img)
-
-        # functions below expect channel last format
-        plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
-
-        if results_dir is not None:
-            fig = plt.gcf()
-
-            fig_name = image_file.replace('/', '_')
-            fig_name = fig_name.replace('.', '_')
-
-            fig.savefig(os.path.join(results_dir, '{}.eps'.format(fig_name)), format='eps')
-
-        # plot_contour_enhancement_individual_kernels(
-        #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
 
 
 def main_natural_images(model, preprocessing_cb, learnt_kernels, results_dir=None):
@@ -287,6 +237,7 @@ def main_natural_images(model, preprocessing_cb, learnt_kernels, results_dir=Non
     """
 
     list_of_images = [
+        './data/sample_images/irregular_shape.jpg',
         './data/sample_images/cat.23.jpg',
         './data/sample_images/cat.7.jpg',
         './data/sample_images/dog.12447.jpg',
