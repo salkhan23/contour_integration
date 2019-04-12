@@ -439,17 +439,16 @@ if __name__ == '__main__':
 
     # A set is defined as one combination of clen/fspacing, beta, alpha.
     # There are (2*5) * 5 * 3 = 150 sets
-    n_train_images_per_set = 200
+    n_train_images_per_set = 100
     n_test_images_per_set = 20
 
     full_tile_size = np.array((18, 18))
     frag_tile_size = np.array((11, 11))
 
-    # target_kernels = []
-    target_kernels = [0, 2, 5, 10]
+    target_kernels = []
 
     # where the data should be stored
-    data_store_dir = "./data/curved_contours/test"
+    data_store_dir = "./data/curved_contours/coloured_gabors_dataset"
 
     # Optimal Gabor Fits for all kernels
     gabor_params_file = './data_generation/gabor_best_fit_coloured.pickle'
