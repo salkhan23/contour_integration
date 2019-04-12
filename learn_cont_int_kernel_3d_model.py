@@ -106,10 +106,10 @@ def get_train_n_test_dictionary_of_dictionaries(tgt_filt_idx, data_dir):
     :return:
     """
     train_data_key_loc = os.path.join(
-        data_dir, "train/filter_{}".format(tgt_filt_idx), "data_key.pickle")
+        data_dir, "train/filter_{}".format(tgt_filt_idx), "data_key_max_active.pickle")
 
     test_data_key_loc = os.path.join(
-        data_dir, "test/filter_{}".format(tgt_filt_idx), "data_key.pickle")
+        data_dir, "test/filter_{}".format(tgt_filt_idx), "data_key_max_active.pickle")
 
     with open(train_data_key_loc, 'rb') as handle:
         train_data_list_of_dict = pickle.load(handle)  # Returns a list of dictionaries
@@ -180,7 +180,10 @@ def get_train_n_test_data_keys(
 
     # Get all base files (c_len and frag_spacing )
     for entry in c_len:
+        # some data sets use clen some use c_len (not both)
+        use_set.extend([x for x in full_set if 'clen_{}'.format(entry) in x])
         use_set.extend([x for x in full_set if 'c_len_{}'.format(entry) in x])
+
     for entry in f_spacing:
         use_set.extend([x for x in full_set if 'f_spacingx10_{}'.format(int(entry * 10)) in x])
 
@@ -205,7 +208,7 @@ def get_train_n_test_data_keys(
             use_set.extend([x for x in full_set if 'forient_{}'.format(entry) in x])
 
     # for entry in sorted(use_set):
-    #     print entry
+    #     print (entry)
     # print("Number of Internal dictionaries selected {}".format(len(use_set)))
 
     # Single dictionary containing (image file location, expected gain)
@@ -237,12 +240,12 @@ def train_contour_integration_kernel(
     :param axis:
     :return: (min_train_loss, min_test_loss, size_of_train_data_dict, size_of_test_data_dict)
     """
-    print("Learning contour integration kernel @ index {} ...".format(tgt_filt_idx))
+    print("Learning contour integration kernel @ index {} {}".format(tgt_filt_idx, '='*80))
 
     # Modify the contour integration training model to train the target kernel
     contour_integration_model_3d.update_contour_integration_kernel(model, tgt_filt_idx)
     model.compile(
-        optimizer=optimizers.Adam(lr=0.00001, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
+        optimizer=optimizers.Adam(lr=0.00005, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False),
         loss=losses.mean_squared_error
     )
 
@@ -253,6 +256,7 @@ def train_contour_integration_kernel(
 
     train_data_dict, test_data_dict = get_train_n_test_data_keys(
         tgt_filt_idx, data_dir, c_len=c_len, beta=beta, alpha=alpha, f_spacing=f_spacing)
+    print("Length: train_data_dict {} test Data Dict {}".format(len(train_data_dict), len(test_data_dict)))
 
     if b_size > len(train_data_dict):
         print("WARN: Specified batch size is > than number of actual data")
@@ -269,7 +273,7 @@ def train_contour_integration_kernel(
     # Just load all the test images
     test_image_generator = image_generator_curve.DataGenerator(
         test_data_dict,
-        batch_size=len(test_data_dict.keys()),
+        batch_size=1000,
         shuffle=True,
     )
     gen_out = iter(test_image_generator)
@@ -373,38 +377,49 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
-    plt.ion()
-    keras_backend.set_image_dim_ordering('th')
-    keras_backend.clear_session()
-    start_time = datetime.now()
-
     np.random.seed(7)
 
     batch_size = 32
     num_epochs = 100
 
     save_weights = True
+
     # prev_train_weights = \
     #     '/home/salman/workspace/keras/my_projects/contour_integration/results/' \
     #     'beta_rotations_upto30/trained_weights.hf'
 
-    target_kernel_idx_arr = [10]
+    data_directory = "./data/curved_contours/coloured_gabors_dataset"
+    # data_directory = "./data/curved_contours/frag_11x11_full_18x18_param_search"
+
+    results_identifier = 'colored_gabors_individually_trained'
+
     # target_kernel_idx_arr = [
     #     5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
     #     60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
     #     76, 77, 79, 80, 82, 85
     # ]
-
-    data_directory = "./data/curved_contours/frag_11x11_full_18x18_param_search"
-    results_identifier = 'kernel_10_full'
+    #
+    target_kernel_idx_arr = [
+        0,  2,  5, 10, 13, 19, 20, 21, 22, 23,
+        25, 27, 30, 33, 34, 35, 39, 48, 49, 51,
+        52, 54, 55, 56, 59, 62, 64, 65, 66, 68,
+        69, 70, 72, 73, 74, 77, 78, 79, 80, 81,
+        83, 89
+    ]
 
     # What data to train with (None means everything)
     contour_lengths = None
     fragment_spacing = None
-    beta_rotations = None
+    beta_rotations = [0, 15, 30]
     alpha_rotations = [0, 15, 30]
 
     # Immutable  ------------------------------------------------------------------------
+    plt.ion()
+    keras_backend.set_image_dim_ordering('th')
+    keras_backend.clear_session()
+    start_time = datetime.now()
+
+    # Results Folder(s)
     base_results_dir = './results'
     if not os.path.exists(base_results_dir):
         os.makedirs(base_results_dir)
@@ -412,6 +427,14 @@ if __name__ == '__main__':
     results_dir = os.path.join(base_results_dir, results_identifier)
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
+
+    filter_visualization_dir = os.path.join(results_dir, 'filter_visualizations')
+    if not os.path.exists(filter_visualization_dir):
+        os.makedirs(filter_visualization_dir)
+
+    sample_results_dir = os.path.join(results_dir, 'sample_results')
+    if not os.path.exists(sample_results_dir):
+        os.makedirs(sample_results_dir)
 
     weights_store_file = os.path.join(results_dir, 'trained_weights.hf')
 
@@ -444,7 +467,7 @@ if __name__ == '__main__':
         rf_size=35,
         inner_leaky_relu_alpha=0.9,
         outer_leaky_relu_alpha=1.,
-        l1_reg_loss_weight=0.0005,
+        l1_reg_loss_weight=0.0001,
     )
 
     prev_trained_kernel_idx_arr = []
@@ -541,35 +564,36 @@ if __name__ == '__main__':
 
         learnt_kernel_fig = plt.gcf()
         learnt_kernel_fig.savefig(os.path.join(
-            results_dir, 'learnt_contour_integration_kernel_{}.eps'.format(target_kernel_idx)), format='eps')
+            filter_visualization_dir, 'learnt_contour_integration_kernel_{}.eps'.format(
+                target_kernel_idx)), format='eps')
 
-        # -------------------------------------------------------------------------------
-        # Check neurophysiological Performance
-        # -------------------------------------------------------------------------------
-        train_data_dict_of_dicts, test_data_dict_of_dicts = \
-            get_train_n_test_dictionary_of_dictionaries(
-                tgt_filt_idx=target_kernel_idx,
-                data_dir=data_directory
-            )
-
-        field_1993_routines.check_all_performance(
-            cont_int_model,
-            tgt_filt_idx=target_kernel_idx,
-            data_dict_of_dicts=train_data_dict_of_dicts,
-            results_dir=results_dir
-        )
+        # # -------------------------------------------------------------------------------
+        # # Check neurophysiological Performance
+        # # -------------------------------------------------------------------------------
+        # train_data_dict_of_dicts, test_data_dict_of_dicts = \
+        #     get_train_n_test_dictionary_of_dictionaries(
+        #         tgt_filt_idx=target_kernel_idx,
+        #         data_dir=data_directory
+        #     )
+        #
+        # field_1993_routines.check_all_performance(
+        #     cont_int_model,
+        #     tgt_filt_idx=target_kernel_idx,
+        #     data_dict_of_dicts=train_data_dict_of_dicts,
+        #     results_dir=results_dir
+        # )
 
         # -------------------------------------------------------------------------------
         # Debug - Plot the performance on a test image
         # -------------------------------------------------------------------------------
-        print("Checking performance on sample images ...")
+        print("Checking performance on contour images ...")
 
         test_sample_output(
             data_dir=data_directory,
             tgt_filt_idx=target_kernel_idx,
             feat_extract_cb=feat_extract_callback,
             cont_int_cb=cont_int_callback,
-            rslt_dir=results_dir,
+            rslt_dir=sample_results_dir,
             c_len=9,
             beta=15,
             alpha=0,
@@ -581,7 +605,7 @@ if __name__ == '__main__':
             tgt_filt_idx=target_kernel_idx,
             feat_extract_cb=feat_extract_callback,
             cont_int_cb=cont_int_callback,
-            rslt_dir=results_dir,
+            rslt_dir=sample_results_dir,
             c_len=9,
             beta=30,
             alpha=0,
