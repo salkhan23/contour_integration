@@ -95,7 +95,7 @@ def plot_contour_enhancement_individual_kernels(img, input_cb, cont_int_cb, filt
         plt.suptitle("Kernel {}".format(f_idx))
 
 
-def main(model, g_params, preprocessing_cb, learnt_kernels, results_dir=None):
+def main_contour_images(model, g_params, preprocessing_cb, learnt_kernels, results_dir=None):
     """
 
     :param results_dir:
@@ -275,45 +275,69 @@ def main(model, g_params, preprocessing_cb, learnt_kernels, results_dir=None):
         #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
 
 
+def main_natural_images(model, preprocessing_cb, learnt_kernels, results_dir=None):
+    """
+    Plot Performance of specified model on sample natural images
+
+    :param model:
+    :param preprocessing_cb:
+    :param learnt_kernels:
+    :param results_dir:
+    :return:
+    """
+
+    list_of_images = [
+        './data/sample_images/cat.23.jpg',
+        './data/sample_images/cat.7.jpg',
+        './data/sample_images/dog.12447.jpg',
+        './data/sample_images/zahra.jpg',
+        # './data/sample_images/square.png',
+    ]
+
+    cont_int_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'contour_integration_layer')
+    cont_int_input_layer_idx = cont_int_layer_idx - 1
+
+    model.summary()
+
+    # Callbacks
+    cont_int_input_act_cb = alex_net_utils.get_activation_cb(model, cont_int_input_layer_idx)
+    cont_int_act_cb = alex_net_utils.get_activation_cb(model, cont_int_layer_idx)
+
+    for image_file in list_of_images:
+
+        temp = keras.preprocessing.image.load_img(image_file, target_size=(227, 227, 3))
+        in_img = keras.preprocessing.image.img_to_array(temp, dtype='float64', data_format='channels_last')
+
+        in_img = in_img.astype(dtype='float64')
+        test_image = preprocessing_cb(in_img)
+
+        # functions below expect channel last format
+        plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
+
+        if results_dir is not None:
+            fig = plt.gcf()
+
+            fig_name = image_file.replace('/', '_')
+            fig_name = fig_name.replace('.', '_')
+
+            fig.savefig(os.path.join(results_dir, '{}.eps'.format(fig_name)), format='eps')
+
+        # plot_contour_enhancement_individual_kernels(
+        #     test_image, cont_int_input_act_cb, cont_int_act_cb, learnt_kernels)
+
+
 if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
+    preprocessing_fcn = alex_net_utils.preprocessing_divide_255
+
     # immutable
     plt.ion()
     keras.backend.clear_session()
     keras.backend.set_image_dim_ordering('th')
 
-    preprocessing_fcn = alex_net_utils.preprocessing_divide_255
-
     np.random.seed(20)
-
-    # -----------------------------------------------------------------------------------
-    # Base Gabor
-    # -----------------------------------------------------------------------------------
-    # Gabor Params for Filter @ index 5
-    gabor_params = {
-        'x0': 0,
-        'y0': 0,
-        'theta_deg': -90.0,
-        'amp': 1,
-        'sigma': 2.75,
-        'lambda1': 15.0,
-        'psi': 1.5,
-        'gamma': 0.8
-    }
-
-    # # Gabor Params for Filter @ index 10
-    # gabor_params = {
-    #     'x0': 0,
-    #     'y0': 0,
-    #     'theta_deg': 0.0,
-    #     'amp': 1,
-    #     'sigma': 2.75,
-    #     'lambda1': 5.5,
-    #     'psi': 1.25,
-    #     'gamma': 0.8
-    # }
 
     # -----------------------------------------------------------------------------------
     # Model
@@ -332,13 +356,18 @@ if __name__ == '__main__':
     #     l1_reg_loss_weight=0.0005,
     # )
     # cont_int_model.load_weights(contour_int_weights, by_name=True)
+    #
+    # trained_kernels = [
+    #     5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
+    #     60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
+    #     76, 77, 79
+    # ]
 
     # SIMULTANEOUSLY Trained model
     # ----------------------------
-    # contour_int_weights = \
-    #     "./results/optimal_gabors_with_rotations_5_10_orientation/contour_integration_layer_weights.hf"
     contour_int_weights = \
-        "./results/loss_square/preprocessing_divide255_beta_30_alpha_0_l1loss_00001_newPickle/contour_integration_layer_weights.hf"
+        "./results/loss_square/preprocessing_divide255_beta_30_alpha_0_l1loss_00001_newPickle/" \
+        "contour_integration_layer_weights.hf"
 
     cont_int_model = model_3d_all_kernels.training_model(
         rf_size=35,
@@ -348,16 +377,18 @@ if __name__ == '__main__':
     )
     cont_int_model.load_weights(contour_int_weights, by_name=True)
 
-    trained_kernels = [5, 10, 19, 20, 21, 22, 48, 49, 51, 59, 60, 62, 64, 65, 66, 68, 69, 72, 73, 74, 76, 77, 79]
-    # trained_kernels = [5, 10]
-
-    # alex_net_utils.clear_unlearnt_contour_integration_kernels(cont_int_model, trained_kernels)
+    trained_kernels = [
+        0,  2,  5, 10, 13, 19, 20, 21, 22, 23,
+        25, 27, 30, 33, 34, 35, 39, 48, 49, 51,
+        52, 54, 55, 56, 59, 62, 64, 65, 66, 68,
+        69, 70, 72, 73, 74, 77, 78, 79, 80, 81,
+        83, 89
+    ]
 
     # -----------------------------------------------------------------------------------
-    # main routine
+    # main routines
     # -----------------------------------------------------------------------------------
-
-    # #  Plot All learnt kernels
+    # #  Plot Learnt kernels
     # # -------------------------
     # for kernels_idx in trained_kernels:
     #     alex_net_utils.plot_start_n_learnt_contour_integration_kernels(
@@ -366,10 +397,44 @@ if __name__ == '__main__':
     #     )
     #     raw_input('Next?')
 
-    main(
+    # Sample Contour Integration Images
+    # -------------------------------------
+    # Gabor Params for Filter @ index 5
+    # gabor_params = {
+    #     'x0': 0,
+    #     'y0': 0,
+    #     'theta_deg': -90.0,
+    #     'amp': 1,
+    #     'sigma': 2.75,
+    #     'lambda1': 15.0,
+    #     'psi': 1.5,
+    #     'gamma': 0.8
+    # }
+
+    # Gabor Params for Filter @ index 10
+    gabor_params = {
+        'x0': 0,
+        'y0': 0,
+        'theta_deg': 0.0,
+        'amp': 1,
+        'sigma': 2.75,
+        'lambda1': 5.5,
+        'psi': 1.25,
+        'gamma': 0.8
+    }
+
+    main_contour_images(
         model=cont_int_model,
         preprocessing_cb=preprocessing_fcn,
         g_params=gabor_params,
+        learnt_kernels=trained_kernels
+    )
+
+    # Sample Nautral Images Images
+    # -------------------------------------
+    main_natural_images(
+        model=cont_int_model,
+        preprocessing_cb=preprocessing_fcn,
         learnt_kernels=trained_kernels
     )
 
