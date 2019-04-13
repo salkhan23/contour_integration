@@ -171,7 +171,7 @@ def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
     # Initialization
     # -----------------------------------------------------------------------------------
     batch_size = 128
-    num_epochs = 50
+    num_epochs = 20
 
     # Data Directory
     # ===============
@@ -199,7 +199,7 @@ def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
 
     # Results Directory
     # ==================
-    base_results = './results/lr_search'
+    base_results = './results/test'
     results_identifier = 'lossFcn_{}_l1LossWeight_{}_lr_{}_beta_30_alpha_30'.format(
         str(loss_fcn).split(' ')[1],
         str(l1_loss),
@@ -430,10 +430,8 @@ def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
     if not os.path.exists(sample_results_dir):
         os.mkdir(sample_results_dir)
 
-    gabor_params_list = [
-
-        # Gabor Params for Filter @ index 5
-        {
+    gabor_params_dict = {
+        5: {
             'x0': 0,
             'y0': 0,
             'theta_deg': -90.0,
@@ -443,8 +441,8 @@ def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
             'psi': 1.5,
             'gamma': 0.8
         },
-        # Gabor Params for Filter @ index 10
-        {
+
+        10: {
             'x0': 0,
             'y0': 0,
             'theta_deg': 0.0,
@@ -454,15 +452,16 @@ def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
             'psi': 1.25,
             'gamma': 0.8
         }
-    ]
+    }
 
-    for gabor_params in gabor_params_list:
+    for key, value in gabor_params_dict.iteritems():
         visualize_multi_kernel_trained_model.main_contour_images(
             model=model,
             preprocessing_cb=preprocessing_fcn,
-            g_params=gabor_params,
+            g_params=value,
             learnt_kernels=display_kernel_idxs,
-            results_dir=sample_results_dir
+            results_dir=sample_results_dir,
+            tag=key
         )
 
     visualize_multi_kernel_trained_model.main_natural_images(
@@ -490,32 +489,39 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     print("Iteration 1 {}".format('=' * 80))
     main(
-        l1_loss=0.00001,
-        loss_fcn=keras.losses.mean_squared_error,
-        lr=0.0001,
-        preprocessing_fcn=alex_net_utils.preprocessing_divide_255
-    )
-
-    print("Iteration 2 {}".format('=' * 80))
-    main(
-        l1_loss=0.00001,
+        l1_loss=0.000001,
         loss_fcn=keras.losses.mean_squared_error,
         lr=0.00001,
         preprocessing_fcn=alex_net_utils.preprocessing_divide_255
     )
 
-    print("Iteration 3 {}".format('=' * 80))
     main(
-        l1_loss=0.00001,
+        l1_loss=0.0000001,
         loss_fcn=keras.losses.mean_squared_error,
-        lr=0.000001,
+        lr=0.00001,
         preprocessing_fcn=alex_net_utils.preprocessing_divide_255
     )
 
-    print("Iteration 4 {}".format('=' * 80))
-    main(
-        l1_loss=0.00001,
-        loss_fcn=keras.losses.mean_squared_error,
-        lr=0.0000001,
-        preprocessing_fcn=alex_net_utils.preprocessing_divide_255
-    )
+    # print("Iteration 2 {}".format('=' * 80))
+    # main(
+    #     l1_loss=0.00001,
+    #     loss_fcn=keras.losses.mean_squared_error,
+    #     lr=0.00001,
+    #     preprocessing_fcn=alex_net_utils.preprocessing_divide_255
+    # )
+    #
+    # print("Iteration 3 {}".format('=' * 80))
+    # main(
+    #     l1_loss=0.00001,
+    #     loss_fcn=keras.losses.mean_squared_error,
+    #     lr=0.000001,
+    #     preprocessing_fcn=alex_net_utils.preprocessing_divide_255
+    # )
+    #
+    # print("Iteration 4 {}".format('=' * 80))
+    # main(
+    #     l1_loss=0.00001,
+    #     loss_fcn=keras.losses.mean_squared_error,
+    #     lr=0.0000001,
+    #     preprocessing_fcn=alex_net_utils.preprocessing_divide_255
+    # )

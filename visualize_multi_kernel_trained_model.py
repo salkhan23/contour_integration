@@ -95,9 +95,9 @@ def plot_contour_enhancement_individual_kernels(img, input_cb, cont_int_cb, filt
         plt.suptitle("Kernel {}".format(f_idx))
 
 
-def main_contour_images(model, g_params, preprocessing_cb, learnt_kernels, results_dir=None):
+def main_contour_images(model, g_params, preprocessing_cb, learnt_kernels, results_dir=None, tag=None):
     """
-
+    :param tag: an identifier to add to each figure.
     :param results_dir:
     :param preprocessing_cb:
     :param learnt_kernels:
@@ -149,7 +149,11 @@ def main_contour_images(model, g_params, preprocessing_cb, learnt_kernels, resul
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
     if results_dir is not None:
         fig = plt.gcf()
-        fig_file = os.path.join(results_dir, 'curved_contour_at_center_loc.eps')
+        fig_file_name = 'curved_contour_at_center_loc_non_random_beta'
+        if tag is not None:
+            fig_file_name = fig_file_name + '_{}'.format(tag)
+
+        fig_file = os.path.join(results_dir, fig_file_name + '.eps')
         fig.savefig(fig_file, format='eps')
 
     # plot_contour_enhancement_individual_kernels(
@@ -183,7 +187,11 @@ def main_contour_images(model, g_params, preprocessing_cb, learnt_kernels, resul
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
     if results_dir is not None:
         fig = plt.gcf()
-        fig_file = os.path.join(results_dir, 'curved_contour_at_different_loc.eps')
+        fig_file_name = 'curved_contour_at_different_loc'
+        if tag is not None:
+            fig_file_name = fig_file_name + '_{}'.format(tag)
+
+        fig_file = os.path.join(results_dir, fig_file_name + '.eps')
         fig.savefig(fig_file, format='eps')
 
     # plot_contour_enhancement_individual_kernels(
@@ -218,7 +226,11 @@ def main_contour_images(model, g_params, preprocessing_cb, learnt_kernels, resul
     plot_max_contour_enhancement(test_image, cont_int_input_act_cb, cont_int_act_cb)
     if results_dir is not None:
         fig = plt.gcf()
-        fig_file = os.path.join(results_dir, 'circle.eps')
+        fig_file_name = 'circle'
+        if tag is not None:
+            fig_file_name = fig_file_name + '_{}'.format(tag)
+
+        fig_file = os.path.join(results_dir, fig_file_name + '.eps')
         fig.savefig(fig_file, format='eps')
 
     # plot_contour_enhancement_individual_kernels(
