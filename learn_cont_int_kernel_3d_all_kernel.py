@@ -28,6 +28,24 @@ reload(alex_net_utils)
 reload(visualize_multi_kernel_trained_model)
 
 
+def get_alpha_or_beta_value_from_key(key_name, look_for):
+    """
+    key_name = beta
+    :param look_for:
+    :param key_name:
+    :return:
+    """
+    allowed_look_for = ['alpha', 'beta']
+
+    if look_for not in allowed_look_for:
+        raise Exception("Invalid lookfor value {}. Must be one of {}".format(look_for, allowed_look_for))
+
+    look_for_value_string = key_name.split(look_for)[1]
+    look_for_value = look_for_value_string.split('_')[1]
+
+    return look_for_value
+
+
 def create_data_generator(list_pickle_files, preprocessing_cb, b_size=1, shuffle=True):
     """
 
@@ -38,6 +56,12 @@ def create_data_generator(list_pickle_files, preprocessing_cb, b_size=1, shuffle
     :return:
     """
     data_dict = {}
+
+    allowed_alpha = ['alpha_0', 'alpha_15', 'alpha_30']
+    allowed_beta = ['beta_0', 'beta_15', 'beta_30']
+
+    included_alpha_set = set()
+    included_beta_set = set()
 
     for pkl_file in list_pickle_files:
 
@@ -50,24 +74,37 @@ def create_data_generator(list_pickle_files, preprocessing_cb, b_size=1, shuffle
 
         for k, v in curr_dict_of_dicts.iteritems():
 
-            if 'alpha_0' in k:
-                if 'beta_0' in k or 'beta_15' in k or 'beta_30:' in k:
+            # # Debug
+            # print("Checking: {}".format(k))
+            # print("Meets Beta Requirement {}".format(any(x in k for x in allowed_beta)))
+            # print("Meets Alpha Requirement {}".format(any(x in k for x in allowed_alpha)))
+            # print("Should add {}".format(
+            #     any(x in k for x in allowed_beta) and
+            #     any(x in k for x in allowed_alpha))
+            # )
 
-                    # print("Adding {}".format(k))
-                    list_of_used_data_keys.append(k)
+            if any(x in k for x in allowed_beta) and any(x in k for x in allowed_alpha):
+                # print("Adding {}".format(k))
 
-                    data_dict.update(curr_dict_of_dicts[k])
-                    # print("beta_0 in dict {}".format('beta_0' in k))
-                    # print("beta_15 in dict {}".format('beta_15' in k))
-                    # print("beta_30 in dict {}".format('beta_30' in k))
+                list_of_used_data_keys.append(k)
 
-        # # print the list of data_keys that will be used
-        # print("List of data sets that will be used:")
-        # for i_item, item in sorted(list_of_used_data_keys):
-        #     print("[{}]: {}".format(i_item, item))
+                included_alpha_set.add(get_alpha_or_beta_value_from_key(k, look_for='alpha'))
+                included_beta_set.add(get_alpha_or_beta_value_from_key(k, look_for='beta'))
 
+                data_dict.update(curr_dict_of_dicts[k])
+
+            # # Debug: print the list of data_keys that will be used
+            # print("List of data sets that will be used for file {}".format(pkl_file))
+            # for i_item, item in enumerate(sorted(list_of_used_data_keys)):
+            #     print("[{}]: {}".format(i_item, item))
+
+    # Note this is the number of data points from all pickle files
     n_data_pts = len(data_dict)
-    print("Number of data points {}".format(n_data_pts))
+    if n_data_pts == 0:
+        raise Exception("Number of data points = 0")
+
+    print("Total number of data points (all pickle files) {}".format(n_data_pts))
+    print("Number of data points from single pickle file {}".format(n_data_pts / len(list_pickle_files)))
 
     if n_data_pts < b_size:
         b_size = n_data_pts
@@ -81,7 +118,7 @@ def create_data_generator(list_pickle_files, preprocessing_cb, b_size=1, shuffle
         preprocessing_cb=preprocessing_cb
     )
 
-    return data_generator, n_data_pts
+    return data_generator, n_data_pts, included_alpha_set, included_beta_set
 
 
 def get_list_pf_pickle_files(data_dir, pickle_filename):
@@ -129,49 +166,46 @@ def plot_max_contour_enhancement(img, feat_extract_cb, cont_int_cb):
     plt.title("Maximum contour enhancement @ each (x,y) ")
 
 
-if __name__ == '__main__':
+def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
     batch_size = 128
-    num_test_points = 1000
-    num_epochs = 1
-    random_seed = 10
+    num_epochs = 50
 
-    learning_rate = 0.00001
-    l1_weight_loss = 0.00001
-
-    results_dir = './results/random'
-
-    # Data
-    base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
-    display_kernel_idxs = [
-        5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
-        60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
-        76, 77, 79
-    ]
-
-    # base_data_directory = './data/curved_contours/coloured_gabors_dataset'
+    # Data Directory
+    # ===============
+    # base_data_directory = './data/curved_contours/frag_11x11_full_18x18_param_search'
     # display_kernel_idxs = [
-    #     0, 2, 5, 10, 13, 19, 20, 21, 22, 23,
-    #     25, 27, 30, 33, 34, 35, 39, 48, 49, 51,
-    #     52, 54, 55, 56, 59, 62, 64, 65, 66, 68,
-    #     69, 70, 72, 73, 74, 77, 78, 79, 80, 81,
-    #     83, 89
+    #     5, 10, 19, 20, 21, 22, 48, 49, 51, 59,
+    #     60, 62, 64, 65, 66, 68, 69, 72, 73, 74,
+    #     76, 77, 79
     # ]
+    # data_key_file_name = 'data_key_thres_above_half_max_act_preprocessing_divide255.pickle'
 
-    # Which data key to use ?
-    data_key_file_name = 'data_key_above_threshold.pickle'
+    base_data_directory = './data/curved_contours/coloured_gabors_dataset'
+    display_kernel_idxs = [
+        0,   2,  5, 10, 13, 19, 20, 21, 22, 23,
+        25, 27, 30, 33, 34, 35, 39, 48, 49, 51,
+        52, 54, 55, 56, 59, 62, 64, 65, 66, 68,
+        69, 70, 72, 73, 74, 77, 78, 79, 80, 81,
+        83, 89
+    ]
+    data_key_file_name = 'data_key_sigmoid_center_0.5MaxAct_gain_2_preprocessing_divide255.pickle'
+    # data_key_file_name = 'data_key_above_mean_act_preprocessing_divide255.pickle'
 
-    # Which Preprocessing function to use?
-    preprocessing_function = alex_net_utils.preprocessing_divide_255
+    if len(display_kernel_idxs) >= 2:
+        plt.ioff()
 
-    print("{}\nData Directory {}".format('*' * 80, base_data_directory))
-    print("Results @      {}.\n {}".format(results_dir, '*' * 80))
-
-    # Immutable ---------------------------------------------------------
-    keras.backend.set_image_dim_ordering('th')  # Model was originally defined with Theano backend.
-    np.random.seed(random_seed)
+    # Results Directory
+    # ==================
+    base_results = './results/lr_search'
+    results_identifier = 'lossFcn_{}_l1LossWeight_{}_lr_{}_beta_30_alpha_30'.format(
+        str(loss_fcn).split(' ')[1],
+        str(l1_loss),
+        str(lr)
+    )
+    results_dir = os.path.join(base_results, results_identifier)
 
     if os.path.exists(results_dir):
         ans = raw_input("{} directory already exists. Overwrite? y/n".format(results_dir))
@@ -181,37 +215,46 @@ if __name__ == '__main__':
             raise SystemExit
     os.makedirs(results_dir)
 
-    weights_store_name = 'contour_integration_layer_weights.hf'
-    weights_store_file = os.path.join(results_dir, weights_store_name)
+    print("{}\nData Directory {}".format('*' * 80, base_data_directory))
+    print("Results @      {}.\n {}".format(results_dir, '*' * 80))
 
+    # Immutable
+    weights_store_name = 'contour_integration_layer_weights.hf'
     summary_file_name = 'summary.txt'
 
-    plt.ion()
-
+    if len(display_kernel_idxs) > 2:
+        plt.ioff()
     # -----------------------------------------------------------------------------------
     # Data Generators
     # -----------------------------------------------------------------------------------
     print("Creating Data Generators ...")
 
-    # # Manually by explicitly stating
+    # Get pickle data key files
+    # =========================
+    # # Manually
     # train_list_of_pickle_file_paths = [
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_5',
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_10',
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_19',
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_20',
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_21',
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/train/filter_22',
+    #     os.path.join(base_data_directory, 'train/filter_0'),
+    #     os.path.join(base_data_directory, 'train/filter_5'),
+    #     os.path.join(base_data_directory, 'train/filter_10'),
+    #     os.path.join(base_data_directory, 'train/filter_20'),
+    #     os.path.join(base_data_directory, 'train/filter_21'),
+    #     os.path.join(base_data_directory, 'train/filter_22'),
     # ]
+    # train_list_of_pickle_files = \
+    #     [os.path.join(path, data_key_file_name) for path in train_list_of_pickle_file_paths]
     #
     # test_list_of_pickle_file_paths = [
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_5',
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_10',
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_19',
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_20',
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_21',
-    #     './data/curved_contours/frag_11x11_full_18x18_param_search/test/filter_22',
+    #     os.path.join(base_data_directory, 'test/filter_0'),
+    #     os.path.join(base_data_directory, 'test/filter_5'),
+    #     os.path.join(base_data_directory, 'test/filter_10'),
+    #     os.path.join(base_data_directory, 'test/filter_20'),
+    #     os.path.join(base_data_directory, 'test/filter_21'),
+    #     os.path.join(base_data_directory, 'test/filter_22'),
     # ]
+    # test_list_of_pickle_files = \
+    #     [os.path.join(path, data_key_file_name) for path in test_list_of_pickle_file_paths]
 
+    # Automatically get all pickle files.
     train_list_of_pickle_files = \
         get_list_pf_pickle_files(os.path.join(base_data_directory, 'train'), data_key_file_name)
     test_list_of_pickle_files = \
@@ -220,22 +263,22 @@ if __name__ == '__main__':
     print("{} Training and {} pickle files".format(
         len(train_list_of_pickle_files), len(test_list_of_pickle_files)))
 
-    # ------------------------------------------------------
-    train_data_generator, num_training_points = create_data_generator(
+    train_data_generator, num_training_points, included_alpha, included_beta = create_data_generator(
         train_list_of_pickle_files,
-        preprocessing_cb=preprocessing_function,
+        preprocessing_cb=preprocessing_fcn,
         b_size=batch_size
     )
 
     # Get all test data points in one iteration.
     # Tensorboard does not like a generator for validation data
-    test_data_generator, total_test_points = create_data_generator(
+    num_test_points = 1000
+    test_data_generator, total_test_points, _, _ = create_data_generator(
         test_list_of_pickle_files,
-        preprocessing_cb=preprocessing_function,
+        preprocessing_cb=preprocessing_fcn,
         b_size=num_test_points)
 
     gen_out = iter(test_data_generator)
-    X, y = gen_out.next()
+    test_images, test_labels = gen_out.next()
 
     # -----------------------------------------------------------------------------------
     # Model
@@ -245,24 +288,21 @@ if __name__ == '__main__':
         rf_size=35,
         inner_leaky_relu_alpha=0.9,
         outer_leaky_relu_alpha=1.,
-        l1_reg_loss_weight=l1_weight_loss,
+        l1_reg_loss_weight=l1_loss,
     )
     model.summary()
 
-    optimizer = keras.optimizers.Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
-    loss_fcn = keras.losses.mean_squared_error
-    # loss_fcn = keras.losses.mean_squared_logarithmic_error
-
+    optimizer = keras.optimizers.Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=None, amsgrad=False)
     model.compile(optimizer=optimizer, loss=loss_fcn)
 
     cont_int_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'contour_integration_layer')
-    feat_extract_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'conv_1')
+    # feat_extract_layer_idx = alex_net_utils.get_layer_idx_by_name(model, 'conv_1')
 
     start_weights, _ = model.layers[cont_int_layer_idx].get_weights()
 
-    # Callbacks
-    feat_extract_act_cb = alex_net_utils.get_activation_cb(model, feat_extract_layer_idx)
-    cont_int_act_cb = alex_net_utils.get_activation_cb(model, cont_int_layer_idx)
+    # # Callbacks
+    # feat_extract_act_cb = alex_net_utils.get_activation_cb(model, feat_extract_layer_idx)
+    # cont_int_act_cb = alex_net_utils.get_activation_cb(model, cont_int_layer_idx)
 
     # -----------------------------------------------------------------------------------
     # Training
@@ -270,6 +310,7 @@ if __name__ == '__main__':
     print("Training the model ...")
 
     start_time = datetime.now()
+    weights_store_file = os.path.join(results_dir, weights_store_name)
 
     checkpoint = keras.callbacks.ModelCheckpoint(
         weights_store_file,
@@ -297,7 +338,7 @@ if __name__ == '__main__':
         epochs=num_epochs,
         steps_per_epoch=steps_per_epoch,
         verbose=1,
-        validation_data=(X, y),
+        validation_data=(test_images, test_labels),
         validation_steps=1,
         # max_q_size=1,
         workers=8,
@@ -318,11 +359,10 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     #  Write Summary File
     # -----------------------------------------------------------------------------------
-    print("Writing Summary File ")
     with open(os.path.join(results_dir, summary_file_name), 'wb') as f_id:
 
         f_id.write("Final training Loss: {} @ Epoch {}\n".format(
-            np.min(history.history['loss']),  np.argmin(history.history['loss'])))
+            np.min(history.history['loss']), np.argmin(history.history['loss'])))
         f_id.write("Final Validation Loss: {} @ Epoch {}\n".format(
             np.min(history.history['val_loss']), np.argmin(history.history['val_loss'])))
         f_id.write("Training Duration: {}\n".format(training_time))
@@ -338,7 +378,7 @@ if __name__ == '__main__':
         f_id.write("Training Details : --------------------------------------\n")
         f_id.write("Number of Epochs: {}.\n".format(num_epochs))
         f_id.write("Batch Size: {}.\n".format(batch_size))
-        f_id.write("Start Learning rate: {}.\n".format(learning_rate))
+        f_id.write("Start Learning rate: {}.\n".format(lr))
         f_id.write("Final Learning Rate: {}.\n".format(keras.backend.eval(optimizer.lr)))
         f_id.write("Optimizer Type: {}\n".format(optimizer.__class__))
         f_id.write("Loss Function: {}\n".format(str(loss_fcn).split(' ')[1]))
@@ -350,7 +390,9 @@ if __name__ == '__main__':
         f_id.write("Data points: training {}, test {} out of {}\n".format(
             num_training_points, num_test_points, total_test_points
         ))
-        f_id.write("Preprocessing Function: {}\n".format(str(preprocessing_function).split(' ')[1]))
+        f_id.write("Included alpha values: {}\n".format(sorted(included_alpha)))
+        f_id.write("Included beta values: {}\n".format(sorted(included_beta)))
+
         f_id.write("Training pickle files: \n")
         for idx, pickle_file in enumerate(train_list_of_pickle_files):
             f_id.write('\t{}: {}\n'.format(idx, pickle_file))
@@ -362,7 +404,6 @@ if __name__ == '__main__':
     # Save Learnt Contour Integration kernels
     # -------------------------------------------------------------------------------------
     print("Plotting Learnt Contour Integration kernels")
-
     learnt_weights_visualize_dir = os.path.join(results_dir, 'filter_visualizations')
     if not os.path.exists(learnt_weights_visualize_dir):
         os.mkdir(learnt_weights_visualize_dir)
@@ -418,7 +459,7 @@ if __name__ == '__main__':
     for gabor_params in gabor_params_list:
         visualize_multi_kernel_trained_model.main_contour_images(
             model=model,
-            preprocessing_cb=preprocessing_function,
+            preprocessing_cb=preprocessing_fcn,
             g_params=gabor_params,
             learnt_kernels=display_kernel_idxs,
             results_dir=sample_results_dir
@@ -426,7 +467,55 @@ if __name__ == '__main__':
 
     visualize_multi_kernel_trained_model.main_natural_images(
         model=model,
-        preprocessing_cb=preprocessing_function,
+        preprocessing_cb=preprocessing_fcn,
         learnt_kernels=display_kernel_idxs,
         results_dir=sample_results_dir
+    )
+
+
+if __name__ == '__main__':
+    # -----------------------------------------------------------------------------------
+    # Initialization
+    # -----------------------------------------------------------------------------------
+    random_seed = 10
+
+    # Model was originally defined with Theano backend.
+    keras.backend.set_image_dim_ordering('th')
+    np.random.seed(random_seed)
+
+    plt.ion()
+
+    # -----------------------------------------------------------------------------------
+    # Main Routine(s)
+    # -----------------------------------------------------------------------------------
+    print("Iteration 1 {}".format('=' * 80))
+    main(
+        l1_loss=0.00001,
+        loss_fcn=keras.losses.mean_squared_error,
+        lr=0.0001,
+        preprocessing_fcn=alex_net_utils.preprocessing_divide_255
+    )
+
+    print("Iteration 2 {}".format('=' * 80))
+    main(
+        l1_loss=0.00001,
+        loss_fcn=keras.losses.mean_squared_error,
+        lr=0.00001,
+        preprocessing_fcn=alex_net_utils.preprocessing_divide_255
+    )
+
+    print("Iteration 3 {}".format('=' * 80))
+    main(
+        l1_loss=0.00001,
+        loss_fcn=keras.losses.mean_squared_error,
+        lr=0.000001,
+        preprocessing_fcn=alex_net_utils.preprocessing_divide_255
+    )
+
+    print("Iteration 4 {}".format('=' * 80))
+    main(
+        l1_loss=0.00001,
+        loss_fcn=keras.losses.mean_squared_error,
+        lr=0.0000001,
+        preprocessing_fcn=alex_net_utils.preprocessing_divide_255
     )
