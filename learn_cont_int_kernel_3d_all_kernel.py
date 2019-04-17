@@ -166,12 +166,12 @@ def plot_max_contour_enhancement(img, feat_extract_cb, cont_int_cb):
     plt.title("Maximum contour enhancement @ each (x,y) ")
 
 
-def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
+def main(l1_loss, loss_fcn, lr, preprocessing_fcn, data_key_file_name):
     # -----------------------------------------------------------------------------------
     # Initialization
     # -----------------------------------------------------------------------------------
     batch_size = 128
-    num_epochs = 20
+    num_epochs = 50
 
     # Data Directory
     # ===============
@@ -191,8 +191,6 @@ def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
         69, 70, 72, 73, 74, 77, 78, 79, 80, 81,
         83, 89
     ]
-    data_key_file_name = 'data_key_sigmoid_center_0.5MaxAct_gain_2_preprocessing_divide255.pickle'
-    # data_key_file_name = 'data_key_above_mean_act_preprocessing_divide255.pickle'
 
     if len(display_kernel_idxs) >= 2:
         plt.ioff()
@@ -200,10 +198,11 @@ def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
     # Results Directory
     # ==================
     base_results = './results/test'
-    results_identifier = 'lossFcn_{}_l1LossWeight_{}_lr_{}_beta_30_alpha_30'.format(
+    results_identifier = 'lossFcn_{}_l1LossWeight_{}_lr_{}_beta_30_alpha_30_data_key_{}'.format(
         str(loss_fcn).split(' ')[1],
         str(l1_loss),
-        str(lr)
+        str(lr),
+        data_key_file_name,
     )
     results_dir = os.path.join(base_results, results_identifier)
 
@@ -229,16 +228,16 @@ def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
     # -----------------------------------------------------------------------------------
     print("Creating Data Generators ...")
 
-    # Get pickle data key files
-    # =========================
+    # # Get pickle data key files
+    # # =========================
     # # Manually
     # train_list_of_pickle_file_paths = [
     #     os.path.join(base_data_directory, 'train/filter_0'),
     #     os.path.join(base_data_directory, 'train/filter_5'),
     #     os.path.join(base_data_directory, 'train/filter_10'),
-    #     os.path.join(base_data_directory, 'train/filter_20'),
-    #     os.path.join(base_data_directory, 'train/filter_21'),
-    #     os.path.join(base_data_directory, 'train/filter_22'),
+    #     # os.path.join(base_data_directory, 'train/filter_20'),
+    #     # os.path.join(base_data_directory, 'train/filter_21'),
+    #     # os.path.join(base_data_directory, 'train/filter_22'),
     # ]
     # train_list_of_pickle_files = \
     #     [os.path.join(path, data_key_file_name) for path in train_list_of_pickle_file_paths]
@@ -247,9 +246,9 @@ def main(l1_loss, loss_fcn, lr, preprocessing_fcn):
     #     os.path.join(base_data_directory, 'test/filter_0'),
     #     os.path.join(base_data_directory, 'test/filter_5'),
     #     os.path.join(base_data_directory, 'test/filter_10'),
-    #     os.path.join(base_data_directory, 'test/filter_20'),
-    #     os.path.join(base_data_directory, 'test/filter_21'),
-    #     os.path.join(base_data_directory, 'test/filter_22'),
+    #     # os.path.join(base_data_directory, 'test/filter_20'),
+    #     # os.path.join(base_data_directory, 'test/filter_21'),
+    #     # os.path.join(base_data_directory, 'test/filter_22'),
     # ]
     # test_list_of_pickle_files = \
     #     [os.path.join(path, data_key_file_name) for path in test_list_of_pickle_file_paths]
@@ -492,36 +491,51 @@ if __name__ == '__main__':
         l1_loss=0.000001,
         loss_fcn=keras.losses.mean_squared_error,
         lr=0.00001,
-        preprocessing_fcn=alex_net_utils.preprocessing_divide_255
+        preprocessing_fcn=alex_net_utils.preprocessing_divide_255,
+        data_key_file_name='data_key_sigmoid_center_0.1MaxAct_gain_3_preprocessing_divide255.pickle'
     )
 
+    print("Iteration 2 {}".format('=' * 80))
+    main(
+        l1_loss=0.000001,
+        loss_fcn=keras.losses.mean_squared_error,
+        lr=0.00001,
+        preprocessing_fcn=alex_net_utils.preprocessing_divide_255,
+        data_key_file_name='data_key_sigmoid_center_0.1MaxAct_gain_3_preprocessing_divide255_suppress.pickle'
+    )
+
+    print("Iteration 3 {}".format('=' * 80))
     main(
         l1_loss=0.0000001,
         loss_fcn=keras.losses.mean_squared_error,
         lr=0.00001,
-        preprocessing_fcn=alex_net_utils.preprocessing_divide_255
+        preprocessing_fcn=alex_net_utils.preprocessing_divide_255,
+        data_key_file_name='data_key_sigmoid_center_0.5MaxAct_gain_2_preprocessing_divide255.pickle'
     )
 
-    # print("Iteration 2 {}".format('=' * 80))
-    # main(
-    #     l1_loss=0.00001,
-    #     loss_fcn=keras.losses.mean_squared_error,
-    #     lr=0.00001,
-    #     preprocessing_fcn=alex_net_utils.preprocessing_divide_255
-    # )
-    #
-    # print("Iteration 3 {}".format('=' * 80))
-    # main(
-    #     l1_loss=0.00001,
-    #     loss_fcn=keras.losses.mean_squared_error,
-    #     lr=0.000001,
-    #     preprocessing_fcn=alex_net_utils.preprocessing_divide_255
-    # )
-    #
     # print("Iteration 4 {}".format('=' * 80))
     # main(
-    #     l1_loss=0.00001,
+    #     l1_loss=0.000001,
     #     loss_fcn=keras.losses.mean_squared_error,
-    #     lr=0.0000001,
-    #     preprocessing_fcn=alex_net_utils.preprocessing_divide_255
+    #     lr=0.00001,
+    #     preprocessing_fcn=alex_net_utils.preprocessing_divide_255,
+    #     data_key_file_name='data_key_sigmoid_center_0.5MaxAct_gain_1_preprocessing_divide255.pickle'
+    # )
+    #
+    # print("Iteration 5 {}".format('=' * 80))
+    # main(
+    #     l1_loss=0.000001,
+    #     loss_fcn=keras.losses.mean_squared_error,
+    #     lr=0.000001,
+    #     preprocessing_fcn=alex_net_utils.preprocessing_divide_255,
+    #     data_key_file_name='data_key_sigmoid_center_0.5MaxAct_gain_2_preprocessing_divide255.pickle'
+    # )
+    #
+    # print("Iteration 6 {}".format('=' * 80))
+    # main(
+    #     l1_loss=0.0000001,
+    #     loss_fcn=keras.losses.mean_squared_error,
+    #     lr=0.000001,
+    #     preprocessing_fcn=alex_net_utils.preprocessing_divide_255,
+    #     data_key_file_name='data_key_sigmoid_center_0.5MaxAct_gain_2_preprocessing_divide255.pickle'
     # )
