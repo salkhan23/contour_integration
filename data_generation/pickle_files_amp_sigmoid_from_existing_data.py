@@ -183,13 +183,13 @@ def generate_simultaneous_training_pickle_files(
                 thres_folder_dict[k] = new_v_thres
                 # print("New Label above Threshold: {}".format(new_v_thres))
 
-                # Debug
+                # # Debug
                 # if v >= 2 and (prev_folder != filt_dir_name):
                 #     plt.figure()
                 #     prev_folder = filt_dir_name
                 #
                 #     plt.stem(max_act * sigmoid_center, label='{} of max act (Sigmoid Center)'.format(sigmoid_center))
-                #     plt.plot(center_neuron_act, label='raw act to gabor frag', color='g')
+                #     plt.plot(center_neuron_act, label='raw act to gabor frag', color='g', marker='d', markersize=10)
                 #     plt.plot(new_v_thres, label='gain', color='r')
                 #
                 #     plt.legend()
